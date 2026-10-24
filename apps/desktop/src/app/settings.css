@@ -1,0 +1,37 @@
+/* 设置窗口壳（独立系统窗口形态的打样呈现；真多窗口=m2.3） */
+.settings-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.settings-win {
+  width: 640px; max-width: calc(100vw - 48px);
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.settings-bar {
+  height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px;
+  background: var(--ade-chrome); border-bottom: 1px solid var(--ade-line); font-size: 12px; color: var(--ade-muted);
+}
+.settings-bar b { color: var(--ade-ink); font-weight: 500; }
+.settings-close { width: 30px; height: 26px; border-radius: 4px; color: var(--ade-muted); display: flex; align-items: center; justify-content: center; }
+.settings-close:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.settings-body { display: flex; min-height: 300px; }
+.settings-nav {
+  width: 150px; flex: none; background: var(--ade-bench); border-right: 1px solid var(--ade-line);
+  padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;
+}
+.settings-nav button {
+  font-size: 12.5px; color: var(--ade-muted); padding: 7px 10px; border-radius: 5px;
+  display: flex; align-items: center; gap: 7px; text-align: left;
+}
+.settings-nav button:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.settings-nav button.on { background: var(--ade-accent-soft); color: var(--ade-ink); box-shadow: inset 2px 0 0 var(--ade-accent); }
+.settings-pane { flex: 1; padding: 18px; }
+.wbtns .gear { color: var(--ade-accent); }
+.wbtns .gear:hover { background: var(--ade-hover); }
+
+/* 状态栏授权指示（原"在线"占位语义替换） */
+.statusbar .lic { display: inline-flex; align-items: center; gap: 5px; color: var(--ade-ink); }
+.statusbar .lic .dot.warn { background: var(--ade-pen-red); }

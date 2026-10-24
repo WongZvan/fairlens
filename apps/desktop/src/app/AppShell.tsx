@@ -1,5 +1,6 @@
 import { ArrowLeft, FileText } from 'lucide-react';
 import { useState } from 'react';
+import { SettingsGear, SettingsWindow } from './SettingsWindow.js';
 import { useTranslation } from 'react-i18next';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
 import { useLicense } from '../stores/license.js';
@@ -7,16 +8,21 @@ import { useLicense } from '../stores/license.js';
 /** 应用壳：标题栏 + 主区（路由骨架 library|editor；dev 面路由 m4/m5 懒加载挂载） */
 export function AppShell() {
   const [view, setView] = useState<'library' | 'editor'>('library');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div className="shell">
-      <TitleBarConnector onBack={view === 'editor' ? () => setView('library') : undefined} />
+      <TitleBarConnector
+        onBack={view === 'editor' ? () => setView('library') : undefined}
+        onSettings={() => setSettingsOpen(true)}
+      />
       {view === 'library' ? <LibraryPlaceholder onOpenMockup={() => setView('editor')} /> : <EditorMockup />}
       <StatusBar />
+      <SettingsWindow open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
 
-function TitleBarConnector({ onBack }: { onBack?: () => void }) {
+function TitleBarConnector({ onBack, onSettings }: { onBack?: () => void; onSettings: () => void }) {
   const { t } = useTranslation();
   return (
     <header className="titlebar" data-tauri-drag-region>
@@ -29,13 +35,13 @@ function TitleBarConnector({ onBack }: { onBack?: () => void }) {
       )}
       <span className="muted file" data-tauri-drag-region>{t('status.m1')} · {t('license.unactivated')}</span>
       <span className="chip"><i className="dot ok" /> {t('titlebar.saved')}</span>
-      <TitleButtons />
+      <TitleButtons onSettings={onSettings} />
     </header>
   );
 }
 
 /** 窗口三键与主题循环（从 M0 TitleBar 迁入；isTauri 守卫 web 调试） */
-function TitleButtons() {
+function TitleButtons({ onSettings }: { onSettings: () => void }) {
   const { t } = useTranslation();
   const mode = useThemeMode();
   const cycle = useThemeCycle();
@@ -45,7 +51,7 @@ function TitleButtons() {
   return (
     <div className="wbtns">
       <button aria-label={t('titlebar.theme', { theme: t(`theme.${mode}`) })} onClick={cycle} title={t(`theme.${mode}`)}>{glyph}</button>
-      <button aria-label={t('titlebar.settings')} className="gear" disabled>⚙</button>
+      <SettingsGear onClick={onSettings} />
       {win && (
         <>
           <button aria-label={t('titlebar.windowMin')} onClick={() => void win.minimize()}>─</button>
@@ -92,9 +98,13 @@ function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
 /** 状态栏（M0 组件迁入文件以集中壳层） */
 function StatusBar() {
   const { t } = useTranslation();
+  const activated = useLicense((s) => s.activated);
   return (
     <footer className="statusbar mono">
-      <span className="online"><i className="dot ok" /> {t('status.online')}</span>
+      <span className="lic">
+        <i className={activated ? 'dot ok' : 'dot warn'} />
+        {activated ? t('status.activated') : t('status.unactivated')}
+      </span>
       <span className="muted">{t('status.commandHint')}</span>
     </footer>
   );

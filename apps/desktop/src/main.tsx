@@ -4,6 +4,7 @@ import { AppShell } from './app/AppShell.js';
 import './design-system/tokens.css';
 import './design-system/base.css';
 import './app/shell.css';
+import './app/settings.css';
 import './features/editor-mockup/mockup.css';
 import './features/editor-mockup/paper.css';
 import './i18n/index.js';
