@@ -18,7 +18,7 @@ function blockIdAttr() {
   return {
     default: null as string | null,
     parseHTML: (el: HTMLElement) => el.getAttribute(BLOCK_ID),
-    renderHTML: (attrs: Record<string, unknown>) => (attrs[BLOCK_ID] ? { [BLOCK_ID]: attrs[BLOCK_ID] } : {}),
+    renderHTML: (attrs: Record<string, unknown>) => (attrs.id ? { [BLOCK_ID]: attrs.id } : {}),
   };
 }
 
@@ -158,6 +158,29 @@ export const linkMark = Link.configure({
   linkOnPaste: false,
 });
 
+/** 右键菜单转发（#93）：PM 默认吞 contextmenu 的 stopPropagation → React onContextMenu 收不到。
+ *  插件层 handleDOMEvents.contextmenu 转发给冒出（调用方经 window 自定义事件接收）。 */
+export const contextMenuForward = Extension.create({
+  name: 'flContextMenuForward',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('flContextMenu'),
+        props: {
+          handleDOMEvents: {
+            contextmenu: (_view, event) => {
+              // PM 不拦 contextmenu：透传（return false）让原生冒泡到 React onContextMenu。
+              // 之前"二次 dispatch"版造成死循环（探针实测 42 次/16ms）——勿恢复
+              void _view; void event;
+              return false;
+            },
+          },
+        },
+      }),
+    ];
+  },
+});
+
 /** Ctrl/Meta+点击链接 → openExternal（独立顶层插件：extend(Link) 的 handleClick 会被 Link 内部拦截吞掉——实测） */
 export const linkClickPlugin = Extension.create({
   name: 'flLinkClick',
@@ -183,6 +206,7 @@ export const linkClickPlugin = Extension.create({
 });
 
 export const flExtensions = [
+  contextMenuForward,
   linkClickPlugin,
   HardBreakNode,
   SectionNode,

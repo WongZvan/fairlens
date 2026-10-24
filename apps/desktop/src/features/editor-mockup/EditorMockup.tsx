@@ -6,10 +6,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
 import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
+import { nanoid } from '../../lib/nanoid.js';
 import { resolveShortcut } from '../editor/shortcuts.js';
 import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
 import { CommandPalette } from './CommandPalette.js';
+import { ContextMenuView, useContextMenu, type ContextMenuEntry } from './ContextMenu.js';
 import { sampleDoc } from './sample-data.js';
 import { dims, findings } from './sample-data.js';
 
@@ -34,21 +36,12 @@ export function EditorMockup() {
         id: 'view.toggle-right', title: '收起/展开评估面板', hint: '', keywords: ['评估', '侧栏'],
         run: () => useMockup.getState().toggleRight(),
       }),
-      commandRegistry.register({
-        id: 'view.zoom-fit-width', title: '缩放：适应宽度', keywords: ['缩放', '铺满'],
-        run: () => useMockup.getState().setZoomMode('fit-width'),
-      }),
-      commandRegistry.register({
-        id: 'view.zoom-fit-page', title: '缩放：适应整页', keywords: ['缩放', '整页'],
-        run: () => useMockup.getState().setZoomMode('fit-page'),
-      }),
-      commandRegistry.register({
-        id: 'view.zoom-100', title: '缩放：实际尺寸（100%）', keywords: ['缩放', '实际'],
-        run: () => useMockup.getState().setZoomMode(1),
-      }),
+
+
+
       commandRegistry.register({
         id: 'edit.entry-duplicate', title: '复制当前条目', hint: 'Ctrl+D', keywords: ['复制', '条目'],
-        devOnly: false, run: () => useMockup.getState().bumpZoom(0),
+        devOnly: false, run: () => console.log('[m1.5] 复制条目请用画布右键菜单（需先选中条目）'),
       }),
       commandRegistry.register({
         id: 'dev.reload-packs', title: '[开发] 重载提示词包', devOnly: true,
@@ -60,6 +53,26 @@ export function EditorMockup() {
   const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
   const editorApiRef = useRef<EditorApi | null>(null);
 
+  // #93：画布右键菜单（两种光标态）。结构复制真实现（同 entry 内复制条目，nanoid 新块）
+  const duplicateEntry = (sectionId: string, entryId: string) => {
+    setCanvasDoc((d) => ({
+      ...d,
+      sections: d.sections.map((sec) => {
+        if (sec.id !== sectionId) return sec;
+        const idx = sec.entries.findIndex((e) => e.id === entryId);
+        if (idx === -1) return sec;
+        const src = sec.entries[idx]!;
+        const copy = {
+          ...src,
+          id: nanoid(),
+          bullets: src.bullets.map((b) => ({ ...b, id: nanoid() })),
+        };
+        const entries = [...sec.entries];
+        entries.splice(idx + 1, 0, copy);
+        return { ...sec, entries };
+      }),
+    }));
+  };
   const reorderEntry = (sectionId: string, from: number, to: number) => {
     setCanvasDoc((d) => ({
       ...d,
@@ -116,7 +129,8 @@ export function EditorMockup() {
       ) : (
         <Rail side="left" />
       )}
-      <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={setCanvasDoc} editorApiRef={editorApiRef} />
+      <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={setCanvasDoc} editorApiRef={editorApiRef}
+        onDuplicateEntry={duplicateEntry} />
       {rightOpen ? <EvalPanel /> : <Rail side="right" />}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
@@ -146,11 +160,30 @@ interface CenterPaneProps {
   canvasDoc: ResumeDoc;
   onCanvasDocChange: (d: ResumeDoc) => void;
   editorApiRef: React.MutableRefObject<EditorApi | null>;
+  onDuplicateEntry: (sectionId: string, entryId: string) => void;
 }
-function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef }: CenterPaneProps) {
+function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry }: CenterPaneProps) {
   const { t } = useTranslation();
   const { template, zoomMode, zoom, setTemplate } = useMockup();
   const setCanvasDoc = onCanvasDocChange;
+  const ctx = useContextMenu();
+
+  // #93 右键菜单：bullet 上=结构命令（复制条目/粘贴）；选区=文字命令；空白=通用
+  const openCanvasMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    const entryId = target.closest('[data-type="fl-entry"]')?.getAttribute('data-block-id') ?? undefined;
+    const sectionId = target.closest('[data-type="fl-section"]')?.getAttribute('data-block-id') ?? '';
+    const items: ContextMenuEntry[] = [];
+    if (entryId && sectionId) {
+      items.push(
+        { label: '复制此条目', hint: 'Ctrl+D', run: () => onDuplicateEntry(sectionId, entryId) },
+        { divider: true },
+      );
+    }
+    items.push({ label: '粘贴', hint: 'Ctrl+V', run: () => navigator.clipboard.readText().then((t) => t && document.execCommand('insertText', false, t)).catch(() => {}) });
+    ctx.open(e.clientX, e.clientY, items);
+  };
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [paperLayoutW, setPaperLayoutW] = useState(794);
@@ -217,7 +250,11 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef }: CenterPanePr
         <button className="m-btn" title={t('editor.mockOnly')}><ScanSearch size={14} />{t('editor.walkthrough')}</button>
         <button className="m-btn primary" title={t('editor.mockOnly')}><Sparkles size={14} />{t('editor.evaluate')}</button>
       </div>
-      <div className="m-canvas" ref={canvasRef}>
+      <div
+        className="m-canvas"
+        ref={canvasRef}
+        onContextMenu={openCanvasMenu}
+      >
         {/*
           缩放滚动几何（§5.2）：transform 不改布局宽。外层显式布局宽=纸面宽×zoom 撑开滚动范围，
           内层 scale origin=top left 使滚动坐标与视觉一致。宽度随 Tiptap 挂载实测同步（ref 回读，
@@ -230,6 +267,7 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef }: CenterPanePr
         </div>
         <div className="pagebreak mono">{t('editor.pagebreak')}</div>
       </div>
+      <ContextMenuView state={ctx.state} onClose={ctx.close} />
       <ZoomCtl />
     </section>
   );
