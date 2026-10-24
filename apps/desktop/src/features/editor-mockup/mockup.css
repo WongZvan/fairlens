@@ -83,4 +83,4 @@
 .fl-host .ProseMirror { outline: none; }
 
 /* 缩放滚动几何：外层撑布局宽（zoom×纸面宽），内层 scale */
-.paper-scale { transform-origin: top left; }
+.paper-scale { transform-origin: top left; width: fit-content; } /* fit-content：不被父级显式宽拉伸，保持纸面真实布局宽 */

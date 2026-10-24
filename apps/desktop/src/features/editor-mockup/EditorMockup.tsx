@@ -3,7 +3,7 @@ import {
   PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMockup } from '../../stores/mockup.js';
 import { CanvasEditor } from '../editor/CanvasEditor.js';
 import { sampleDoc } from './sample-data.js';
@@ -45,6 +45,23 @@ function CenterPane() {
   const { t } = useTranslation();
   const { template, zoom, setTemplate, setZoom } = useMockup();
   const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [paperLayoutW, setPaperLayoutW] = useState(794);
+  useEffect(() => {
+    // 纸面布局宽只测一次（挂载后）：.paper-scale 为 fit-content 不随父宽拉伸，
+    // 持续 Observer 会与 host 显式宽形成反馈环（实测滚到 22M px）——模板切换时由 key 重挂载自然重测
+    const measure = () => {
+      const scaled = hostRef.current?.querySelector('.paper-scale') as HTMLElement | null;
+      if (scaled && scaled.offsetWidth > 0) {
+        setPaperLayoutW(scaled.offsetWidth);
+        return true;
+      }
+      return false;
+    };
+    if (measure()) return;
+    const t = setTimeout(measure, 200);
+    return () => clearTimeout(t);
+  }, []);
 
   // Ctrl+滚轮缩放（§5.2：50–150% 步进 10%；仅 Ctrl 按住时拦截，不劫持普通滚动）
   useEffect(() => {
@@ -74,11 +91,11 @@ function CenterPane() {
       </div>
       <div className="m-canvas">
         {/*
-          缩放滚动几何（§5.2）：transform 不改布局宽——150% 时纸面视觉 1191px 但布局仍 794px，
-          滚动区按布局算导致两侧不可达。修法：host 显式布局宽=纸面宽×zoom（撑开滚动范围），
-          内层再 scale 且 origin=top left，滚动坐标与视觉严格一致。
+          缩放滚动几何（§5.2）：transform 不改布局宽。外层显式布局宽=纸面宽×zoom 撑开滚动范围，
+          内层 scale origin=top left 使滚动坐标与视觉一致。宽度随 Tiptap 挂载实测同步（ref 回读，
+          勿硬编码——纸面真实宽由模板 margin/padding 决定）。左右留 scrollPad 让纸缘不贴死滚动边界。
         */}
-        <div className="paper-host" style={{ width: 794 * zoom }}>
+        <div className="paper-host" style={{ width: paperLayoutW * zoom + 48 }} ref={hostRef}>
           <div className="paper-scale" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
             <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} />
           </div>
