@@ -43,9 +43,10 @@ function Rail({ side }: { side: 'left' | 'right' }) {
 
 function CenterPane() {
   const { t } = useTranslation();
-  const { template, zoom, setTemplate, setZoom } = useMockup();
+  const { template, zoomMode, zoom, setTemplate } = useMockup();
   const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
   const hostRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [paperLayoutW, setPaperLayoutW] = useState(794);
   useEffect(() => {
     // 纸面布局宽只测一次（挂载后）：.paper-scale 为 fit-content 不随父宽拉伸，
@@ -63,18 +64,40 @@ function CenterPane() {
     return () => clearTimeout(t);
   }, []);
 
-  // Ctrl+滚轮缩放（§5.2：50–150% 步进 10%；仅 Ctrl 按住时拦截，不劫持普通滚动）
+  // #90-② fit 模式解析：容器/纸面变化时动态求倍率（fit-width 按可视宽；fit-page 按可视宽与高取小）
+  useEffect(() => {
+    if (zoomMode === 'fit-width' || zoomMode === 'fit-page') {
+      const resolve = () => {
+        const canvas = canvasRef.current;
+        if (!canvas || paperLayoutW <= 0) return;
+        const availW = canvas.clientWidth - 48; // 滚动垫
+        let z = availW / paperLayoutW;
+        if (zoomMode === 'fit-page') {
+          const paper = hostRef.current?.querySelector('.fl-paper') as HTMLElement | null;
+          const availH = canvas.clientHeight - 48;
+          if (paper && paper.offsetHeight > 0) z = Math.min(z, availH / paper.offsetHeight);
+        }
+        useMockup.getState().setResolvedZoom(z);
+      };
+      resolve();
+      const ro = new ResizeObserver(resolve); // 容器尺寸变化（窗口缩放/面板折叠）重解析
+      if (canvasRef.current) ro.observe(canvasRef.current);
+      return () => ro.disconnect();
+    }
+  }, [zoomMode, paperLayoutW]);
+
+  // Ctrl+滚轮缩放（§5.2：步进 10%；任何滚轮/±操作离开 fit 模式进固定档）
   useEffect(() => {
     const onWheel: EventListener = (ev) => {
       const e = ev as WheelEvent;
       if (!e.ctrlKey) return;
       e.preventDefault();
-      setZoom(useMockup.getState().zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+      useMockup.getState().bumpZoom(e.deltaY < 0 ? 0.1 : -0.1);
     };
     const canvas = document.querySelector('.m-canvas');
     canvas?.addEventListener('wheel', onWheel, { passive: false });
     return () => canvas?.removeEventListener('wheel', onWheel);
-  }, [setZoom]);
+  }, []);
   return (
     <section className="m-center">
       <div className="m-toolbar">
@@ -82,14 +105,13 @@ function CenterPane() {
           <button aria-pressed={template === 'classic'} onClick={() => setTemplate('classic')}>{t('editor.tplClassic')}</button>
           <button aria-pressed={template === 'duo'} onClick={() => setTemplate('duo')}>{t('editor.tplDuo')}</button>
         </div>
-        <span className="zoom mono">{Math.round(zoom * 100)}%</span>
         <span style={{ flex: 1 }} />
         <button className="m-btn" disabled title={t('editor.mockOnly')}><Undo2 size={14} /></button>
         <button className="m-btn" disabled title={t('editor.mockOnly')}><Redo2 size={14} /></button>
         <button className="m-btn" title={t('editor.mockOnly')}><ScanSearch size={14} />{t('editor.walkthrough')}</button>
         <button className="m-btn primary" title={t('editor.mockOnly')}><Sparkles size={14} />{t('editor.evaluate')}</button>
       </div>
-      <div className="m-canvas">
+      <div className="m-canvas" ref={canvasRef}>
         {/*
           缩放滚动几何（§5.2）：transform 不改布局宽。外层显式布局宽=纸面宽×zoom 撑开滚动范围，
           内层 scale origin=top left 使滚动坐标与视觉一致。宽度随 Tiptap 挂载实测同步（ref 回读，
@@ -102,17 +124,28 @@ function CenterPane() {
         </div>
         <div className="pagebreak mono">{t('editor.pagebreak')}</div>
       </div>
-      <ZoomCtl zoom={zoom} setZoom={setZoom} />
+      <ZoomCtl />
     </section>
   );
 }
 
-function ZoomCtl({ zoom, setZoom }: { zoom: number; setZoom: (z: number) => void }) {
+/** #90-② 缩放控件：−[读数]+ 与 适应宽度/适应整页/实际尺寸 三选 */
+function ZoomCtl() {
+  const { t } = useTranslation();
+  const zoom = useMockup((s) => s.zoom);
+  const zoomMode = useMockup((s) => s.zoomMode);
+  const setZoomMode = useMockup((s) => s.setZoomMode);
+  const bump = useMockup((s) => s.bumpZoom);
+  const label =
+    zoomMode === 'fit-width' ? t('editor.zoomFitWidth') : zoomMode === 'fit-page' ? t('editor.zoomFitPage') : `${Math.round(zoom * 100)}%`;
   return (
     <div className="zoom-ctl">
-      <button aria-label="缩小" onClick={() => setZoom(zoom - 0.1)}><Minus size={14} /></button>
-      <span className="val mono">{Math.round(zoom * 100)}%</span>
-      <button aria-label="放大" onClick={() => setZoom(zoom + 0.1)}><Plus size={14} /></button>
+      <button aria-label={t('editor.zoomOut')} onClick={() => bump(-0.1)}><Minus size={14} /></button>
+      <button className="mode" aria-label={t('editor.zoomMode')} title={t('editor.zoomModeHint')} onClick={() => {
+        // 循环：fit-width → fit-page → 100%（实际尺寸）→ fit-width
+        setZoomMode(zoomMode === 'fit-width' ? 'fit-page' : zoomMode === 'fit-page' ? 1 : 'fit-width');
+      }}>{label}</button>
+      <button aria-label={t('editor.zoomIn')} onClick={() => bump(0.1)}><Plus size={14} /></button>
     </div>
   );
 }
