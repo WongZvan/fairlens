@@ -67,6 +67,7 @@
 /* 折叠后的抽屉把手：离边 10px 悬浮药丸（避开无边框窗口的边缘缩放热区），面板底色+描边保证两主题清晰 */
 .rail {
   position: absolute; top: 50%; transform: translateY(-50%);
+  z-index: 20; /* 定位于画布容器之上：左侧把手在 DOM 序上先于 m-canvas(relative)，无 z-index 会被其覆盖 */
   width: 20px; height: 48px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   background: var(--ade-panel); border: 1px solid var(--ade-line);
