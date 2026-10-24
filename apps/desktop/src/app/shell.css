@@ -46,3 +46,7 @@
 
 .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .dot.ok { background: var(--ade-ok); }
+
+/* m1.1：标题栏返回按钮 */
+.titlebar .back-btn { width: 30px; height: 28px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
+.titlebar .back-btn:hover { background: var(--ade-hover); }

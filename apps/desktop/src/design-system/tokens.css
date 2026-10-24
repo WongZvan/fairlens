@@ -4,6 +4,8 @@
   --ade-font-ui: 'IBM Plex Sans', 'IBM Plex Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
   --ade-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --ade-font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans SC', sans-serif;
+  --ade-font-serif: 'Noto Serif SC', serif; /* 印刷声部（纸面/评语） */
+  --ade-font-hand: 'Kaiti SC', 'KaiTi', 'STKaiti', 'Microsoft YaHei', serif; /* 手写声部（批注），系统字体零打包 */
   --ade-radius: 4px;
 }
 
