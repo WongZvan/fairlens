@@ -61,8 +61,8 @@ function CenterPane() {
           <Paper template={template} />
         </div>
         <div className="pagebreak mono">{t('editor.pagebreak')}</div>
-        <ZoomCtl zoom={zoom} setZoom={setZoom} />
       </div>
+      <ZoomCtl zoom={zoom} setZoom={setZoom} />
     </section>
   );
 }

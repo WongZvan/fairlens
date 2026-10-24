@@ -6,7 +6,7 @@
 .m-right { width: 296px; border-left: 1px solid var(--ade-line); padding: 14px; }
 .m-left.closed, .m-right.closed { width: 0; padding: 0; border: none; }
 
-.m-center { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.m-center { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 
 /* 工具栏 */
 .m-toolbar { height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
@@ -31,7 +31,7 @@
 .m-canvas { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: center; overflow: auto; padding: 16px 0 6px; }
 .pagebreak { display: flex; align-items: center; gap: 10px; width: 70%; margin-top: 10px; color: var(--ade-muted); font-size: 11px; flex: none; }
 .pagebreak::before, .pagebreak::after { content: ''; flex: 1; border-top: 1.5px dashed var(--ade-line); }
-.zoom-ctl { position: absolute; right: 16px; bottom: 12px; display: flex; align-items: center; gap: 2px; background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 6px; padding: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.zoom-ctl { position: absolute; right: 16px; bottom: 12px; z-index: 10; display: flex; align-items: center; gap: 2px; background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 6px; padding: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
 .zoom-ctl button { width: 26px; height: 24px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
 .zoom-ctl button:hover { background: var(--ade-hover); }
 .zoom-ctl .val { font-size: 11px; min-width: 38px; text-align: center; color: var(--ade-muted); }
