@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+  - functions/*
+
+allowBuilds:
+  esbuild: true

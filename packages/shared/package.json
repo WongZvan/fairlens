@@ -1,0 +1,22 @@
+{
+  "name": "@fairlens/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --root .",
+    "export-lease-api": "tsx scripts/export-lease-api.ts",
+    "check-lease-api": "tsx scripts/check-lease-api.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.19.0",
+    "zod-to-json-schema": "^3.24.0"
+  }
+}

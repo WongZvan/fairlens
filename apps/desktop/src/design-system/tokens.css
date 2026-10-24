@@ -1,0 +1,38 @@
+/* FairLens 设计令牌（§12.1 纸墨工房/夜墨，--ade-* 双主题）
+   纸面永远白（=导出真色）；批注色仅 chrome 域提亮，纸面恒原色（由画布样式另行固定） */
+:root {
+  --ade-font-ui: 'IBM Plex Sans', 'IBM Plex Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --ade-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ade-font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans SC', sans-serif;
+  --ade-radius: 4px;
+}
+
+:root[data-theme='light'] {
+  --ade-bench: #f2f1ed;
+  --ade-panel: #f7f6f2;
+  --ade-chrome: #eceae4;
+  --ade-ink: #1c1d1b;
+  --ade-muted: #6f6d67; /* 对比度 ≥4.5:1（第三轮审计定稿值） */
+  --ade-line: #e4e2dc;
+  --ade-accent: #33518e;
+  --ade-accent-soft: rgba(51, 81, 142, 0.08);
+  --ade-pen-red: #c4372b;
+  --ade-pen-green: #2e6e4e;
+  --ade-ok: #2e6e4e;
+  --ade-hover: #eceae4;
+}
+
+:root[data-theme='dark'] {
+  --ade-bench: #232428;
+  --ade-panel: #2a2b30;
+  --ade-chrome: #1e1f23;
+  --ade-ink: #e8e6e1;
+  --ade-muted: #a8a69e; /* 第三轮审计：由 #9B998F 提亮至 ≥4.5:1 */
+  --ade-line: #3a3b40;
+  --ade-accent: #8fa6d9;
+  --ade-accent-soft: rgba(143, 166, 217, 0.13);
+  --ade-pen-red: #d96a5f;
+  --ade-pen-green: #7fb89a;
+  --ade-ok: #7fb89a;
+  --ade-hover: #33343a;
+}

@@ -1,0 +1,48 @@
+/* 应用壳布局（标题栏/主区/状态栏）与标题栏细节 */
+.shell { display: flex; flex-direction: column; height: 100%; }
+
+.titlebar {
+  flex: none;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 14px;
+  background: var(--ade-chrome);
+  border-bottom: 1px solid var(--ade-line);
+}
+.titlebar .app { font-size: 12.5px; font-weight: 500; letter-spacing: 0.08em; } /* 仪表体字标 */
+.titlebar .file { font-size: 12px; }
+.titlebar .chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--ade-muted);
+  border: 1px solid var(--ade-line); background: var(--ade-panel);
+  border-radius: 99px; padding: 2px 9px;
+}
+.wbtns { margin-left: auto; display: flex; gap: 2px; }
+.wbtns button {
+  width: 34px; height: 30px; border-radius: 4px;
+  color: var(--ade-muted); display: flex; align-items: center; justify-content: center;
+}
+.wbtns button:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.wbtns button.close:hover { background: var(--ade-pen-red); color: #fff; }
+.wbtns button:disabled { opacity: 0.4; cursor: default; }
+.wbtns button.gear { color: var(--ade-accent); }
+
+.library-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; border: 1.5px dashed var(--ade-line); border-radius: 8px;
+  margin: 22px 26px; padding: 32px; text-align: center;
+}
+.library-empty h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: 0.06em; }
+.small { font-size: 11.5px; }
+
+.statusbar {
+  flex: none; height: 30px; display: flex; align-items: center; gap: 14px;
+  padding: 0 14px; background: var(--ade-chrome);
+  border-top: 1px solid var(--ade-line); font-size: 11px; color: var(--ade-muted);
+}
+.statusbar .online { display: inline-flex; align-items: center; gap: 5px; color: var(--ade-ink); }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.dot.ok { background: var(--ade-ok); }

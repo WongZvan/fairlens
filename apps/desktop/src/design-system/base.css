@@ -1,0 +1,30 @@
+/* 基础样式：工作体/布局原子（四声部之②；签名元素红笔系统随 M4 批注落地） */
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--ade-font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ade-ink);
+  background: var(--ade-bench);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.mono { font-family: var(--ade-font-mono); }
+.muted { color: var(--ade-muted); }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* 动效纪律：克制精准；prefers-reduced-motion 全降级（§12.3） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

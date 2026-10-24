@@ -14,15 +14,16 @@ FairLens 面向按批次组织的面试候选人（客户方授权激活），�
 | [docs/02-开发启动手册.md](docs/02-开发启动手册.md) | 开发前流程顺序：远程仓库/分支保护/环境准备/M0 启动/里程碑节奏/外部资源时机表 |
 | [docs/design-previews/](docs/design-previews/) | 五份设计基线预览（M1 UI 打样的在库参照）：亮色主界面 / 夜墨深色（含设置窗） / 模型连接页 / 四声部字体 / 简历库+导出下拉 |
 
-## 仓库结构（规划，代码 M0 起按此生成）
+## 仓库结构（M0 已落地；core/prompts 于 M1–M3 生成）
 
 ```
 fairlens/
-├─ apps/desktop/        # Tauri 2 桌面应用（React+TS，Rust 薄层 <300 行）
-├─ packages/            # shared(zod 契约) / core(纯逻辑) / prompts(兜底包)
-├─ functions/lease/     # 唯一服务端：~100 行授权租赁函数（CF Worker+KV）
-├─ tools/keygen/        # 激活码签发/吊销/签名 CLI
-└─ dist/                # 提示词/模板/引导 的签名静态分发区
+├─ apps/desktop/        # Tauri 2 桌面应用（React+TS；src-tauri Rust 薄层 <300 行）
+├─ packages/shared/     # ✅ M0：全契约（zod 逐字段，含全部预留类型）
+├─ packages/{core,prompts}/   # M1–M3 生成
+├─ functions/lease/     # 契约已冻结（lease-api.v1.json）；端点实现=M2
+├─ tools/keygen/        # ✅ M0：init（双环境密钥对）；issue 等=M2/M5
+└─ keys/                # 本地密钥（gitignore，绝不入仓）
 ```
 
 ## 版本策略

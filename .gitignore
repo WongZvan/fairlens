@@ -21,3 +21,8 @@ Thumbs.db
 # 日志与临时
 *.log
 tmp/
+
+# 前端构建产物（tauri frontendDist，构建时生成）
+apps/desktop/dist/
+*.tsbuildinfo
+.zcode/

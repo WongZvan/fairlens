@@ -1,0 +1,27 @@
+{
+  "name": "fairlens",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @fairlens/desktop dev",
+    "build": "pnpm -r --filter './packages/*' --filter './tools/*' build",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "contract:export": "pnpm --filter @fairlens/shared export-lease-api",
+    "contract:check": "pnpm --filter @fairlens/shared check-lease-api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "eslint": "^9.30.0",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.0"
+  }
+}

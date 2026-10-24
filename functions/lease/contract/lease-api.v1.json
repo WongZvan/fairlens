@@ -1,0 +1,145 @@
+{
+  "name": "fairlens-lease-api",
+  "version": "v1",
+  "generatedNote": "由 packages/shared/src/lease-api.ts 导出；修改契约后必须重新导出并提交（CI 零漂移校验）",
+  "paths": {
+    "lease": "/v1/lease",
+    "adminProvision": "/v1/admin/provision",
+    "adminRevoke": "/v1/admin/revoke",
+    "adminUnbind": "/v1/admin/unbind"
+  },
+  "schemas": {
+    "LeaseRequest": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "acquire",
+            "renew",
+            "release"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deviceIdHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "aiConfigured": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action",
+        "code",
+        "deviceIdHash"
+      ],
+      "additionalProperties": false
+    },
+    "LeaseResponse": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "enum": [
+                true
+              ]
+            },
+            "lease": {}
+          },
+          "required": [
+            "ok"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "enum": [
+                false
+              ]
+            },
+            "code": {
+              "type": "string",
+              "enum": [
+                "bad-signature",
+                "expired",
+                "revoked",
+                "unknown-code",
+                "slots-full",
+                "lease-expired",
+                "invalid-request",
+                "unauthorized"
+              ]
+            }
+          },
+          "required": [
+            "ok",
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "AdminProvisionRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxN": {
+          "type": "integer",
+          "exclusiveMinimum": true,
+          "minimum": 0
+        },
+        "batchId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "code",
+        "maxN",
+        "batchId"
+      ],
+      "additionalProperties": false
+    },
+    "AdminRevokeRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "AdminUnbindRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "all": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

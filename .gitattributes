@@ -1,0 +1,5 @@
+# 换行纪律：文本统一 LF 入仓（Windows 工作区 autocrlf 由各端自便；契约校验已做归一）
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary

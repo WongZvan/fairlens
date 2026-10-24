@@ -1,0 +1,25 @@
+[package]
+name = "fairlens"
+version = "0.1.0"
+description = "FairLens 桌面应用（Rust 薄层：仅系统能力宿主，业务逻辑零下沉——红线 <300 行，docs/01 §2.3）"
+edition = "2021"
+
+[lib]
+name = "fairlens_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 里程碑增量（按需解锁，勿提前引入）：
+# M1: tauri-plugin-dialog / tauri-plugin-updater
+# M2: tauri-plugin-sql(features sqlite) / machine-uid
+# M3: tauri-plugin-http
+# M5: CDP printToPDF（tauri devtools）

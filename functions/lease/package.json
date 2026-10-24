@@ -1,0 +1,7 @@
+{
+  "name": "@fairlens/lease",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "唯一服务端：授权租赁函数（CF Worker+KV 双环境；实际端点 M2 交付，M0 为契约占位）"
+}
