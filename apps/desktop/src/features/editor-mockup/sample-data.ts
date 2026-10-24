@@ -1,108 +1,64 @@
-/** 样例简历数据（m1.1 打样静态数据；M1 后续由 ResumeDoc+真实编辑器取代） */
+import { ResumeDoc } from '@fairlens/shared';
 
-export interface SampleBullet {
-  id: string;
-  text: string;
-  annotation?: 'red-quantify' | 'red-link' | 'green-gpa' | 'diff';
-}
-export interface SampleEntry {
-  id: string;
-  org: string;
-  role?: string;
-  date: string;
-  bullets: SampleBullet[];
-}
-export interface SampleSection {
-  id: string;
-  title: string;
-  entries?: SampleEntry[];
-  text?: string[];
-}
-
-export const sampleResume: {
-  name: string;
-  intent: string;
-  contact: string;
-  github: string;
-  basics: string[];
-  skills: string[];
-  sections: SampleSection[];
-} = {
-  name: '李思远',
-  intent: '求职意向：产品经理（26 届）',
-  contact: '138****2321 · lisiyuan@mail.com · ',
-  github: 'github.com/lisiyuan',
-  basics: ['武汉 · 可即时到岗', '产品方向：B 端 / 数据'],
-  skills: ['Axure / Figma · SQL（基础）', 'Python（数据分析）· 英语 CET-6'],
+/** m1.4 起打样画布改挂真编辑器：此为初始样例文档（blockId 稳定不随刷新变——快照/批注锚点要求） */
+export const sampleDoc: ResumeDoc = ResumeDoc.parse({
+  templateId: 'tpl-classic',
   sections: [
     {
-      id: 'edu',
+      id: 'SecBas1c0001',
+      type: 'basic',
+      title: '基本信息',
+      entries: [],
+    },
+    {
+      id: 'SecEdu00001A',
+      type: 'education',
       title: '教育经历',
       entries: [
         {
-          id: 'hust',
+          id: 'EntHust0001A',
           org: '华中科技大学',
           role: '软件工程 · 本科',
-          date: '2022.09 – 2026.06',
-          bullets: [{ id: 'gpa', text: 'GPA 3.6 / 4.0，主修产品设计、数据分析方向课程', annotation: 'green-gpa' }],
+          start: '2022.09',
+          end: '2026.06',
+          bullets: [{ id: 'BulGpa00001A', runs: [{ text: 'GPA 3.6 / 4.0，主修产品设计、数据分析方向课程' }] }],
         },
       ],
     },
     {
-      id: 'exp',
+      id: 'SecExp00001A',
+      type: 'experience',
       title: '实习经历',
       entries: [
         {
-          id: 'bytedance',
+          id: 'EntByte0001A',
           org: '字节跳动',
           role: '产品实习生 · 创作者工具',
-          date: '2025.06 – 2025.09',
+          start: '2025.06',
+          end: '2025.09',
           bullets: [
-            { id: 'report', text: '负责创作者后台的调研与需求梳理，输出 12 份竞品分析报告', annotation: 'red-quantify' },
-            { id: 'diff', text: '', annotation: 'diff' },
+            { id: 'BulRpt00001A', runs: [{ text: '负责创作者后台的调研与需求梳理，输出 12 份竞品分析报告' }] },
+            { id: 'BulDif00001A', runs: [{ text: '主导搜索改版的用户反馈分析，搭建埋点看板，问题定位效率提升 40%' }] },
           ],
         },
         {
-          id: 'meituan',
+          id: 'EntMeit0001A',
           org: '美团',
           role: '产品运营实习生',
-          date: '2024.06 – 2024.09',
-          bullets: [{ id: 'community', text: '负责商家社群运营，策划 3 场促活活动，社群月活跃度提升 25%' }],
-        },
-      ],
-    },
-    {
-      id: 'proj',
-      title: '项目经历',
-      entries: [
-        {
-          id: 'bookloop',
-          org: '校园二手书平台「书循环」',
-          role: '联合创始人',
-          date: '2023.03 – 至今',
-          bullets: [
-            {
-              id: 'growth',
-              text: '负责产品 0 到 1：需求分析、原型设计与 MVP 上线，6 个月积累用户 4000+，促成交易 1200+ 笔',
-              annotation: 'red-link',
-            },
-          ],
+          start: '2024.06',
+          end: '2024.09',
+          bullets: [{ id: 'BulCom00001A', runs: [{ text: '负责商家社群运营，策划 3 场促活活动，社群月活跃度提升 25%' }] }],
         },
       ],
     },
   ],
-};
+});
 
-export const diffPair = {
-  del: '参与搜索改版项目，负责部分数据整理与跟进',
-  ins: '主导搜索改版的用户反馈分析，搭建埋点看板，问题定位效率提升 40%',
-};
-
+/* 打样期静态批注展示数据（评估面板/红笔——M4 真数据接管）保留原样 */
 export const findings = [
-  { sev: 'hi', target: 'report', title: '实习经历缺量化成果', sub: '字节 · 第 1 条：补充被采纳数/影响' },
-  { sev: 'hi', target: 'diff', title: '「参与/负责部分」表述弱化贡献', sub: '已给出改写建议（画布内联）' },
-  { sev: 'sug', target: 'gpa', title: '教育经历建议附专业排名', sub: 'GPA 3.6 具备展示价值' },
-  { sev: 'mid', target: 'growth', title: '项目建议附仓库/演示链接', sub: '岗位 JD 强调作品集' },
+  { sev: 'hi', target: 'BulRpt00001A', title: '实习经历缺量化成果', sub: '字节 · 第 1 条：补充被采纳数/影响' },
+  { sev: 'hi', target: 'BulDif00001A', title: '「参与/负责部分」表述弱化贡献', sub: '已给出改写建议（画布内联）' },
+  { sev: 'sug', target: 'BulGpa00001A', title: '教育经历建议附专业排名', sub: 'GPA 3.6 具备展示价值' },
 ] as const;
 
 export const dims = [

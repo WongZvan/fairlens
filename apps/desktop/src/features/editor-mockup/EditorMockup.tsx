@@ -3,8 +3,10 @@ import {
   PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import { useMockup } from '../../stores/mockup.js';
-import { Paper } from './Paper.js';
+import { CanvasEditor } from '../editor/CanvasEditor.js';
+import { sampleDoc } from './sample-data.js';
 import { dims, findings } from './sample-data.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
@@ -42,6 +44,7 @@ function Rail({ side }: { side: 'left' | 'right' }) {
 function CenterPane() {
   const { t } = useTranslation();
   const { template, zoom, setTemplate, setZoom } = useMockup();
+  const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
   return (
     <section className="m-center">
       <div className="m-toolbar">
@@ -58,7 +61,7 @@ function CenterPane() {
       </div>
       <div className="m-canvas">
         <div className="paper-host" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
-          <Paper template={template} />
+          <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} />
         </div>
         <div className="pagebreak mono">{t('editor.pagebreak')}</div>
       </div>

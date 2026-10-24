@@ -21,6 +21,8 @@ export default tseslint.config(
       ],
     },
     rules: {
+      // 签名保持位（如 handlePaste 第三参 slice）按约定前缀豁免
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'boundaries/element-types': [
         'error',
         {

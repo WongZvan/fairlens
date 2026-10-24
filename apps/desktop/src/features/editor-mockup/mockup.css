@@ -77,3 +77,7 @@
 .rail:hover { color: var(--ade-accent); border-color: var(--ade-accent); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2); }
 .rail-left { left: 10px; }
 .rail-right { right: 10px; }
+
+/* 真画布容器（m1.4）：模板 printCSS 注入后纸面由 Tiptap 渲染 */
+.canvas-wrap { flex: none; }
+.fl-host .ProseMirror { outline: none; }

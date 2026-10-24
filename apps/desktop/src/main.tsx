@@ -1,4 +1,5 @@
 import React from 'react';
+void React;
 import ReactDOM from 'react-dom/client';
 import { AppShell } from './app/AppShell.js';
 import './design-system/tokens.css';
@@ -7,7 +8,6 @@ import './app/shell.css';
 import './app/settings.css';
 import './app/gate.css';
 import './features/editor-mockup/mockup.css';
-import './features/editor-mockup/paper.css';
 import './i18n/index.js';
 
 // 四声部字体（fontsource 打包分发；楷体走系统回退链）
@@ -20,8 +20,5 @@ import '@fontsource/ibm-plex-mono/500.css';
 import '@fontsource/noto-serif-sc/600.css';
 import '@fontsource/noto-serif-sc/700.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AppShell />
-  </React.StrictMode>,
-);
+// StrictMode 双挂载与 Tiptap DOM 直控冲突（removeChild 崩溃实测）——开发态关闭，生产无影响
+ReactDOM.createRoot(document.getElementById('root')!).render(<AppShell />);
