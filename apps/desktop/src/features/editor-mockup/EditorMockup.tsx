@@ -1,22 +1,41 @@
 import {
-  ChevronDown, FileText, GripVertical, Minus, PanelLeftClose, PanelRightClose, Plus,
-  Redo2, ScanSearch, Sparkles, Undo2,
+  ChevronDown, FileText, GripVertical, Minus, PanelLeftClose, PanelLeftOpen, PanelRightClose,
+  PanelRightOpen, Plus, Redo2, ScanSearch, Sparkles, Undo2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMockup } from '../../stores/mockup.js';
 import { Paper } from './Paper.js';
 import { dims, findings } from './sample-data.js';
 
-/** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠/主题（TitleBar） */
+/** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
 export function EditorMockup() {
   const leftOpen = useMockup((s) => s.leftOpen);
   const rightOpen = useMockup((s) => s.rightOpen);
   return (
     <div className="editor-mock">
-      <OutlineTree closed={!leftOpen} />
+      {leftOpen ? <OutlineTree /> : <Rail side="left" />}
       <CenterPane />
-      <EvalPanel closed={!rightOpen} />
+      {rightOpen ? <EvalPanel /> : <Rail side="right" />}
     </div>
+  );
+}
+
+/** 折叠后的边缘细轨：展开按钮必须存活于折叠容器之外（宽度归零会吞掉内部按钮） */
+function Rail({ side }: { side: 'left' | 'right' }) {
+  const { t } = useTranslation();
+  const toggleLeft = useMockup((s) => s.toggleLeft);
+  const toggleRight = useMockup((s) => s.toggleRight);
+  const Icon = side === 'left' ? PanelLeftOpen : PanelRightOpen;
+  const label = side === 'left' ? t('editor.showOutline') : t('editor.showEval');
+  return (
+    <button
+      className={`rail rail-${side}`}
+      onClick={side === 'left' ? toggleLeft : toggleRight}
+      aria-label={label}
+      title={label}
+    >
+      <Icon size={15} />
+    </button>
   );
 }
 
@@ -58,16 +77,9 @@ function ZoomCtl({ zoom, setZoom }: { zoom: number; setZoom: (z: number) => void
   );
 }
 
-function OutlineTree({ closed }: { closed: boolean }) {
+function OutlineTree() {
   const { t } = useTranslation();
   const toggleLeft = useMockup((s) => s.toggleLeft);
-  if (closed) {
-    return (
-      <aside className="m-left closed" aria-label={t('editor.outline')}>
-        <button className="m-btn" onClick={toggleLeft} style={{ margin: '4px auto', display: 'flex' }} aria-label={t('editor.showOutline')}><PanelLeftClose size={14} className="flip" /></button>
-      </aside>
-    );
-  }
   return (
     <aside className="m-left" aria-label={t('editor.outline')}>
       <button className="m-btn" onClick={toggleLeft} style={{ margin: '0 4px 10px', padding: '4px 10px' }} aria-label={t('editor.hideOutline')}>
@@ -91,16 +103,9 @@ function OutlineTree({ closed }: { closed: boolean }) {
   );
 }
 
-function EvalPanel({ closed }: { closed: boolean }) {
+function EvalPanel() {
   const { t } = useTranslation();
   const toggleRight = useMockup((s) => s.toggleRight);
-  if (closed) {
-    return (
-      <aside className="m-right closed" aria-label={t('editor.evalPanel')}>
-        <button className="m-btn" onClick={toggleRight} style={{ margin: '4px auto', display: 'flex' }} aria-label={t('editor.showEval')}><PanelRightClose size={14} className="flip" /></button>
-      </aside>
-    );
-  }
   return (
     <aside className="m-right m-eval" aria-label={t('editor.evalPanel')}>
       <button className="m-btn" onClick={toggleRight} style={{ padding: '4px 10px', marginBottom: 8 }} aria-label={t('editor.hideEval')}>
