@@ -9,6 +9,8 @@ import { Link } from '@tiptap/extension-link';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { ResumeDoc, Section } from '@fairlens/shared';
+import { nanoid as nanoidGen } from '../../lib/nanoid.js';
+const nanoid12 = () => nanoidGen(12);
 
 export const BLOCK_ID = 'data-block-id' as const;
 
@@ -109,11 +111,35 @@ export const BulletNode = Node.create({
   addAttributes() {
     return { id: blockIdAttr() };
   },
+  addKeyboardShortcuts() {
+    // Enter：当前 bullet 内新起一条 bullet（同 entry 语义）；Shift+Enter：同 bullet 软换行
+    return {
+      Enter: () => {
+        if (!this.editor.isActive('flBullet')) return false;
+        return this.editor.chain().focus().splitBlock({ keepMarks: false }).updateAttributes('flBullet', { id: nanoid12() }).run();
+      },
+      'Shift-Enter': () => this.editor.commands.insertContent({ type: 'hardBreak' }),
+    };
+  },
   parseHTML() {
     return [{ tag: 'li[data-type="fl-bullet"]' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ['li', mergeAttributes(HTMLAttributes, { 'data-type': 'fl-bullet' }), 0];
+  },
+});
+
+/** 软换行（Shift+Enter 产物；§5.2 权限矩阵补注：属于内容结构，非格式控制） */
+export const HardBreakNode = Node.create({
+  name: 'hardBreak',
+  group: 'inline',
+  inline: true,
+  selectable: false,
+  parseHTML() {
+    return [{ tag: 'br' }];
+  },
+  renderHTML() {
+    return ['br'];
   },
 });
 
@@ -158,6 +184,7 @@ export const linkClickPlugin = Extension.create({
 
 export const flExtensions = [
   linkClickPlugin,
+  HardBreakNode,
   SectionNode,
   SectionHeaderNode,
   EntryNode,
@@ -180,6 +207,7 @@ interface PMNode {
 function runsOf(pm: PMNode | undefined): Array<{ text: string; bold?: true; italic?: true; href?: string }> {
   if (!pm?.content) return [];
   return pm.content.flatMap((c) => {
+    if (c.type === 'hardBreak') return [{ text: '\n' }];
     if (c.type !== 'text' || !c.text) return [];
     const run: { text: string; bold?: true; italic?: true; href?: string } = { text: c.text };
     for (const m of c.marks ?? []) {
@@ -253,13 +281,19 @@ export function resumeDocToPm(doc: ResumeDoc): PMNode {
             ...e.bullets.map((b) => ({
               type: 'flBullet',
               attrs: { id: b.id },
-              content: b.runs.map((r) => {
-                const marks: PMNode['marks'] = [];
-                if (r.bold) marks!.push({ type: 'bold' });
-                if (r.italic) marks!.push({ type: 'italic' });
-                if (r.href) marks!.push({ type: 'link', attrs: { href: r.href } });
-                return { type: 'text', text: r.text, ...(marks!.length ? { marks: marks } : {}) };
-              }),
+              content: b.runs.flatMap((r) =>
+                r.text.split('\n').flatMap((seg, i) => {
+                  const parts: PMNode[] = [];
+                  if (i > 0) parts.push({ type: 'hardBreak' });
+                  if (seg.length === 0) return parts;
+                  const marks: PMNode['marks'] = [];
+                  if (r.bold) marks!.push({ type: 'bold' });
+                  if (r.italic) marks!.push({ type: 'italic' });
+                  if (r.href) marks!.push({ type: 'link', attrs: { href: r.href } });
+                  parts.push({ type: 'text', text: seg, ...(marks!.length ? { marks } : {}) });
+                  return parts;
+                }),
+              ),
             })),
           ],
         })),

@@ -7,6 +7,7 @@ import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
 import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
 import { resolveShortcut } from '../editor/shortcuts.js';
+import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
 import { CommandPalette } from './CommandPalette.js';
 import { sampleDoc } from './sample-data.js';
@@ -17,6 +18,45 @@ export function EditorMockup() {
   const leftOpen = useMockup((s) => s.leftOpen);
   const rightOpen = useMockup((s) => s.rightOpen);
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // 命令注册（当前可用命令；后续模块随手挂：评估/走查/导出/设置…）
+  useEffect(() => {
+    const offs = [
+      commandRegistry.register({
+        id: 'view.back-library', title: '返回简历库', hint: 'Ctrl+Alt+←', keywords: ['返回', '简历库'],
+        run: () => window.dispatchEvent(new CustomEvent('fl:back-library')),
+      }),
+      commandRegistry.register({
+        id: 'view.toggle-left', title: '收起/展开大纲', hint: '', keywords: ['大纲', '侧栏'],
+        run: () => useMockup.getState().toggleLeft(),
+      }),
+      commandRegistry.register({
+        id: 'view.toggle-right', title: '收起/展开评估面板', hint: '', keywords: ['评估', '侧栏'],
+        run: () => useMockup.getState().toggleRight(),
+      }),
+      commandRegistry.register({
+        id: 'view.zoom-fit-width', title: '缩放：适应宽度', keywords: ['缩放', '铺满'],
+        run: () => useMockup.getState().setZoomMode('fit-width'),
+      }),
+      commandRegistry.register({
+        id: 'view.zoom-fit-page', title: '缩放：适应整页', keywords: ['缩放', '整页'],
+        run: () => useMockup.getState().setZoomMode('fit-page'),
+      }),
+      commandRegistry.register({
+        id: 'view.zoom-100', title: '缩放：实际尺寸（100%）', keywords: ['缩放', '实际'],
+        run: () => useMockup.getState().setZoomMode(1),
+      }),
+      commandRegistry.register({
+        id: 'edit.entry-duplicate', title: '复制当前条目', hint: 'Ctrl+D', keywords: ['复制', '条目'],
+        devOnly: false, run: () => useMockup.getState().bumpZoom(0),
+      }),
+      commandRegistry.register({
+        id: 'dev.reload-packs', title: '[开发] 重载提示词包', devOnly: true,
+        run: () => console.log('[m1.5] reload packs（M2 接管）'),
+      }),
+    ];
+    return () => offs.forEach((off) => off());
+  }, []);
   const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
   const editorApiRef = useRef<EditorApi | null>(null);
 
@@ -30,6 +70,13 @@ export function EditorMockup() {
       ),
     }));
   };
+
+  // 命令事件：返回简历库
+  useEffect(() => {
+    const onBack = () => { const b = [...document.querySelectorAll('button')].find((x) => x.getAttribute('aria-label') === '返回简历库'); b?.click(); };
+    window.addEventListener('fl:back-library', onBack);
+    return () => window.removeEventListener('fl:back-library', onBack);
+  }, []);
 
   // 全局快捷键（§5.10；编辑器内键位由 Tiptap 自理，此处管全局态）
   useEffect(() => {
