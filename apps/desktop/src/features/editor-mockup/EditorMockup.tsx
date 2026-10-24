@@ -1,6 +1,6 @@
 import {
-  ChevronDown, FileText, GripVertical, Minus, PanelLeftClose, PanelLeftOpen, PanelRightClose,
-  PanelRightOpen, Plus, Redo2, ScanSearch, Sparkles, Undo2,
+  ChevronDown, ChevronLeft, ChevronRight, FileText, GripVertical, Minus, PanelLeftClose,
+  PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMockup } from '../../stores/mockup.js';
@@ -20,12 +20,12 @@ export function EditorMockup() {
   );
 }
 
-/** 折叠后的边缘细轨：展开按钮必须存活于折叠容器之外（宽度归零会吞掉内部按钮） */
+/** 折叠后的抽屉把手：小箭头（‹ / ›）拉开，边缘细轨存活于折叠容器之外 */
 function Rail({ side }: { side: 'left' | 'right' }) {
   const { t } = useTranslation();
   const toggleLeft = useMockup((s) => s.toggleLeft);
   const toggleRight = useMockup((s) => s.toggleRight);
-  const Icon = side === 'left' ? PanelLeftOpen : PanelRightOpen;
+  const Icon = side === 'left' ? ChevronLeft : ChevronRight;
   const label = side === 'left' ? t('editor.showOutline') : t('editor.showEval');
   return (
     <button
@@ -34,7 +34,7 @@ function Rail({ side }: { side: 'left' | 'right' }) {
       aria-label={label}
       title={label}
     >
-      <Icon size={13} />
+      <Icon size={15} strokeWidth={2.2} />
     </button>
   );
 }
