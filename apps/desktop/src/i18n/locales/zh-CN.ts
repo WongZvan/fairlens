@@ -35,6 +35,21 @@ export default {
     mockNote: '此面板为壳（{{module}} 交付真功能：激活管理/主题与字号/自动保存·样式·画布背景/模型连接/版本与日志）',
   },
   common: { close: '关闭' },
+  palette: {
+    title: '命令面板',
+    placeholder: '输入命令…（↑↓ 选择，Enter 执行，Esc 关闭）',
+    empty: '没有匹配的命令',
+  },
+  actions: {
+    saveNow: '立即保存',
+    evaluate: '运行全篇评估',
+    walkthrough: 'AI 走查',
+    duplicateBlock: '复制当前条目',
+    find: '在简历中查找',
+    backLibrary: '返回简历库',
+    toggleLeft: '收起/展开大纲',
+    toggleRight: '收起/展开评估面板',
+  },
   gate: {
     title: '激活 FairLens',
     subtitle: '输入客户方提供的激活码开始使用',

@@ -50,7 +50,7 @@ export const SectionHeaderNode = Node.create({
     return { id: blockIdAttr() };
   },
   parseHTML() {
-    return [{ tag: 'h3[data-type="fl-section-header"]`' }];
+    return [{ tag: 'h3[data-type="fl-section-header"]' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ['h3', mergeAttributes(HTMLAttributes, { 'data-type': 'fl-section-header' }), 0];
@@ -92,7 +92,7 @@ export const EntryHeaderNode = Node.create({
     return { id: blockIdAttr() };
   },
   parseHTML() {
-    return [{ tag: 'header[data-type="fl-entry-header"]`' }];
+    return [{ tag: 'header[data-type="fl-entry-header"]' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ['header', mergeAttributes(HTMLAttributes, { 'data-type': 'fl-entry-header' }), 0];
@@ -109,7 +109,7 @@ export const BulletNode = Node.create({
     return { id: blockIdAttr() };
   },
   parseHTML() {
-    return [{ tag: 'li[data-type="fl-bullet"]`' }];
+    return [{ tag: 'li[data-type="fl-bullet"]' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ['li', mergeAttributes(HTMLAttributes, { 'data-type': 'fl-bullet' }), 0];

@@ -12,6 +12,7 @@ import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { FloatingToolbar } from './FloatingToolbar.js';
 import { useEffect, useMemo } from 'react';
 import type { DocStyle, ResumeDoc } from '@fairlens/shared';
 import { validateDocStyleAgainstManifest } from '@fairlens/shared';
@@ -20,14 +21,21 @@ import { usePasteNormalization } from './use-paste-normalization.js';
 import { resolveStyleVars } from './style-vars.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 
+export interface EditorApi {
+  undo: () => void;
+  redo: () => void;
+}
+
 export interface CanvasEditorProps {
   doc: ResumeDoc;
   onDocChange: (doc: ResumeDoc) => void;
+  /** 编辑器就绪后暴露 undo/redo（工具栏按钮/快捷键消费） */
+  onReady?: (api: EditorApi) => void;
   /** 结构 gating（§5.2）：增删条目等命令经 manifest 校验；编辑自由 */
   onStructureGate?: (manifestId: string) => void;
 }
 
-export function CanvasEditor({ doc, onDocChange }: CanvasEditorProps) {
+export function CanvasEditor({ doc, onDocChange, onReady }: CanvasEditorProps) {
   const builtin = getBuiltinTemplate(doc.templateId);
   const manifest = builtin?.manifest;
 
@@ -62,14 +70,15 @@ export function CanvasEditor({ doc, onDocChange }: CanvasEditorProps) {
   const templateCss = builtin?.printCss ?? '';
   const styleVars = resolveStyleVars(manifest, effectiveStyle);
   useEffect(() => {
-    // editor 实例化/内容重置由 content prop 变化驱动（templateId dep 重建）
-  }, [editor]);
+    if (editor && onReady) onReady({ undo: () => editor.chain().focus().undo().run(), redo: () => editor.chain().focus().redo().run() });
+  }, [editor, onReady]);
 
   return (
     <div className="canvas-wrap">
       <style>{templateCss}</style>
       <div className="fl-host" style={styleVars as React.CSSProperties} data-template={doc.templateId}>
         <EditorContent editor={editor} />
+        <FloatingToolbar editor={editor} />
       </div>
       <PageGuides />
     </div>

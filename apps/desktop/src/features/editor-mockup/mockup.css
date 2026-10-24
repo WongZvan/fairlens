@@ -101,3 +101,35 @@
 
 .zoom-ctl .mode { width: auto; min-width: 58px; padding: 0 6px; font-size: 11px; color: var(--ade-ink); }
 .zoom-ctl .mode:hover { background: var(--ade-hover); }
+
+/* 命令面板（m1.5） */
+.palette {
+  width: 460px; max-width: calc(100vw - 48px); align-self: flex-start; margin-top: 12vh;
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35); overflow: hidden;
+}
+.settings-overlay:has(.palette) { align-items: flex-start; }
+.palette-input {
+  display: flex; align-items: center; gap: 8px; padding: 11px 14px;
+  border-bottom: 1px solid var(--ade-line); color: var(--ade-muted);
+}
+.palette-input input { flex: 1; border: none; outline: none; background: transparent; color: var(--ade-ink); font-size: 13.5px; }
+.palette-list { list-style: none; margin: 0; padding: 6px; max-height: 320px; overflow: auto; }
+.palette-list li {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px;
+  font-size: 13px; color: var(--ade-ink); cursor: pointer;
+}
+.palette-list li .muted { margin-left: auto; font-size: 10.5px; }
+.palette-list li.on { background: var(--ade-accent-soft); }
+.palette-list li.on .enter { color: var(--ade-accent); margin-left: 8px; }
+.palette-list li.empty { cursor: default; justify-content: center; font-size: 12px; }
+.flash-jump { animation: flashjump 0.9s ease-out; }
+@keyframes flashjump { 0% { box-shadow: 0 0 0 0 rgba(51, 81, 142, 0.4); } 100% { box-shadow: 0 0 0 16px rgba(51, 81, 142, 0); } }
+
+/* 悬浮工具条（m1.5 实装版，BubbleMenu 跟随选区） */
+.float-bar.live { position: static; top: auto; left: auto; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
+.float-bar.live button { width: 26px; height: 24px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
+.float-bar.live button:hover { background: var(--ade-hover); }
+.float-bar.live button.on { background: var(--ade-accent-soft); color: var(--ade-accent); }
+.float-bar.live .ai { width: auto; padding: 0 8px; gap: 4px; font-size: 12px; color: var(--ade-accent); }
+.float-bar.live .ai:disabled { opacity: 0.4; cursor: default; }

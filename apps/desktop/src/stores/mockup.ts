@@ -13,6 +13,7 @@ interface MockupState {
   zoom: number;
   leftOpen: boolean;
   rightOpen: boolean;
+  dirty?: boolean; // m1.6 持久层接管前的保存标记占位
   setTemplate: (t: MockTemplate) => void;
   setZoomMode: (m: ZoomMode) => void;
   setResolvedZoom: (z: number) => void; // fit 模式的动态解析写入

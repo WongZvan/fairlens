@@ -1,11 +1,14 @@
 import {
-  ChevronDown, ChevronLeft, ChevronRight, FileText, GripVertical, Minus, PanelLeftClose,
-  PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
+  ChevronLeft, ChevronRight, FileText, Minus, PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
+import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
-import { CanvasEditor } from '../editor/CanvasEditor.js';
+import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
+import { resolveShortcut } from '../editor/shortcuts.js';
+import { OutlineTreeLive } from './OutlineTreeLive.js';
+import { CommandPalette } from './CommandPalette.js';
 import { sampleDoc } from './sample-data.js';
 import { dims, findings } from './sample-data.js';
 
@@ -13,11 +16,62 @@ import { dims, findings } from './sample-data.js';
 export function EditorMockup() {
   const leftOpen = useMockup((s) => s.leftOpen);
   const rightOpen = useMockup((s) => s.rightOpen);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
+  const editorApiRef = useRef<EditorApi | null>(null);
+
+  const reorderEntry = (sectionId: string, from: number, to: number) => {
+    setCanvasDoc((d) => ({
+      ...d,
+      sections: d.sections.map((sec) =>
+        sec.id === sectionId
+          ? { ...sec, entries: sec.entries.map((e, i, arr) => (i === from ? arr[to]! : i === to ? arr[from]! : e)) }
+          : sec,
+      ),
+    }));
+  };
+
+  // 全局快捷键（§5.10；编辑器内键位由 Tiptap 自理，此处管全局态）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const inEditor = !!document.activeElement?.closest('.ProseMirror');
+      const hasSelection = inEditor && !window.getSelection()?.isCollapsed;
+      const action = resolveShortcut(
+        { ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey, key: e.key },
+        { hasSelection, inEditor },
+      );
+      switch (action) {
+        case 'command-palette':
+          e.preventDefault();
+          setPaletteOpen((o) => !o);
+          break;
+        case 'save':
+          e.preventDefault();
+          useMockup.setState({ dirty: false }); // 持久层 m1.6 接管；先清 dirty 标记模拟
+          break;
+        case 'evaluate':
+        case 'revise-block':
+        case 'find':
+          e.preventDefault(); // M3/M4 真实现接管；先吞键防浏览器默认（Ctrl+F 搜索栏）
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="editor-mock">
-      {leftOpen ? <OutlineTree /> : <Rail side="left" />}
-      <CenterPane />
+      {leftOpen ? (
+        <OutlineTreeLive doc={canvasDoc} onReorderEntry={reorderEntry} />
+      ) : (
+        <Rail side="left" />
+      )}
+      <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={setCanvasDoc} editorApiRef={editorApiRef} />
       {rightOpen ? <EvalPanel /> : <Rail side="right" />}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
@@ -41,10 +95,15 @@ function Rail({ side }: { side: 'left' | 'right' }) {
   );
 }
 
-function CenterPane() {
+interface CenterPaneProps {
+  canvasDoc: ResumeDoc;
+  onCanvasDocChange: (d: ResumeDoc) => void;
+  editorApiRef: React.MutableRefObject<EditorApi | null>;
+}
+function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef }: CenterPaneProps) {
   const { t } = useTranslation();
   const { template, zoomMode, zoom, setTemplate } = useMockup();
-  const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
+  const setCanvasDoc = onCanvasDocChange;
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [paperLayoutW, setPaperLayoutW] = useState(794);
@@ -106,8 +165,8 @@ function CenterPane() {
           <button aria-pressed={template === 'duo'} onClick={() => setTemplate('duo')}>{t('editor.tplDuo')}</button>
         </div>
         <span style={{ flex: 1 }} />
-        <button className="m-btn" disabled title={t('editor.mockOnly')}><Undo2 size={14} /></button>
-        <button className="m-btn" disabled title={t('editor.mockOnly')}><Redo2 size={14} /></button>
+        <button className="m-btn" title={t('editor.mockOnly')} onClick={() => editorApiRef.current?.undo()}><Undo2 size={14} /></button>
+        <button className="m-btn" title={t('editor.mockOnly')} onClick={() => editorApiRef.current?.redo()}><Redo2 size={14} /></button>
         <button className="m-btn" title={t('editor.mockOnly')}><ScanSearch size={14} />{t('editor.walkthrough')}</button>
         <button className="m-btn primary" title={t('editor.mockOnly')}><Sparkles size={14} />{t('editor.evaluate')}</button>
       </div>
@@ -119,7 +178,7 @@ function CenterPane() {
         */}
         <div className="paper-host" style={{ width: paperLayoutW * zoom + 48 }} ref={hostRef}>
           <div className="paper-scale" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-            <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} />
+            <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} onReady={(api) => { editorApiRef.current = api; }} />
           </div>
         </div>
         <div className="pagebreak mono">{t('editor.pagebreak')}</div>
@@ -147,32 +206,6 @@ function ZoomCtl() {
       }}>{label}</button>
       <button aria-label={t('editor.zoomIn')} onClick={() => bump(0.1)}><Plus size={14} /></button>
     </div>
-  );
-}
-
-function OutlineTree() {
-  const { t } = useTranslation();
-  const toggleLeft = useMockup((s) => s.toggleLeft);
-  return (
-    <aside className="m-left" aria-label={t('editor.outline')}>
-      <button className="m-btn" onClick={toggleLeft} style={{ margin: '0 4px 10px', padding: '4px 10px' }} aria-label={t('editor.hideOutline')}>
-        <PanelLeftClose size={14} />{t('editor.collapse')}
-      </button>
-      <h2 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: 'var(--ade-muted)', margin: '2px 4px 8px' }}>{t('editor.outline')}</h2>
-      <div className="tree-item"><ChevronDown size={14} />{t('paper.basic')}</div>
-      <div className="tree-item"><ChevronDown size={14} />{t('paper.edu')}</div>
-      <div className="tree-item sub">华中科技大学</div>
-      <div className="tree-item"><ChevronDown size={14} />{t('paper.exp')}</div>
-      <div className="tree-item sub active"><GripVertical size={12} />字节跳动 · 产品实习</div>
-      <div className="tree-item sub"><GripVertical size={12} />美团 · 产品运营实习</div>
-      <div className="tree-item"><ChevronDown size={14} />{t('paper.proj')}</div>
-      <div className="tree-item sub">书循环 · 联合创始人</div>
-      <div className="tree-item"><ChevronDown size={14} />{t('paper.skills')}</div>
-      <p className="tpl-note">
-        {t('editor.currentTemplate')}：<b>{t(useMockup.getState().template === 'duo' ? 'editor.tplDuo' : 'editor.tplClassic')}</b>
-        <br />{t('editor.tplNote')}
-      </p>
-    </aside>
   );
 }
 
