@@ -34,7 +34,7 @@ function Rail({ side }: { side: 'left' | 'right' }) {
       aria-label={label}
       title={label}
     >
-      <Icon size={15} />
+      <Icon size={13} />
     </button>
   );
 }

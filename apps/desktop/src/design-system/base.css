@@ -28,3 +28,15 @@ button {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* 轻量隐形滚动条（全局）：透明轨道 + 主题色细滑块，hover 显现 */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--ade-line);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--ade-muted); background-clip: padding-box; }
+*::-webkit-scrollbar-corner { background: transparent; }

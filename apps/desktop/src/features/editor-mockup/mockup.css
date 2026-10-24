@@ -65,7 +65,6 @@
 .m-eval .cta { font-size: 12.5px; width: 100%; justify-content: center; display: flex; gap: 6px; margin-top: 8px; border-radius: 6px; padding: 8px 0; background: var(--ade-accent); color: #fff; }
 
 /* 折叠后的边缘细轨（展开键存活于折叠容器之外） */
-.rail { flex: none; width: 24px; display: flex; align-items: center; justify-content: center; background: var(--ade-panel); color: var(--ade-muted); }
-.rail:hover { color: var(--ade-accent); }
-.rail-left { border-right: 1px solid var(--ade-line); }
-.rail-right { border-left: 1px solid var(--ade-line); }
+/* 折叠后的边缘细轨：14px 幽灵态，hover 才显色 */
+.rail { flex: none; width: 14px; display: flex; align-items: center; justify-content: center; background: transparent; color: var(--ade-muted); opacity: .45; transition: opacity 120ms, color 120ms; }
+.rail:hover { opacity: 1; color: var(--ade-accent); }
