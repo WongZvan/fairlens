@@ -26,9 +26,11 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
     <BubbleMenu
       editor={editor}
       options={{ placement: 'top', offset: 8 }}
-      shouldShow={({ editor: ed, from, to }) => {
-        if (from !== to || ed.state.selection.empty) return true;
-        return false;
+      shouldShow={({ from, to }) => {
+        // ① 仅"真实文字选区"时出现（光标态不出现，不遮挡阅读）；② 右键菜单打开时不出现（职责分离 #93）
+        if (from === to) return false;
+        if (document.querySelector('.ctx-menu')) return false;
+        return true;
       }}
     >
       <div className="float-bar live" role="toolbar" aria-label="文字格式">
