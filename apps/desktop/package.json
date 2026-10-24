@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run --root ."
   },
   "dependencies": {
     "@fairlens/shared": "workspace:*",
@@ -24,6 +25,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "vitest": "^3.2.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.6.0",
