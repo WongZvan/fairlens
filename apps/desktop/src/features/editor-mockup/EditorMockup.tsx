@@ -3,7 +3,7 @@ import {
   PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMockup } from '../../stores/mockup.js';
 import { CanvasEditor } from '../editor/CanvasEditor.js';
 import { sampleDoc } from './sample-data.js';
@@ -45,6 +45,19 @@ function CenterPane() {
   const { t } = useTranslation();
   const { template, zoom, setTemplate, setZoom } = useMockup();
   const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
+
+  // Ctrl+滚轮缩放（§5.2：50–150% 步进 10%；仅 Ctrl 按住时拦截，不劫持普通滚动）
+  useEffect(() => {
+    const onWheel: EventListener = (ev) => {
+      const e = ev as WheelEvent;
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom(useMockup.getState().zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+    };
+    const canvas = document.querySelector('.m-canvas');
+    canvas?.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas?.removeEventListener('wheel', onWheel);
+  }, [setZoom]);
   return (
     <section className="m-center">
       <div className="m-toolbar">
