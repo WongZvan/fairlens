@@ -12,14 +12,7 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const activated = useLicense((s) => s.activated);
   if (!activated) {
-    return (
-      <div className="shell">
-        <TitleBarConnector onSettings={() => setSettingsOpen(true)} />
-        <ActivationGate />
-        <StatusBar />
-        <SettingsWindow open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      </div>
-    );
+    return <ActivationGate />; // 激活门=独立小窗形态（无主窗口 chrome：标题栏/状态栏/主题钮一概不出现）
   }
   return (
     <div className="shell">

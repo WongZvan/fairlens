@@ -1,10 +1,11 @@
-/* 激活门：未激活=全屏门（v0.1 §4.2），通过后进简历库 */
+/* 激活门：Claude 登录式独立小窗——固定尺寸居中，无主窗口 chrome（标题栏/状态栏/主题钮不出现） */
 .gate {
-  flex: 1; display: flex; align-items: center; justify-content: center;
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
   background: var(--ade-bench);
 }
 .gate-card {
-  width: 380px; padding: 36px 40px; text-align: center;
+  width: 360px; padding: 32px 36px 28px; text-align: center;
   background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 10px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
 }
