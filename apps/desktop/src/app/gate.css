@@ -1,0 +1,29 @@
+/* 激活门：未激活=全屏门（v0.1 §4.2），通过后进简历库 */
+.gate {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: var(--ade-bench);
+}
+.gate-card {
+  width: 380px; padding: 36px 40px; text-align: center;
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+}
+.gate-logo { font-size: 13px; letter-spacing: 0.1em; color: var(--ade-accent); margin-bottom: 18px; }
+.gate-card h1 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
+.gate-card > .muted { font-size: 12px; margin: 0 0 22px; }
+.gate-input {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--ade-chrome); border: 1px solid var(--ade-line); border-radius: 7px;
+  padding: 9px 12px; color: var(--ade-muted);
+}
+.gate-input:focus-within { border-color: var(--ade-accent); }
+.gate-input input {
+  flex: 1; border: none; outline: none; background: transparent;
+  color: var(--ade-ink); font-family: var(--ade-font-mono); font-size: 13px; letter-spacing: 0.06em;
+}
+.gate-btn {
+  width: 100%; margin-top: 14px; padding: 9px 0; border-radius: 7px;
+  background: var(--ade-accent); color: #fff; font-size: 13px;
+}
+.gate-btn:disabled { opacity: 0.4; cursor: default; }
+.gate-hint { font-size: 11px; margin: 14px 0 0; }

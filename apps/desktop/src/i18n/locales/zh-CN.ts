@@ -35,6 +35,13 @@ export default {
     mockNote: '此面板为壳（{{module}} 交付真功能：激活管理/主题与字号/自动保存·样式·画布背景/模型连接/版本与日志）',
   },
   common: { close: '关闭' },
+  gate: {
+    title: '激活 FairLens',
+    subtitle: '输入客户方提供的激活码开始使用',
+    placeholder: 'FL-XXXX-XXXX-XXXX',
+    action: '激活',
+    hint: '一码一机；换机请先在原设备解绑（设置 → 激活管理）',
+  },
   paper: {
     basic: '基本信息',
     edu: '教育经历',

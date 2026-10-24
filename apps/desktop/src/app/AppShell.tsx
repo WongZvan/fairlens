@@ -1,5 +1,6 @@
 import { ArrowLeft, FileText } from 'lucide-react';
 import { useState } from 'react';
+import { ActivationGate } from './ActivationGate.js';
 import { SettingsGear, SettingsWindow } from './SettingsWindow.js';
 import { useTranslation } from 'react-i18next';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
@@ -9,6 +10,17 @@ import { useLicense } from '../stores/license.js';
 export function AppShell() {
   const [view, setView] = useState<'library' | 'editor'>('library');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const activated = useLicense((s) => s.activated);
+  if (!activated) {
+    return (
+      <div className="shell">
+        <TitleBarConnector onSettings={() => setSettingsOpen(true)} />
+        <ActivationGate />
+        <StatusBar />
+        <SettingsWindow open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      </div>
+    );
+  }
   return (
     <div className="shell">
       <TitleBarConnector
