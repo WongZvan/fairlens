@@ -1,0 +1,203 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<div id="fairlens-library-preview">
+  <style>
+    #fairlens-library-preview{
+      --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23; --card:#2A2B30;
+      --fg:#E8E6E1; --muted:#9B998F; --line:#3A3B40; --hover:#33343A;
+      --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
+      --ok:#7FB89A; --pen-red:#D96A5F;
+      font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+      font-size:14px; line-height:1.5; color:var(--fg); background:transparent;
+    }
+    #fairlens-library-preview.light{
+      --bench:#F2F1ED; --panel:#F7F6F2; --chrome:#ECEAE4; --card:#FFFFFF;
+      --fg:#1C1D1B; --muted:#8B8983; --line:#E4E2DC; --hover:#ECEAE4;
+      --accent:#33518E; --accent-solid:#33518E; --accent-tint:rgba(51,81,142,.08);
+      --ok:#2E6E4E; --pen-red:#C4372B;
+    }
+    #fairlens-library-preview .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+    #fairlens-library-preview svg{display:block;}
+    #fairlens-library-preview i[data-lucide]{display:inline-flex;}
+    #fairlens-library-preview .caption{font-size:11px; color:#9B998F; margin:0 0 8px;}
+
+    #fairlens-library-preview .win{background:var(--bench); border:1px solid #17181B; border-radius:8px; overflow:hidden; display:flex; flex-direction:column;}
+    #fairlens-library-preview.light .win{border-color:#D9D6CF;}
+    #fairlens-library-preview .titlebar{height:42px; flex:none; display:flex; align-items:center; gap:10px; padding:0 10px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line);}
+    #fairlens-library-preview .titlebar .app{display:flex; align-items:center; gap:9px; font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px;}
+    #fairlens-library-preview .titlebar .app i{color:var(--accent);}
+    #fairlens-library-preview .crumb{font-size:12px; color:var(--muted);}
+    #fairlens-library-preview .wbtns{margin-left:auto; display:flex; gap:2px;}
+    #fairlens-library-preview .wbtn{width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px;}
+    #fairlens-library-preview .wbtn:hover{background:var(--hover); color:var(--fg);}
+    #fairlens-library-preview .wbtn.close:hover{background:#C4372B; color:#fff;}
+    #fairlens-library-preview .wbtn.theme{color:var(--accent); margin-right:2px;}
+    #fairlens-library-preview .ic-sun,#fairlens-library-preview.light .ic-moon{display:none;}
+    #fairlens-library-preview.light .ic-sun{display:inline-flex;}
+
+    #fairlens-library-preview .home{padding:22px 26px 18px;}
+    #fairlens-library-preview .home-head{display:flex; align-items:baseline; gap:12px; margin-bottom:16px;}
+    #fairlens-library-preview .home-head h1{font-family:'Noto Serif SC',serif; font-size:19px; font-weight:600; margin:0; letter-spacing:.06em;}
+    #fairlens-library-preview .home-head .sub{font-size:12px; color:var(--muted);}
+    #fairlens-library-preview .home-head .spacer{flex:1;}
+    #fairlens-library-preview .btn{font:inherit; font-size:12.5px; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:7px 13px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg);}
+    #fairlens-library-preview .btn.primary{background:var(--accent-solid); border-color:var(--accent-solid); color:#fff;}
+    #fairlens-library-preview .btn:hover{border-color:var(--accent);}
+
+    #fairlens-library-preview .create-row{display:flex; gap:12px; margin-bottom:18px; align-items:stretch;}
+    #fairlens-library-preview .tpl-quick{display:flex; gap:10px;}
+    #fairlens-library-preview .tq{width:108px; border:1px solid var(--line); border-radius:8px; background:var(--card); padding:9px 10px 8px; cursor:pointer;}
+    #fairlens-library-preview .tq:hover{border-color:var(--accent);}
+    #fairlens-library-preview .tq .thumb{height:52px; border-radius:4px; background:var(--panel); border:1px solid var(--line); margin-bottom:7px; position:relative; overflow:hidden;}
+    #fairlens-library-preview .tq .thumb i{position:absolute; background:var(--muted); opacity:.5;}
+    #fairlens-library-preview .tq .nm{font-size:11.5px; color:var(--fg);}
+    #fairlens-library-preview .tq .hint{font-size:10px; color:var(--muted); margin-top:1px;}
+    #fairlens-library-preview .dropzone{flex:1; border:1.5px dashed var(--line); border-radius:8px; display:flex; align-items:center; gap:14px; padding:0 18px; color:var(--muted); font-size:12.5px;}
+    #fairlens-library-preview .dropzone b{color:var(--fg); font-weight:500;}
+    #fairlens-library-preview .dropzone .links{margin-left:auto; display:flex; gap:8px;}
+    #fairlens-library-preview .mini{font:inherit; font-size:11.5px; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); background:var(--panel); color:var(--fg); border-radius:6px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
+    #fairlens-library-preview .mini:hover{border-color:var(--accent);}
+
+    #fairlens-library-preview .cards{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+    #fairlens-library-preview .rcard{border:1px solid var(--line); border-radius:8px; background:var(--card); padding:13px 14px 11px; cursor:pointer; position:relative;}
+    #fairlens-library-preview .rcard:hover{border-color:var(--accent);}
+    #fairlens-library-preview .rcard .nm{font-family:'Noto Serif SC',serif; font-size:14.5px; font-weight:600; padding-right:26px;}
+    #fairlens-library-preview .rcard .meta{font-size:11px; color:var(--muted); margin-top:4px; line-height:1.6;}
+    #fairlens-library-preview .rcard .foot{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:10.5px; color:var(--muted);}
+    #fairlens-library-preview .rcard .score{font-family:'IBM Plex Mono',monospace; color:var(--accent); border:1px solid var(--line); border-radius:4px; padding:1px 7px;}
+    #fairlens-library-preview .rcard .more{position:absolute; top:10px; right:10px; color:var(--muted); border:0; background:none; cursor:pointer; padding:2px;}
+    #fairlens-library-preview .rcard .bar{height:3px; border-radius:2px; background:var(--line); overflow:hidden; margin-top:9px;}
+    #fairlens-library-preview .rcard .bar i{display:block; height:100%; background:var(--accent); width:var(--w);}
+    #fairlens-library-preview .home-foot{margin-top:16px; font-size:11px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+
+    #fairlens-library-preview .demo-wrap{margin-top:26px;}
+    #fairlens-library-preview .toolbar-demo{background:var(--bench); border:1px solid #17181B; border-radius:8px; padding:8px 14px 12px; position:relative;}
+    #fairlens-library-preview .tb{height:40px; display:flex; align-items:center; gap:10px;}
+    #fairlens-library-preview .seg{display:flex; border:1px solid var(--line); border-radius:6px; background:var(--panel); overflow:hidden;}
+    #fairlens-library-preview .seg button{font:inherit; font-size:12px; border:0; background:transparent; color:var(--muted); padding:5px 12px; cursor:pointer;}
+    #fairlens-library-preview .seg button[aria-pressed="true"]{background:var(--accent-solid); color:#fff;}
+    #fairlens-library-preview .zoom{font-size:11px; color:var(--muted);}
+    #fairlens-library-preview .menu{position:absolute; top:52px; right:14px; width:264px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; box-shadow:0 16px 44px rgba(0,0,0,.42); z-index:9;}
+    #fairlens-library-preview .menu .grp{font-size:10px; letter-spacing:.14em; color:var(--muted); padding:7px 10px 4px; font-family:'IBM Plex Mono',monospace;}
+    #fairlens-library-preview .menu .it{display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:6px; font-size:12.5px; color:var(--fg); cursor:pointer;}
+    #fairlens-library-preview .menu .it:hover{background:var(--hover);}
+    #fairlens-library-preview .menu .it i{color:var(--muted); flex:none;}
+    #fairlens-library-preview .menu .it .d{font-size:10.5px; color:var(--muted); margin-left:auto; white-space:nowrap;}
+    #fairlens-library-preview .menu .div{border-top:1px solid var(--line); margin:5px 8px;}
+  </style>
+
+  <p class="caption">简历库首页（启动进入 / 关闭文档返回）—— 新建选模板 · 导入 · 卡片管理 · 备份恢复</p>
+  <div class="win">
+    <div class="titlebar">
+      <span class="app"><i data-lucide="pen-line" aria-hidden="true"></i>FAIRLENS</span>
+      <span class="crumb">简历库</span>
+      <div class="wbtns">
+        <span style="flex:1"></span>
+        <button type="button" class="wbtn theme" id="themeBtn" aria-label="切换浅色/深色">
+          <i data-lucide="moon" aria-hidden="true" class="ic-moon"></i><i data-lucide="sun" aria-hidden="true" class="ic-sun"></i>
+        </button>
+        <button type="button" class="wbtn" aria-label="设置"><i data-lucide="settings" aria-hidden="true"></i></button>
+        <button type="button" class="wbtn" aria-label="最小化"><i data-lucide="minus" aria-hidden="true"></i></button>
+        <button type="button" class="wbtn" aria-label="最大化"><i data-lucide="square" aria-hidden="true" style="width:12px;height:12px"></i></button>
+        <button type="button" class="wbtn close" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="home">
+      <div class="home-head">
+        <h1>简历库</h1>
+        <span class="sub">3 份简历 · 数据仅存本机</span>
+        <span class="spacer"></span>
+        <button class="btn" type="button"><i data-lucide="file-archive" aria-hidden="true"></i>备份与恢复</button>
+      </div>
+
+      <div class="create-row">
+        <div class="tpl-quick">
+          <div class="tq">
+            <div class="thumb"><i style="left:16px; right:16px; top:8px; height:4px"></i><i style="left:16px; right:40px; top:18px; height:3px"></i><i style="left:16px; right:16px; top:27px; height:3px"></i><i style="left:16px; right:52px; top:36px; height:3px"></i></div>
+            <div class="nm">经典单栏</div><div class="hint">点击新建</div>
+          </div>
+          <div class="tq">
+            <div class="thumb"><i style="left:8px; width:28px; top:8px; height:34px"></i><i style="left:44px; right:10px; top:9px; height:4px"></i><i style="left:44px; right:26px; top:19px; height:3px"></i><i style="left:44px; right:10px; top:28px; height:3px"></i></div>
+            <div class="nm">侧栏双栏</div><div class="hint">带照片槽</div>
+          </div>
+          <div class="tq">
+            <div class="thumb" style="border-color:rgba(143,166,217,.6)"><i style="left:0; top:0; bottom:0; width:26px; background:var(--accent); opacity:.35"></i><i style="left:34px; right:10px; top:9px; height:4px"></i><i style="left:34px; right:30px; top:19px; height:3px"></i><i style="left:34px; right:10px; top:28px; height:3px"></i></div>
+            <div class="nm">强调色侧边</div><div class="hint">第三套</div>
+          </div>
+        </div>
+        <div class="dropzone">
+          <i data-lucide="file-down" aria-hidden="true" style="width:22px;height:22px"></i>
+          <span><b>拖入 DOCX / PDF 到此处</b>，自动提取并结构化；粘贴文本也行</span>
+          <span class="links">
+            <button class="mini" type="button"><i data-lucide="clipboard" aria-hidden="true" style="width:12px;height:12px"></i>粘贴文本</button>
+            <button class="mini" type="button"><i data-lucide="folder" aria-hidden="true" style="width:12px;height:12px"></i>浏览文件</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="rcard">
+          <button class="more" type="button" aria-label="更多"><i data-lucide="more-horizontal" aria-hidden="true"></i></button>
+          <div class="nm">李思远 · 产品经理</div>
+          <div class="meta">垂类 general · 经典单栏<br>最近编辑 10-23 14:05</div>
+          <div class="bar"><i style="--w:62%"></i></div>
+          <div class="foot"><span class="score">评估 62</span><span>4 条批注 · 6 个快照</span></div>
+        </div>
+        <div class="rcard">
+          <button class="more" type="button" aria-label="更多"><i data-lucide="more-horizontal" aria-hidden="true"></i></button>
+          <div class="nm">李思远 · 数据分析</div>
+          <div class="meta">垂类 general · 侧栏双栏<br>最近编辑 10-20 09:12</div>
+          <div class="bar"><i style="--w:48%"></i></div>
+          <div class="foot"><span class="score">评估 48</span><span>未修订完 · 2 个快照</span></div>
+        </div>
+        <div class="rcard">
+          <button class="more" type="button" aria-label="更多"><i data-lucide="more-horizontal" aria-hidden="true"></i></button>
+          <div class="nm">实习冲刺 · 9 月版</div>
+          <div class="meta">归档自 09-28 · 已投递<br>保留作对照，不参与统计</div>
+          <div class="foot"><span class="score" style="color:var(--muted)">评估 55</span><span>已归档</span></div>
+        </div>
+      </div>
+
+      <p class="home-foot"><i data-lucide="info" aria-hidden="true" style="width:12px;height:12px"></i>「备份与恢复」导出 .fairlens 档案包（简历 + 全部快照与评估历史），换机或重装时在首页导入恢复。</p>
+    </div>
+  </div>
+
+  <div class="demo-wrap">
+    <p class="caption">编辑器工具栏 —— 右侧「导出」下拉展开态（定稿版 / 批注版 / 归档）</p>
+    <div class="toolbar-demo">
+      <div class="tb">
+        <div class="seg" role="group" aria-label="模板">
+          <button type="button" aria-pressed="true">经典单栏</button>
+          <button type="button" aria-pressed="false">侧栏双栏</button>
+          <button type="button" aria-pressed="false">强调色侧边</button>
+        </div>
+        <span class="zoom mono">92%</span>
+        <span style="flex:1"></span>
+        <button class="btn" type="button"><i data-lucide="scan-search" aria-hidden="true"></i>AI 走查</button>
+        <button class="btn" type="button"><i data-lucide="gauge" aria-hidden="true"></i>运行评估</button>
+        <button class="btn primary" type="button"><i data-lucide="file-down" aria-hidden="true"></i>导出<i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></button>
+      </div>
+      <div class="menu" role="menu" aria-label="导出">
+        <div class="grp">定稿版 · 交付用</div>
+        <div class="it" role="menuitem"><i data-lucide="file-text" aria-hidden="true"></i>PDF<span class="d">矢量 · 链接可点</span></div>
+        <div class="it" role="menuitem"><i data-lucide="file" aria-hidden="true"></i>Word（.docx）<span class="d">可继续编辑</span></div>
+        <div class="grp">批注版 · 复盘/求助</div>
+        <div class="it" role="menuitem"><i data-lucide="printer" aria-hidden="true"></i>批注版 PDF<span class="d">红笔打印稿</span></div>
+        <div class="it" role="menuitem"><i data-lucide="image" aria-hidden="true"></i>批注长图 PNG<span class="d">2x / 3x</span></div>
+        <div class="it" role="menuitem"><i data-lucide="code" aria-hidden="true"></i>批注版 HTML<span class="d">自包含 · 内嵌字体</span></div>
+        <div class="div"></div>
+        <div class="it" role="menuitem"><i data-lucide="file-archive" aria-hidden="true"></i>归档备份（.fairlens）<span class="d">含全部历史</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      var root=document.getElementById('fairlens-library-preview');
+      root.querySelector('#themeBtn').addEventListener('click',function(){root.classList.toggle('light');});
+      try{ lucide.createIcons({attrs:{width:15,height:15}}); }catch(e){}
+    })();
+  </script>
+</div>

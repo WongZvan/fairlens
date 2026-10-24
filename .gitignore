@@ -1,0 +1,23 @@
+# 依赖与构建产物
+node_modules/
+target/
+dist-server/
+*.local
+
+# 环境与密钥（绝不入仓）
+.env
+.env.*
+keys/
+*.pem
+*.key
+
+# IDE / 系统
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+.DS_Store
+
+# 日志与临时
+*.log
+tmp/

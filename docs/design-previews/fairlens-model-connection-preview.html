@@ -1,0 +1,178 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<div id="fairlens-mc-preview">
+  <style>
+    #fairlens-mc-preview{
+      --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23; --input:#232428;
+      --fg:#E8E6E1; --muted:#9B998F; --line:#3A3B40; --hover:#33343A;
+      --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
+      --ok:#7FB89A; --err:#D96A5F;
+      font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+      font-size:14px; line-height:1.5; color:var(--fg); background:transparent;
+    }
+    #fairlens-mc-preview .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+    #fairlens-mc-preview svg{display:block;}
+    #fairlens-mc-preview i[data-lucide]{display:inline-flex;}
+    #fairlens-mc-preview .caption{font-size:11px; color:#9B998F; margin:0 0 8px;}
+
+    /* 标题栏条（齿轮入口位置示意） */
+    #fairlens-mc-preview .tbar{height:38px; display:flex; align-items:center; gap:8px; padding:0 8px 0 14px; background:var(--chrome); border:1px solid #17181B; border-bottom:0; border-radius:8px 8px 0 0; font-size:12px; color:var(--muted);}
+    #fairlens-mc-preview .tbar .app{color:var(--fg); font-weight:600; display:flex; align-items:center; gap:7px;}
+    #fairlens-mc-preview .tbar .app i{color:var(--accent);}
+    #fairlens-mc-preview .wbtn{width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px;}
+    #fairlens-mc-preview .wbtn:hover{background:var(--hover); color:var(--fg);}
+    #fairlens-mc-preview .wbtn.gear{color:var(--accent); position:relative;}
+    #fairlens-mc-preview .wbtn.gear::after{content:""; position:absolute; inset:-2px; border:1px solid var(--accent); border-radius:6px; opacity:.55;}
+
+    /* 设置窗口 */
+    #fairlens-mc-preview .fl-win{width:660px; background:#26272B; border:1px solid #17181B; border-top:0; border-radius:0 0 8px 8px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.40); display:flex; min-height:600px;}
+    #fairlens-mc-preview .nav{width:126px; flex:none; background:#232428; border-right:1px solid var(--line); padding:10px 8px; display:flex; flex-direction:column; gap:2px;}
+    #fairlens-mc-preview .nav a{font-size:12.5px; color:var(--muted); padding:7px 10px; border-radius:5px; display:flex; align-items:center; gap:7px;}
+    #fairlens-mc-preview .nav a.on{background:var(--accent-tint); color:var(--fg); box-shadow:inset 2px 0 0 var(--accent);}
+    #fairlens-mc-preview .pane{flex:1; padding:16px 18px 14px; overflow:hidden;}
+
+    /* Provider 卡片 */
+    #fairlens-mc-preview .prov-row{display:flex; gap:10px; margin-bottom:14px;}
+    #fairlens-mc-preview .pcard{flex:1; border:1px solid var(--line); border-radius:7px; background:var(--panel); padding:9px 11px; cursor:pointer; position:relative;}
+    #fairlens-mc-preview .pcard.on{border-color:var(--accent); background:var(--accent-tint);}
+    #fairlens-mc-preview .pcard .nm{font-size:12.5px; font-weight:500; display:flex; align-items:center; gap:6px;}
+    #fairlens-dark-preview .pcard .nm i{color:var(--muted);}
+    #fairlens-mc-preview .pcard .md{font-size:10.5px; color:var(--muted); margin-top:2px;}
+    #fairlens-mc-preview .pcard .st{position:absolute; top:9px; right:10px; width:7px; height:7px; border-radius:50%; background:var(--ok);}
+    #fairlens-mc-preview .pcard .def{position:absolute; bottom:8px; right:10px; font-size:9.5px; color:var(--accent); border:1px solid rgba(143,166,217,.5); border-radius:3px; padding:0 4px;}
+    #fairlens-mc-preview .pcard.add{flex:0 0 92px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; color:var(--muted); font-size:11.5px;}
+    #fairlens-mc-preview .pcard.add:hover{border-color:var(--accent); color:var(--accent);}
+
+    /* 表单 */
+    #fairlens-mc-preview .grid{display:grid; grid-template-columns:1fr 1fr; gap:9px 12px;}
+    #fairlens-mc-preview .field{display:flex; flex-direction:column; gap:4px;}
+    #fairlens-mc-preview .field.full{grid-column:1 / -1;}
+    #fairlens-mc-preview .field label{font-size:11px; color:var(--muted); letter-spacing:.05em; display:flex; align-items:center; gap:5px;}
+    #fairlens-mc-preview .ctrl{display:flex; align-items:center; gap:6px; background:var(--input); border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:12.5px; color:var(--fg); min-height:32px;}
+    #fairlens-mc-preview .ctrl .ph{color:var(--muted);}
+    #fairlens-mc-preview .ctrl .caret{margin-left:auto; color:var(--muted); display:flex;}
+    #fairlens-mc-preview .ctrl .tail{margin-left:auto; color:var(--muted); font-size:10.5px; display:flex; align-items:center; gap:4px;}
+    #fairlens-mc-preview .ctrl .lock{color:var(--ok);}
+    #fairlens-mc-preview .mini{font:inherit; font-size:11.5px; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); background:var(--panel); color:var(--fg); border-radius:6px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
+    #fairlens-mc-preview .mini:hover{border-color:var(--accent);}
+    #fairlens-mc-preview .fseg{display:inline-flex; border:1px solid var(--line); border-radius:6px; background:var(--input); overflow:hidden;}
+    #fairlens-mc-preview .fseg button{font:inherit; font-size:11.5px; border:0; background:transparent; color:var(--muted); padding:6px 14px; cursor:pointer;}
+    #fairlens-mc-preview .fseg button[aria-pressed="true"]{background:var(--accent-solid); color:#fff;}
+    #fairlens-mc-preview .hint{font-size:10.5px; color:var(--muted); line-height:1.45;}
+
+    /* 测试行 */
+    #fairlens-mc-preview .test-row{display:flex; align-items:center; gap:10px; margin-top:12px;}
+    #fairlens-mc-preview .btn{font:inherit; font-size:12.5px; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:7px 14px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg);}
+    #fairlens-mc-preview .btn.primary{background:var(--accent-solid); border-color:var(--accent-solid); color:#fff;}
+    #fairlens-mc-preview .badge{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ok); border:1px solid rgba(127,184,154,.45); background:rgba(127,184,154,.10); border-radius:99px; padding:4px 11px;}
+    #fairlens-mc-preview .badge .dot{width:6px; height:6px; border-radius:50%; background:var(--ok);}
+
+    /* 场景分配 */
+    #fairlens-mc-preview .sec-title{font-size:11px; color:var(--muted); letter-spacing:.1em; margin:16px 0 8px; display:flex; align-items:center; gap:8px;}
+    #fairlens-mc-preview .sec-title::after{content:""; flex:1; border-top:1px solid var(--line);}
+    #fairlens-mc-preview .scene{display:flex; align-items:center; gap:10px; padding:6px 0;}
+    #fairlens-mc-preview .scene .snm{font-size:12.5px; width:96px; flex:none;}
+    #fairlens-mc-preview .scene .ctrl{flex:1;}
+    #fairlens-mc-preview .scene .apply{font-size:11px; color:var(--accent); background:none; border:0; cursor:pointer; padding:0; white-space:nowrap;}
+    #fairlens-mc-preview .foot-link{margin-top:14px; font-size:11.5px; color:var(--accent); display:inline-flex; align-items:center; gap:5px;}
+  </style>
+
+  <p class="caption">主界面标题栏 —— 小齿轮打开独立设置窗口（位于主题切换与窗口控制之间）</p>
+  <div class="tbar">
+    <span class="app"><i data-lucide="pen-line" aria-hidden="true"></i>FairLens</span>
+    <span>李思远_产品经理_简历.fairlens</span>
+    <span style="flex:1"></span>
+    <button type="button" class="wbtn" aria-label="主题"><i data-lucide="moon" aria-hidden="true"></i></button>
+    <button type="button" class="wbtn gear" aria-label="设置"><i data-lucide="settings" aria-hidden="true"></i></button>
+    <button type="button" class="wbtn" aria-label="最小化"><i data-lucide="minus" aria-hidden="true"></i></button>
+    <button type="button" class="wbtn" aria-label="最大化"><i data-lucide="square" aria-hidden="true" style="width:12px;height:12px"></i></button>
+    <button type="button" class="wbtn" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+  </div>
+
+  <p class="caption" style="margin-top:14px">设置窗口 · 模型连接（CC Switch 式 Provider 配置切换器）</p>
+  <div class="fl-win">
+    <nav class="nav">
+      <a><i data-lucide="shield-check" aria-hidden="true"></i>激活管理</a>
+      <a><i data-lucide="sun-moon" aria-hidden="true"></i>外观</a>
+      <a class="on"><i data-lucide="plug" aria-hidden="true"></i>模型连接</a>
+      <a><i data-lucide="info" aria-hidden="true"></i>关于</a>
+    </nav>
+    <div class="pane">
+      <div class="prov-row">
+        <div class="pcard on">
+          <span class="st"></span>
+          <div class="nm"><i data-lucide="zap" aria-hidden="true" style="color:#8FA6D9"></i>DeepSeek</div>
+          <div class="md mono">deepseek-chat</div>
+          <span class="def">默认</span>
+        </div>
+        <div class="pcard">
+          <span class="st"></span>
+          <div class="nm"><i data-lucide="sparkles" aria-hidden="true" style="color:#9B998F"></i>智谱 GLM</div>
+          <div class="md mono">glm-4.7</div>
+        </div>
+        <div class="pcard add"><i data-lucide="plus" aria-hidden="true"></i>添加厂商</div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label>厂商预设</label>
+          <div class="ctrl">DeepSeek（OpenAI 兼容）<span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span></div>
+        </div>
+        <div class="field">
+          <label>接口地址 baseURL</label>
+          <div class="ctrl mono" style="font-size:11.5px">https://api.deepseek.com/v1</div>
+        </div>
+        <div class="field full">
+          <label>API Key <i data-lucide="lock" aria-hidden="true" class="lock" style="width:11px;height:11px"></i></label>
+          <div class="ctrl mono" style="font-size:11.5px">sk-•••••••••••••••9f3a<span class="tail"><i data-lucide="lock" aria-hidden="true" style="width:11px;height:11px"></i>仅加密存本机，永不上传</span></div>
+        </div>
+        <div class="field full">
+          <label>模型</label>
+          <div class="ctrl">
+            <span class="mono" style="font-size:11.5px">deepseek-chat</span>
+            <span class="tail">最近：deepseek-reasoner</span>
+            <span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span>
+            <button class="mini" type="button"><i data-lucide="refresh-cw" aria-hidden="true" style="width:12px;height:12px"></i>拉取模型列表</button>
+          </div>
+          <span class="hint">“拉取模型列表”调用 GET /models，成功后变为下拉选择；也可手动输入任意模型名。</span>
+        </div>
+        <div class="field">
+          <label>上下文窗口</label>
+          <div class="ctrl">128K<span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span></div>
+          <span class="hint">声明式字段：用于画布 token 预算条（8K–1M）。</span>
+        </div>
+        <div class="field">
+          <label>最大输出 tokens</label>
+          <div class="ctrl mono">4096</div>
+        </div>
+        <div class="field full">
+          <label>推理强度 effort</label>
+          <div class="fseg" role="group" aria-label="推理强度">
+            <button type="button" aria-pressed="false">低</button>
+            <button type="button" aria-pressed="true">中</button>
+            <button type="button" aria-pressed="false">高</button>
+          </div>
+          <span class="hint">按厂商自动翻译：OpenAI 系 reasoning_effort · Qwen enable_thinking · GLM thinking；不支持的厂商静默忽略。</span>
+        </div>
+      </div>
+
+      <div class="test-row">
+        <button class="btn primary" type="button"><i data-lucide="zap" aria-hidden="true"></i>测试连通</button>
+        <span class="badge"><span class="dot"></span>连通 · <span class="mono">356ms</span> · 可用模型 <span class="mono">42</span> · Key 有效</span>
+      </div>
+
+      <div class="sec-title">场景分配</div>
+      <div class="scene"><span class="snm">AI 修订</span><div class="ctrl"><span class="mono" style="font-size:11.5px">DeepSeek · deepseek-chat</span><span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span></div></div>
+      <div class="scene"><span class="snm">全篇评估</span><div class="ctrl"><span class="mono" style="font-size:11.5px">智谱 GLM · glm-4.7</span><span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span></div></div>
+      <div class="scene"><span class="snm">AI 走查</span><div class="ctrl"><span class="mono" style="font-size:11.5px">DeepSeek · deepseek-chat</span><span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span></div></div>
+      <div class="scene"><span class="snm">导入结构化</span><div class="ctrl"><span class="mono" style="font-size:11.5px">DeepSeek · deepseek-chat</span><span class="caret"><i data-lucide="chevron-down" aria-hidden="true" style="width:13px;height:13px"></i></span></div><button class="apply" type="button">全部使用此配置</button></div>
+
+      <a class="foot-link" href="#guides"><i data-lucide="book-open" aria-hidden="true" style="width:13px;height:13px"></i>查看各厂商注册与取 Key 图文教程</a>
+    </div>
+  </div>
+
+  <script>
+    try{ lucide.createIcons({attrs:{width:15,height:15}}); }catch(e){}
+  </script>
+</div>

@@ -1,0 +1,404 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<div id="fairlens-type-preview">
+  <style>
+    #fairlens-type-preview{
+      --paper:#FFFFFF; --ink-paper:#1C1D1B;
+      font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+      font-size:14px; line-height:1.5; color:#E8E6E1;
+    }
+    #fairlens-type-preview .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+    #fairlens-type-preview svg{display:block;}
+    #fairlens-type-preview i[data-lucide]{display:inline-flex;}
+
+    #fairlens-type-preview .fl-main{
+      --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23;
+      --fg:#E8E6E1; --muted:#9B998F; --line:#3A3B40; --hover:#33343A;
+      --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
+      --pen-red-c:#D96A5F; --pen-green-c:#7FB89A;
+      background:var(--bench); color:var(--fg);
+      border:1px solid #17181B; border-radius:8px; overflow:hidden;
+      display:flex; flex-direction:column; height:872px;
+    }
+    #fairlens-type-preview .fl-main.light{
+      --bench:#F2F1ED; --panel:#F7F6F2; --chrome:#ECEAE4;
+      --fg:#1C1D1B; --muted:#8B8983; --line:#E4E2DC; --hover:#ECEAE4;
+      --accent:#33518E; --accent-solid:#33518E; --accent-tint:rgba(51,81,142,.08);
+      --pen-red-c:#C4372B; --pen-green-c:#2E6E4E;
+      border-color:#D9D6CF;
+    }
+
+    /* 声部③ 仪表体：Mono 铭牌字标 */
+    #fairlens-type-preview .titlebar{height:42px; flex:none; display:flex; align-items:center; gap:10px; padding:0 10px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line);}
+    #fairlens-type-preview .titlebar .app{display:flex; align-items:center; gap:9px; font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; color:var(--fg);}
+    #fairlens-type-preview .titlebar .app i{color:var(--accent);}
+    #fairlens-type-preview .titlebar .file{color:var(--muted); font-size:12px;}
+    #fairlens-type-preview .chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); border:1px solid var(--line); background:var(--panel); border-radius:99px; padding:2px 9px;}
+    #fairlens-type-preview .chip .dot{width:6px; height:6px; border-radius:50%; background:var(--pen-green-c);}
+    #fairlens-type-preview .wbtns{margin-left:auto; display:flex; align-items:center; gap:2px;}
+    #fairlens-type-preview .wbtn{width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px;}
+    #fairlens-type-preview .wbtn:hover{background:var(--hover); color:var(--fg);}
+    #fairlens-type-preview .wbtn.close:hover{background:#C4372B; color:#fff;}
+    #fairlens-type-preview .wbtn.theme{margin-right:2px; color:var(--accent);}
+    #fairlens-type-preview .ic-sun,#fairlens-type-preview .fl-main.light .ic-moon{display:none;}
+    #fairlens-type-preview .fl-main.light .ic-sun{display:inline-flex;}
+
+    #fairlens-type-preview .main{flex:1; display:flex; min-height:0;}
+
+    /* 声部③ 仪表体：大纲树 Condensed（拉丁数字窄体） */
+    #fairlens-type-preview .outline{width:206px; flex:none; background:var(--panel); border-right:1px solid var(--line); padding:12px 10px;}
+    #fairlens-type-preview .outline h2{font-size:11px; font-weight:600; letter-spacing:.12em; color:var(--muted); margin:2px 4px 8px;}
+    #fairlens-type-preview .tree-item{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:4px; font-size:13px; color:var(--fg); font-family:'IBM Plex Sans Condensed','IBM Plex Sans SC','Microsoft YaHei',sans-serif;}
+    #fairlens-type-preview .tree-item i{color:var(--muted); flex:none;}
+    #fairlens-type-preview .tree-item .grip{opacity:0; margin-left:auto;}
+    #fairlens-type-preview .tree-item:hover{background:var(--hover);}
+    #fairlens-type-preview .tree-item:hover .grip{opacity:1;}
+    #fairlens-type-preview .tree-item.sub{padding-left:26px; font-size:12.5px; color:var(--muted);}
+    #fairlens-type-preview .tree-item.active{background:var(--accent-tint); box-shadow:inset 2px 0 0 var(--accent); color:var(--fg);}
+    #fairlens-type-preview .outline .tpl-note{margin-top:14px; font-size:11px; color:var(--muted); padding:0 4px;}
+
+    #fairlens-type-preview .center{flex:1; min-width:0; display:flex; flex-direction:column;}
+    #fairlens-type-preview .toolbar{height:42px; flex:none; display:flex; align-items:center; gap:10px; padding:0 14px;}
+    #fairlens-type-preview .seg{display:flex; border:1px solid var(--line); border-radius:6px; background:var(--panel); overflow:hidden;}
+    #fairlens-type-preview .seg button{font:inherit; font-size:12px; border:0; background:transparent; color:var(--muted); padding:5px 12px; cursor:pointer;}
+    #fairlens-type-preview .seg button[aria-pressed="true"]{background:var(--accent-solid); color:#FFFFFF;}
+    #fairlens-type-preview .zoom{font-size:11px; color:var(--muted);}
+    #fairlens-type-preview .btn{font:inherit; font-size:12px; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:6px 12px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg);}
+    #fairlens-type-preview .btn.primary{background:var(--accent-solid); border-color:var(--accent-solid); color:#FFFFFF;}
+
+    #fairlens-type-preview .canvas{flex:1; min-height:0; position:relative; display:flex; flex-direction:column; align-items:center; padding:16px 0 6px;}
+    #fairlens-type-preview .paper-wrap{transform:scale(.9); transform-origin:top center; flex:none;}
+    #fairlens-type-preview .pagebreak{display:flex; align-items:center; gap:10px; width:70%; margin-top:10px; color:var(--muted); font-size:11px;}
+    #fairlens-type-preview .pagebreak::before,#fairlens-type-preview .pagebreak::after{content:""; flex:1; border-top:1.5px dashed #4A4B52;}
+
+    /* 声部① 印刷体：纸面（不变） */
+    #fairlens-type-preview .paper{width:566px; min-height:800px; background:var(--paper); border-radius:2px; position:relative;
+      box-shadow:0 1px 2px rgba(0,0,0,.30), 0 12px 32px rgba(0,0,0,.38);
+      padding:46px 54px; font-size:12.5px; color:var(--ink-paper);}
+    #fairlens-type-preview .tpl-classic .r-side{display:contents;}
+    #fairlens-type-preview .tpl-duo{padding:0; display:grid; grid-template-columns:198px 1fr; grid-template-areas:"head head" "side main" "side main";}
+    #fairlens-type-preview .tpl-duo .r-head{grid-area:head; padding:34px 40px 10px;}
+    #fairlens-type-preview .tpl-duo .r-side{grid-area:side; background:#F4F3ED; padding:8px 20px 24px; display:block; border-right:1px solid #ECEAE2;}
+    #fairlens-type-preview .tpl-duo .r-main{grid-area:main; padding:6px 40px 30px;}
+    #fairlens-type-preview .tpl-duo .photo-slot{display:flex;}
+    #fairlens-type-preview .photo-slot{display:none; width:74px; height:98px; margin:12px auto 4px; border:1.5px dashed #D9D6CF; border-radius:3px; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#8B8983; font-size:10.5px; background:#FFFFFF;}
+    #fairlens-type-preview .r-head .name{display:flex; align-items:baseline; gap:12px;}
+    #fairlens-type-preview .r-head .name b{font-family:'Noto Serif SC',serif; font-weight:700; font-size:27px; letter-spacing:.06em;}
+    #fairlens-type-preview .r-head .intent{color:#5A5955; font-size:12px;}
+    #fairlens-type-preview .r-head .contact{margin-top:6px; font-size:11.5px; color:#5A5955;}
+    #fairlens-type-preview .r-head .contact a{color:#33518E; text-decoration:underline; text-underline-offset:2px;}
+    #fairlens-type-preview .r-head .rule{border-top:2px solid #1C1D1B; margin-top:14px;}
+    #fairlens-type-preview .tpl-duo .r-head .rule{display:none;}
+    #fairlens-type-preview .r-sec h3{font-family:'Noto Serif SC',serif; font-size:14.5px; font-weight:600; letter-spacing:.14em; margin:18px 0 6px; display:flex; align-items:center; gap:8px; color:#1C1D1B;}
+    #fairlens-type-preview .r-sec h3::after{content:""; flex:1; border-top:1px solid #D9D6CF;}
+    #fairlens-type-preview .r-sec-basic h3,#fairlens-type-preview .r-sec-skill h3{margin-top:16px;}
+    #fairlens-type-preview .entry{margin:8px 0 4px;}
+    #fairlens-type-preview .entry .row{display:flex; align-items:baseline; gap:8px;}
+    #fairlens-type-preview .entry .row b{font-weight:600; font-size:13px;}
+    #fairlens-type-preview .entry .row .role{color:#5A5955;}
+    #fairlens-type-preview .entry .row .date{margin-left:auto; color:#8B8983; font-size:11.5px; font-family:'IBM Plex Mono',monospace;}
+    #fairlens-type-preview ul.bullets{margin:4px 0 0; padding-left:0; list-style:none;}
+    #fairlens-type-preview ul.bullets li{position:relative; padding-left:14px; margin:3px 0; color:#33322F;}
+    #fairlens-type-preview ul.bullets li::before{content:""; position:absolute; left:2px; top:.62em; width:4px; height:4px; background:#1C1D1B;}
+    #fairlens-type-preview .r-sec-skill p,#fairlens-type-preview .r-sec-basic p{margin:4px 0; color:#33322F; font-size:12px;}
+
+    #fairlens-type-preview .ins{background:rgba(46,110,78,.08); color:#1F5138; text-decoration:underline; text-decoration-color:#2E6E4E; text-decoration-style:wavy; text-underline-offset:3px; text-decoration-thickness:1px;}
+    #fairlens-type-preview .del{background:rgba(196,55,43,.07); color:#7A2A21; text-decoration:line-through; text-decoration-color:#C4372B; text-decoration-thickness:1.5px;}
+    #fairlens-type-preview .ai-chip{position:absolute; right:-6px; top:-14px; display:flex; gap:4px; align-items:center;}
+    #fairlens-type-preview .ai-chip .tag{font-size:10px; color:#33518E; border:1px solid rgba(51,81,142,.4); background:#fff; border-radius:3px; padding:0 5px;}
+    #fairlens-type-preview .ai-chip button{width:18px; height:18px; border-radius:4px; border:1px solid #D9D6CF; background:#fff; color:#5A5955; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
+    #fairlens-type-preview .ai-chip button.ok{color:#2E6E4E; border-color:rgba(46,110,78,.5);}
+    #fairlens-type-preview .ai-chip button.no{color:#C4372B; border-color:rgba(196,55,43,.4);}
+    #fairlens-type-preview li.diff-host{padding-right:26px;}
+    #fairlens-type-preview .pen-u{position:relative;}
+    #fairlens-type-preview .pen-u svg{position:absolute; left:0; right:0; bottom:-4px; width:100%; height:8px;}
+
+    /* 声部④ 手写体：楷体批注卡 */
+    #fairlens-type-preview .m-note{position:absolute; width:122px; font-size:11.5px; line-height:1.5; padding:7px 9px 8px; border-radius:3px; background:#FFFDF8; box-shadow:0 2px 8px rgba(0,0,0,.16); z-index:5; color:#33322F; font-family:'Kaiti SC','KaiTi','STKaiti','Microsoft YaHei',serif;}
+    #fairlens-type-preview .m-note.red{border-left:3px solid #C4372B; transform:rotate(-1.6deg);}
+    #fairlens-type-preview .m-note.green{border-left:3px solid #2E6E4E; transform:rotate(1.1deg); color:#24513B;}
+    #fairlens-type-preview .m-note b{display:block; font-weight:600; margin-bottom:2px; font-size:11px; letter-spacing:.1em;}
+    #fairlens-type-preview .m-note.red b{color:#C4372B;}
+    #fairlens-type-preview .m-note.green b{color:#2E6E4E;}
+    #fairlens-type-preview .m-note .go{display:inline-flex; align-items:center; gap:3px; margin-top:4px; color:#33518E; font-size:11px;}
+    #fairlens-type-preview .flash{animation:ftflash .9s ease-out;}
+    @keyframes ftflash{0%{box-shadow:0 0 0 0 rgba(196,55,43,.45);}100%{box-shadow:0 0 0 14px rgba(196,55,43,0);}}
+    @media (prefers-reduced-motion:reduce){#fairlens-type-preview .flash{animation:none;}}
+
+    #fairlens-type-preview .float-bar{position:absolute; z-index:9; display:flex; align-items:center; gap:2px; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:3px 5px; box-shadow:0 6px 18px rgba(0,0,0,.35);}
+    #fairlens-type-preview .float-bar button{width:26px; height:24px; border:0; background:transparent; border-radius:4px; color:var(--fg); display:flex; align-items:center; justify-content:center; cursor:pointer;}
+    #fairlens-type-preview .float-bar button:hover{background:var(--hover);}
+    #fairlens-type-preview .float-bar .v{width:1px; height:16px; background:var(--line); margin:0 4px;}
+    #fairlens-type-preview .float-bar .ai{width:auto; padding:0 8px; gap:5px; font-size:12px; color:var(--accent);}
+
+    /* 声部① 印刷体（评估声部）：评语区衬线 */
+    #fairlens-type-preview .eval{width:294px; flex:none; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; padding:14px 14px 12px;}
+    #fairlens-type-preview .eval h2{font-size:11px; font-weight:600; letter-spacing:.12em; color:var(--muted);}
+    #fairlens-type-preview .eval .meta{font-size:10.5px; color:var(--muted); margin:2px 0 8px;}
+    #fairlens-type-preview .score-row{display:flex; align-items:baseline; gap:8px;}
+    #fairlens-type-preview .score-row .big{font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:500; color:var(--fg);}
+    #fairlens-type-preview .score-row .lvl{font-size:12px; color:var(--muted);}
+    #fairlens-type-preview .score-row .delta{margin-left:auto; font-size:11px; color:var(--pen-green-c);}
+    #fairlens-type-preview .summary{font-family:'Noto Serif SC',serif; font-size:12px; line-height:1.7; color:var(--fg); margin:6px 0 4px; border-left:2px solid var(--line); padding-left:9px;}
+    #fairlens-type-preview .summary b{font-weight:600;}
+    #fairlens-type-preview .radar{margin:2px auto 2px;}
+    #fairlens-type-preview .dims{width:100%; border-collapse:collapse; margin-bottom:8px;}
+    #fairlens-type-preview .dims td{font-size:11.5px; padding:2.5px 0; color:var(--muted);}
+    #fairlens-type-preview .dims td.dnm{font-family:'Noto Serif SC',serif; color:var(--fg); font-weight:600; font-size:11.5px;}
+    #fairlens-type-preview .dims td.num{text-align:right; font-family:'IBM Plex Mono',monospace; color:var(--fg);}
+    #fairlens-type-preview .dims td.trk{width:60px;}
+    #fairlens-type-preview .dims td.trk i{display:block; height:3px; border-radius:2px; background:var(--line); position:relative; overflow:hidden; font-style:normal;}
+    #fairlens-type-preview .dims td.trk i::after{content:""; position:absolute; left:0; top:0; bottom:0; width:var(--w); background:var(--accent); border-radius:2px;}
+    #fairlens-type-preview .findings{flex:1; min-height:0; margin-top:4px;}
+    #fairlens-type-preview .findings h3{font-size:11px; font-weight:600; letter-spacing:.12em; color:var(--muted); margin-bottom:6px;}
+    #fairlens-type-preview .finding{display:flex; gap:8px; padding:7px 8px; border-radius:5px; cursor:pointer;}
+    #fairlens-type-preview .finding:hover{background:var(--hover);}
+    #fairlens-type-preview .finding .sev{flex:none; width:8px; height:8px; border-radius:50%; margin-top:5px;}
+    #fairlens-type-preview .sev.hi{background:var(--pen-red-c);}
+    #fairlens-type-preview .sev.mid{border:1.6px solid var(--pen-red-c);}
+    #fairlens-type-preview .sev.sug{border:1.6px solid var(--pen-green-c);}
+    #fairlens-type-preview .finding p{margin:0; font-size:12px; line-height:1.45; color:var(--fg);}
+    #fairlens-type-preview .finding span{display:block; font-size:10.5px; color:var(--muted); margin-top:1px;}
+    #fairlens-type-preview .eval .cta{font:inherit; font-size:12.5px; width:100%; justify-content:center; display:flex; gap:6px; margin-top:8px; border-radius:6px; padding:8px 0; cursor:pointer; background:var(--accent-solid); border:0; color:#fff;}
+
+    #fairlens-type-preview .statusbar{height:30px; flex:none; display:flex; align-items:center; gap:14px; padding:0 14px; background:var(--chrome); border-top:1px solid var(--line); font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace;}
+    #fairlens-type-preview .statusbar .k{padding:1px 7px; border:1px solid var(--line); border-radius:4px; background:var(--panel); color:var(--fg);}
+
+    /* 四声部图例（自我演示） */
+    #fairlens-type-preview .voices{display:flex; gap:10px; flex-wrap:wrap; padding:18px 4px 4px;}
+    #fairlens-type-preview .voice{flex:1; min-width:200px; border:1px solid #3A3B40; border-radius:8px; background:#26272B; padding:11px 13px;}
+    #fairlens-type-preview .voice .tag{font-size:10px; letter-spacing:.14em; color:#8FA6D9; margin-bottom:6px; font-family:'IBM Plex Mono',monospace;}
+    #fairlens-type-preview .voice .demo{font-size:13px; color:#E8E6E1; line-height:1.5;}
+    #fairlens-type-preview .voice .where{font-size:10.5px; color:#9B998F; margin-top:4px;}
+    #fairlens-type-preview .v-print .demo{font-family:'Noto Serif SC',serif;}
+    #fairlens-type-preview .v-work .demo{font-family:'IBM Plex Sans','IBM Plex Sans SC',sans-serif;}
+    #fairlens-type-preview .v-meter .demo{font-family:'IBM Plex Mono','IBM Plex Sans Condensed',monospace;}
+    #fairlens-type-preview .v-hand .demo{font-family:'Kaiti SC','KaiTi','STKaiti',serif;}
+  </style>
+
+  <div class="fl-main" id="flMain">
+    <div class="titlebar">
+      <span class="app"><i data-lucide="pen-line" aria-hidden="true"></i>FAIRLENS</span>
+      <span class="file">李思远_产品经理_简历.fairlens</span>
+      <span class="chip"><i data-lucide="check" aria-hidden="true" style="width:11px;height:11px"></i>已保存</span>
+      <div class="wbtns">
+        <span style="flex:1"></span>
+        <button type="button" class="wbtn theme" id="themeBtn" aria-label="切换浅色/深色">
+          <i data-lucide="moon" aria-hidden="true" class="ic-moon"></i><i data-lucide="sun" aria-hidden="true" class="ic-sun"></i>
+        </button>
+        <button type="button" class="wbtn" aria-label="设置"><i data-lucide="settings" aria-hidden="true"></i></button>
+        <button type="button" class="wbtn" aria-label="最小化"><i data-lucide="minus" aria-hidden="true"></i></button>
+        <button type="button" class="wbtn" aria-label="最大化"><i data-lucide="square" aria-hidden="true" style="width:12px;height:12px"></i></button>
+        <button type="button" class="wbtn close" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="main">
+      <aside class="outline" aria-label="大纲">
+        <h2>大纲</h2>
+        <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>基本信息</div>
+        <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>教育经历</div>
+        <div class="tree-item sub">华中科技大学</div>
+        <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>实习经历</div>
+        <div class="tree-item sub active"><i data-lucide="grip-vertical" aria-hidden="true" class="grip" style="width:12px;height:12px;margin-left:0;margin-right:2px"></i>字节跳动 ByteDance · 产品实习</div>
+        <div class="tree-item sub"><i data-lucide="grip-vertical" aria-hidden="true" class="grip" style="width:12px;height:12px;margin-left:0;margin-right:2px"></i>美团 Meituan · 产品运营</div>
+        <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>项目经历</div>
+        <div class="tree-item sub">书循环 · 联合创始人</div>
+        <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>技能证书</div>
+        <p class="tpl-note">当前模板：<b id="tplName">经典单栏</b></p>
+      </aside>
+
+      <section class="center">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="模板">
+            <button type="button" id="tplClassicBtn" aria-pressed="true">经典单栏</button>
+            <button type="button" id="tplDuoBtn" aria-pressed="false">侧栏双栏</button>
+          </div>
+          <span class="zoom mono">92%</span>
+          <span style="flex:1"></span>
+          <button class="btn" type="button"><i data-lucide="scan-search" aria-hidden="true"></i>AI 走查</button>
+          <button class="btn primary" type="button"><i data-lucide="gauge" aria-hidden="true"></i>运行评估</button>
+        </div>
+
+        <div class="canvas">
+          <div class="paper-wrap">
+            <article class="paper tpl-classic" id="paper">
+              <div class="m-note red" id="note1" style="top:210px; right:-8px;">
+                <b>缺量化</b>只写「输出 12 份报告」，未说明被采纳几份、影响了什么决策。
+                <span class="go">修订此块 <i data-lucide="arrow-right" aria-hidden="true" style="width:10px;height:10px"></i></span>
+              </div>
+              <div class="m-note red" id="note2" style="top:474px; right:-16px;">
+                <b>建议附链接</b>项目亮点足，宜挂仓库或演示链接，作加分项。
+              </div>
+              <div class="m-note green" id="note3" style="top:332px; right:-4px;">
+                <b>可补强</b>GPA 3.6 已不错，若附专业排名更具说服力。
+              </div>
+              <div class="float-bar" style="top:236px; left:452px;">
+                <button type="button" aria-label="加粗"><i data-lucide="bold" aria-hidden="true"></i></button>
+                <button type="button" aria-label="斜体"><i data-lucide="italic" aria-hidden="true"></i></button>
+                <button type="button" aria-label="链接"><i data-lucide="link" aria-hidden="true"></i></button>
+                <span class="v"></span>
+                <button type="button" class="ai"><i data-lucide="sparkles" aria-hidden="true"></i>改写</button>
+              </div>
+
+              <header class="r-head">
+                <div class="name"><b>李思远</b><span class="intent">求职意向：产品经理（26 届）</span></div>
+                <p class="contact">138****2321 · lisiyuan@mail.com · <a href="#github">github.com/lisiyuan</a></p>
+                <div class="rule"></div>
+              </header>
+
+              <div class="r-side">
+                <section class="r-sec r-sec-basic">
+                  <h3>基本信息</h3>
+                  <div class="photo-slot"><i data-lucide="camera" aria-hidden="true"></i>照片</div>
+                  <p>武汉 · 可即时到岗<br>产品方向：B 端 / 数据</p>
+                </section>
+                <section class="r-sec r-sec-skill">
+                  <h3>技能</h3>
+                  <p>Axure / Figma · SQL（基础）<br>Python（数据分析）· 英语 CET-6</p>
+                </section>
+              </div>
+
+              <div class="r-main">
+                <section class="r-sec r-sec-edu">
+                  <h3>教育经历</h3>
+                  <div class="entry">
+                    <div class="row"><b>华中科技大学</b><span class="role">软件工程 · 本科</span><span class="date">2022.09 – 2026.06</span></div>
+                    <ul class="bullets">
+                      <li class="pen-u" id="blk-gpa">GPA 3.6 / 4.0，主修产品设计、数据分析方向课程
+                        <svg viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2,5 Q30,2.4 62,4.6 T124,4 T198,5" fill="none" stroke="#C4372B" stroke-width="1.8" stroke-linecap="round" opacity=".9"/><path d="M40,4.6 Q80,2.8 130,4.8" fill="none" stroke="#C4372B" stroke-width="1.2" stroke-linecap="round" opacity=".5"/></svg>
+                      </li>
+                    </ul>
+                  </div>
+                </section>
+
+                <section class="r-sec r-sec-exp">
+                  <h3>实习经历</h3>
+                  <div class="entry">
+                    <div class="row"><b>字节跳动</b><span class="role">产品实习生 · 创作者工具</span><span class="date">2025.06 – 2025.09</span></div>
+                    <ul class="bullets">
+                      <li class="pen-u" id="blk-report">负责创作者后台的调研与需求梳理，输出 12 份竞品分析报告
+                        <svg viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2,4.4 Q36,2.2 70,5 T140,3.6 T198,4.8" fill="none" stroke="#C4372B" stroke-width="2" stroke-linecap="round" opacity=".92"/><path d="M20,5.4 Q90,3 170,5.2" fill="none" stroke="#C4372B" stroke-width="1.1" stroke-linecap="round" opacity=".45"/></svg>
+                      </li>
+                      <li class="diff-host" id="blk-diff"><span class="del">参与搜索改版项目，负责部分数据整理与跟进</span> <span class="ins">主导搜索改版的用户反馈分析，搭建埋点看板，问题定位效率提升 40%</span>
+                        <span class="ai-chip"><span class="tag">AI 建议</span><button type="button" class="ok" aria-label="采纳"><i data-lucide="check" aria-hidden="true" style="width:11px;height:11px"></i></button><button type="button" class="no" aria-label="拒绝"><i data-lucide="x" aria-hidden="true" style="width:11px;height:11px"></i></button></span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="entry">
+                    <div class="row"><b>美团</b><span class="role">产品运营实习生</span><span class="date">2024.06 – 2024.09</span></div>
+                    <ul class="bullets">
+                      <li>负责商家社群运营，策划 3 场促活活动，社群月活跃度提升 25%</li>
+                    </ul>
+                  </div>
+                </section>
+
+                <section class="r-sec r-sec-proj">
+                  <h3>项目经历</h3>
+                  <div class="entry">
+                    <div class="row"><b>校园二手书平台「书循环」</b><span class="role">联合创始人</span><span class="date">2023.03 – 至今</span></div>
+                    <ul class="bullets">
+                      <li class="pen-u" id="blk-proj">负责产品 0 到 1：需求分析、原型设计与 MVP 上线，6 个月积累用户 4000+，促成交易 1200+ 笔
+                        <svg viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2,5 Q44,2.6 84,4.8 T160,3.8 T198,5" fill="none" stroke="#C4372B" stroke-width="1.9" stroke-linecap="round" opacity=".9"/><path d="M56,4.4 Q120,2.6 186,4.6" fill="none" stroke="#C4372B" stroke-width="1.2" stroke-linecap="round" opacity=".5"/></svg>
+                      </li>
+                    </ul>
+                  </div>
+                </section>
+              </div>
+            </article>
+          </div>
+          <div class="pagebreak mono">技能证书 → 第 2 页（自动分页）</div>
+        </div>
+      </section>
+
+      <aside class="eval" aria-label="评估报告">
+        <h2>评估报告</h2>
+        <p class="meta mono">10-23 14:02 · glm-4.7 · general v4</p>
+        <div class="score-row">
+          <span class="big">62</span><span class="lvl">综合 · 中</span><span class="delta">较上次 +4</span>
+        </div>
+        <p class="summary">评语：结构完整、经历扎实，主要短板在<b>成果量化</b>与<b>岗位关键词</b>——先补数字，再对齐 JD。</p>
+        <svg class="radar" width="196" height="170" viewBox="0 0 180 170" role="img" aria-label="六维雷达图">
+          <polygon points="90,61 115.1,75.5 115.1,104.5 90,119 64.9,104.5 64.9,75.5" fill="none" stroke="#3A3B40" stroke-width="1"/>
+          <polygon points="90,32 140.2,61 140.2,119 90,148 39.8,119 39.8,61" fill="none" stroke="#3A3B40" stroke-width="1"/>
+          <line x1="90" y1="90" x2="90" y2="32" stroke="#3A3B40"/><line x1="90" y1="90" x2="140.2" y2="61" stroke="#3A3B40"/><line x1="90" y1="90" x2="140.2" y2="119" stroke="#3A3B40"/><line x1="90" y1="90" x2="90" y2="148" stroke="#3A3B40"/><line x1="90" y1="90" x2="39.8" y2="119" stroke="#3A3B40"/><line x1="90" y1="90" x2="39.8" y2="61" stroke="#3A3B40"/>
+          <polygon points="90,48.2 120.6,72.3 114.1,103.9 90,121.9 56.9,109.1 50.8,67.4" fill="rgba(143,166,217,.18)" stroke="#8FA6D9" stroke-width="1.6"/>
+          <circle cx="90" cy="48.2" r="2.4" fill="#8FA6D9"/><circle cx="120.6" cy="72.3" r="2.4" fill="#8FA6D9"/><circle cx="114.1" cy="103.9" r="2.4" fill="#8FA6D9"/><circle cx="90" cy="121.9" r="2.4" fill="#8FA6D9"/><circle cx="56.9" cy="109.1" r="2.4" fill="#8FA6D9"/><circle cx="50.8" cy="67.4" r="2.4" fill="#8FA6D9"/>
+          <text x="90" y="20" text-anchor="middle" font-size="10.5" fill="#9B998F">结构 72</text>
+          <text x="146" y="58" font-size="10.5" fill="#9B998F">STAR 61</text>
+          <text x="146" y="132" font-size="10.5" fill="#9B998F">量化 48</text>
+          <text x="90" y="162" text-anchor="middle" font-size="10.5" fill="#9B998F">匹配 55</text>
+          <text x="4" y="132" font-size="10.5" fill="#9B998F">关键词 66</text>
+          <text x="10" y="58" font-size="10.5" fill="#9B998F">清晰 78</text>
+        </svg>
+        <table class="dims"><tbody>
+          <tr><td class="dnm">结构完整性</td><td class="trk"><i style="--w:72%"></i></td><td class="num">72</td></tr>
+          <tr><td class="dnm">STAR 描述</td><td class="trk"><i style="--w:61%"></i></td><td class="num">61</td></tr>
+          <tr><td class="dnm">量化与成果</td><td class="trk"><i style="--w:48%"></i></td><td class="num">48</td></tr>
+          <tr><td class="dnm">岗位匹配</td><td class="trk"><i style="--w:55%"></i></td><td class="num">55</td></tr>
+        </tbody></table>
+        <div class="findings">
+          <h3>批注 · 4</h3>
+          <div class="finding" data-target="blk-report" role="button" tabindex="0">
+            <span class="sev hi"></span>
+            <p>实习经历缺量化成果<span>字节 · 第 1 条：补充被采纳数/影响</span></p>
+          </div>
+          <div class="finding" data-target="blk-diff" role="button" tabindex="0">
+            <span class="sev hi"></span>
+            <p>「参与/负责部分」表述弱化贡献<span>已给出改写建议（画布内联）</span></p>
+          </div>
+          <div class="finding" data-target="blk-gpa" role="button" tabindex="0">
+            <span class="sev sug"></span>
+            <p>教育经历建议附专业排名<span>GPA 3.6 具备展示价值</span></p>
+          </div>
+          <div class="finding" data-target="blk-proj" role="button" tabindex="0">
+            <span class="sev mid"></span>
+            <p>项目建议附仓库/演示链接<span>岗位 JD 强调作品集</span></p>
+          </div>
+        </div>
+        <button class="cta" type="button">去修订第一处问题<i data-lucide="arrow-right" aria-hidden="true"></i></button>
+      </aside>
+    </div>
+
+    <div class="statusbar">
+      <span>deepseek-chat</span><span>会话 3.2k tok</span><span>general v4</span>
+      <span style="margin-left:auto"></span>
+      <span>租约剩余 71 天</span><span class="k">Ctrl+K</span><span>命令面板</span>
+    </div>
+  </div>
+
+  <div class="voices" aria-label="四声部字体图例">
+    <div class="voice v-print"><div class="tag">声部 ① 印刷体</div><div class="demo">简历纸面与评语 · 宋体衬线 Aa</div><div class="where">画布内容 / 评估维度名与总评</div></div>
+    <div class="voice v-work"><div class="tag">声部 ② 工作体</div><div class="demo">表单与按钮 · 无衬线 Aa</div><div class="where">设置 / 工具栏 / 菜单 / 对话框</div></div>
+    <div class="voice v-meter"><div class="tag">声部 ③ 仪表体</div><div class="demo">数据与铭牌 · Mono 0123 & Condensed</div><div class="where">字标 / 状态栏 / 分数 / 大纲树</div></div>
+    <div class="voice v-hand"><div class="tag">声部 ④ 手写体</div><div class="demo">导师批注 · 楷体 批改如笔</div><div class="where">页边批注卡 / AI 走查批注</div></div>
+  </div>
+
+  <script>
+    (function(){
+      var root=document.getElementById('fairlens-type-preview');
+      var main=root.querySelector('#flMain');
+      var paper=root.querySelector('#paper');
+      var cBtn=root.querySelector('#tplClassicBtn'), dBtn=root.querySelector('#tplDuoBtn'), tName=root.querySelector('#tplName');
+      root.querySelector('#themeBtn').addEventListener('click',function(){main.classList.toggle('light');});
+      function setTpl(duo){
+        paper.classList.toggle('tpl-duo',duo); paper.classList.toggle('tpl-classic',!duo);
+        cBtn.setAttribute('aria-pressed',String(!duo)); dBtn.setAttribute('aria-pressed',String(duo));
+        tName.textContent=duo?'侧栏双栏':'经典单栏';
+      }
+      cBtn.addEventListener('click',function(){setTpl(false);});
+      dBtn.addEventListener('click',function(){setTpl(true);});
+      root.querySelectorAll('.finding').forEach(function(f){
+        function go(){
+          var el=document.getElementById(f.getAttribute('data-target'));
+          if(!el){return;}
+          el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+        }
+        f.addEventListener('click',go);
+        f.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+      });
+      try{ lucide.createIcons({attrs:{width:15,height:15}}); }catch(e){}
+    })();
+  </script>
+</div>

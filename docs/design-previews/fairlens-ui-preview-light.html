@@ -1,0 +1,366 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<div id="ade-preview">
+  <style>
+    #ade-preview{
+      --paper:#FFFFFF; --bench:#F2F1ED; --chrome:#ECEAE4; --panel:#F7F6F2;
+      --ink:#1C1D1B; --ink-2:#5A5955; --ink-3:#8B8983;
+      --inkBlue:#33518E; --inkBlue-bg:rgba(51,81,142,.08);
+      --pen-red:#C4372B; --pen-red-bg:rgba(196,55,43,.07);
+      --pen-green:#2E6E4E; --pen-green-bg:rgba(46,110,78,.08);
+      --line:#E4E2DC; --line-2:#D9D6CF;
+      font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+      background:var(--bench); color:var(--ink);
+      border:1px solid var(--line-2); border-radius:8px; overflow:hidden;
+      display:flex; flex-direction:column; height:880px;
+      font-size:14px; line-height:1.5;
+    }
+    #ade-preview .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+    #ade-preview svg{display:block;}
+    #ade-preview i[data-lucide]{display:inline-flex;}
+
+    /* ── 标题栏 ── */
+    #ade-preview .titlebar{height:42px; flex:none; display:flex; align-items:center; gap:10px; padding:0 14px; background:var(--chrome); border-bottom:1px solid var(--line);}
+    #ade-preview .titlebar .app{display:flex; align-items:center; gap:8px; font-weight:600; font-size:13px;}
+    #ade-preview .titlebar .app i{color:var(--inkBlue);}
+    #ade-preview .titlebar .file{color:var(--ink-2); font-size:12px;}
+    #ade-preview .titlebar .spacer{flex:1;}
+    #ade-preview .chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-2); border:1px solid var(--line); background:#FFFFFF; border-radius:99px; padding:2px 9px;}
+    #ade-preview .chip .dot{width:6px; height:6px; border-radius:50%; background:var(--pen-green);}
+
+    /* ── 主体 ── */
+    #ade-preview .main{flex:1; display:flex; min-height:0;}
+
+    /* 左：大纲 */
+    #ade-preview .outline{width:208px; flex:none; background:var(--panel); border-right:1px solid var(--line); padding:12px 10px; overflow:hidden;}
+    #ade-preview .outline h2{font-size:11px; font-weight:600; letter-spacing:.12em; color:var(--ink-3); margin:2px 4px 8px;}
+    #ade-preview .tree-item{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:4px; font-size:13px; cursor:default; color:var(--ink);}
+    #ade-preview .tree-item i{color:var(--ink-3); flex:none;}
+    #ade-preview .tree-item .grip{opacity:0; margin-left:auto;}
+    #ade-preview .tree-item:hover .grip{opacity:1;}
+    #ade-preview .tree-item.sub{padding-left:26px; font-size:12.5px; color:var(--ink-2);}
+    #ade-preview .tree-item.active{background:var(--inkBlue-bg); box-shadow:inset 2px 0 0 var(--inkBlue); color:var(--ink);}
+    #ade-preview .outline .tpl-note{margin-top:14px; font-size:11px; color:var(--ink-3); padding:0 4px;}
+
+    /* 中：工具栏 + 画布 */
+    #ade-preview .center{flex:1; min-width:0; display:flex; flex-direction:column;}
+    #ade-preview .toolbar{height:42px; flex:none; display:flex; align-items:center; gap:10px; padding:0 14px;}
+    #ade-preview .seg{display:flex; border:1px solid var(--line-2); border-radius:6px; background:#FFFFFF; overflow:hidden;}
+    #ade-preview .seg button{font:inherit; font-size:12px; border:0; background:transparent; color:var(--ink-2); padding:5px 12px; cursor:pointer;}
+    #ade-preview .seg button[aria-pressed="true"]{background:var(--inkBlue); color:#FFFFFF;}
+    #ade-preview .zoom{font-size:11px; color:var(--ink-3);}
+    #ade-preview .toolbar .spacer{flex:1;}
+    #ade-preview .btn{font:inherit; font-size:12px; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:6px 12px; cursor:pointer; border:1px solid var(--line-2); background:#FFFFFF; color:var(--ink);}
+    #ade-preview .btn.primary{background:var(--inkBlue); border-color:var(--inkBlue); color:#FFFFFF;}
+
+    #ade-preview .canvas{flex:1; min-height:0; position:relative; display:flex; flex-direction:column; align-items:center; padding:16px 0 6px;}
+    #ade-preview .paper-wrap{transform:scale(.9); transform-origin:top center; flex:none;}
+    #ade-preview .pagebreak{display:flex; align-items:center; gap:10px; width:70%; margin-top:10px; color:var(--ink-3); font-size:11px;}
+    #ade-preview .pagebreak::before,#ade-preview .pagebreak::after{content:""; flex:1; border-top:1.5px dashed var(--line-2);}
+
+    /* A4 纸（模板投影） */
+    #ade-preview .paper{width:566px; min-height:800px; background:var(--paper); border-radius:2px; position:relative;
+      box-shadow:0 1px 2px rgba(28,29,27,.08), 0 10px 28px rgba(28,29,27,.10);
+      padding:46px 54px; font-size:12.5px;}
+    #ade-preview .tpl-classic .r-side{display:contents;}
+    #ade-preview .tpl-duo{padding:0; display:grid; grid-template-columns:198px 1fr; grid-template-areas:"head head" "side main" "side main";}
+    #ade-preview .tpl-duo .r-head{grid-area:head; padding:34px 40px 10px;}
+    #ade-preview .tpl-duo .r-side{grid-area:side; background:#F4F3ED; padding:8px 20px 24px; display:block; border-right:1px solid #ECEAE2;}
+    #ade-preview .tpl-duo .r-main{grid-area:main; padding:6px 40px 30px;}
+    #ade-preview .tpl-duo .photo-slot{display:flex;}
+    #ade-preview .photo-slot{display:none; width:74px; height:98px; margin:12px auto 4px; border:1.5px dashed var(--line-2); border-radius:3px; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:var(--ink-3); font-size:10.5px;}
+    #ade-preview .tpl-duo .r-sec-skill h3, #ade-preview .tpl-duo .r-sec-basic h3{margin-top:16px;}
+
+    #ade-preview .r-head .name{display:flex; align-items:baseline; gap:12px;}
+    #ade-preview .r-head .name b{font-family:'Noto Serif SC',serif; font-weight:700; font-size:27px; letter-spacing:.06em;}
+    #ade-preview .r-head .intent{color:var(--ink-2); font-size:12px;}
+    #ade-preview .r-head .contact{margin-top:6px; font-size:11.5px; color:var(--ink-2);}
+    #ade-preview .r-head .contact a{color:var(--inkBlue); text-decoration:underline; text-underline-offset:2px;}
+    #ade-preview .r-head .rule{border-top:2px solid var(--ink); margin-top:14px;}
+    #ade-preview .tpl-duo .r-head .rule{display:none;}
+
+    #ade-preview .r-sec h3{font-family:'Noto Serif SC',serif; font-size:14.5px; font-weight:600; letter-spacing:.14em; margin:18px 0 6px; display:flex; align-items:center; gap:8px;}
+    #ade-preview .r-sec h3::after{content:""; flex:1; border-top:1px solid var(--line-2);}
+    #ade-preview .entry{margin:8px 0 4px;}
+    #ade-preview .entry .row{display:flex; align-items:baseline; gap:8px;}
+    #ade-preview .entry .row b{font-weight:600; font-size:13px;}
+    #ade-preview .entry .row .role{color:var(--ink-2);}
+    #ade-preview .entry .row .date{margin-left:auto; color:var(--ink-3); font-size:11.5px; font-family:'IBM Plex Mono',monospace;}
+    #ade-preview ul.bullets{margin:4px 0 0; padding-left:0; list-style:none;}
+    #ade-preview ul.bullets li{position:relative; padding-left:14px; margin:3px 0; color:#33322F;}
+    #ade-preview ul.bullets li::before{content:""; position:absolute; left:2px; top:.62em; width:4px; height:4px; background:var(--ink);}
+    #ade-preview .r-sec-skill p{margin:4px 0; color:#33322F;}
+    #ade-preview .r-sec-basic p{margin:3px 0; color:#33322F; font-size:12px;}
+
+    /* AI 内联 diff（块级修订建议） */
+    #ade-preview .ins{background:var(--pen-green-bg); color:#1F5138; text-decoration:underline; text-decoration-color:var(--pen-green); text-decoration-style:wavy; text-underline-offset:3px; text-decoration-thickness:1px;}
+    #ade-preview .del{background:var(--pen-red-bg); color:#7A2A21; text-decoration:line-through; text-decoration-color:var(--pen-red); text-decoration-thickness:1.5px;}
+    #ade-preview .ai-chip{position:absolute; right:-6px; top:-14px; display:flex; gap:4px; align-items:center;}
+    #ade-preview .ai-chip .tag{font-size:10px; color:var(--inkBlue); border:1px solid rgba(51,81,142,.4); background:#fff; border-radius:3px; padding:0 5px;}
+    #ade-preview .ai-chip button{width:18px; height:18px; border-radius:4px; border:1px solid var(--line-2); background:#fff; color:var(--ink-2); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
+    #ade-preview .ai-chip button.ok{color:var(--pen-green); border-color:rgba(46,110,78,.5);}
+    #ade-preview .ai-chip button.no{color:var(--pen-red); border-color:rgba(196,55,43,.4);}
+    #ade-preview li.diff-host{padding-right:26px;}
+
+    /* 红笔批注：行内笔触 + 页边批注卡 */
+    #ade-preview .pen-u{position:relative; }
+    #ade-preview .pen-u svg{position:absolute; left:0; right:0; bottom:-4px; width:100%; height:8px;}
+    #ade-preview .m-note{position:absolute; width:118px; font-size:11px; line-height:1.45; padding:7px 9px 8px; border-radius:3px; background:#FFFDF8; box-shadow:0 2px 8px rgba(28,29,27,.10); z-index:5;}
+    #ade-preview .m-note.red{border-left:3px solid var(--pen-red); color:#6E271E; transform:rotate(-1.6deg);}
+    #ade-preview .m-note.green{border-left:3px solid var(--pen-green); color:#24513B; transform:rotate(1.1deg);}
+    #ade-preview .m-note b{display:block; font-weight:600; margin-bottom:2px; font-size:10.5px; letter-spacing:.08em;}
+    #ade-preview .m-note.red b{color:var(--pen-red);}
+    #ade-preview .m-note.green b{color:var(--pen-green);}
+    #ade-preview .m-note .go{display:inline-flex; align-items:center; gap:3px; margin-top:4px; color:var(--inkBlue); font-size:10.5px;}
+    #ade-preview .flash{animation:adeflash .9s ease-out;}
+    @keyframes adeflash{0%{box-shadow:0 0 0 0 rgba(196,55,43,.4);}100%{box-shadow:0 0 0 14px rgba(196,55,43,0);}}
+    @media (prefers-reduced-motion:reduce){#ade-preview .flash{animation:none;}}
+
+    /* 悬浮工具条 */
+    #ade-preview .float-bar{position:absolute; z-index:9; display:flex; align-items:center; gap:2px; background:#fff; border:1px solid var(--line-2); border-radius:6px; padding:3px 5px; box-shadow:0 4px 14px rgba(28,29,27,.14);}
+    #ade-preview .float-bar button{width:26px; height:24px; border:0; background:transparent; border-radius:4px; color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer;}
+    #ade-preview .float-bar button:hover{background:var(--bench);}
+    #ade-preview .float-bar .v{width:1px; height:16px; background:var(--line); margin:0 4px;}
+    #ade-preview .float-bar .ai{width:auto; padding:0 8px; gap:5px; font-size:12px; color:var(--inkBlue);}
+
+    /* 右：评估面板 */
+    #ade-preview .eval{width:296px; flex:none; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; padding:14px 14px 12px; overflow:hidden;}
+    #ade-preview .eval h2{font-size:11px; font-weight:600; letter-spacing:.12em; color:var(--ink-3);}
+    #ade-preview .eval .meta{font-size:10.5px; color:var(--ink-3); margin:2px 0 10px;}
+    #ade-preview .score-row{display:flex; align-items:baseline; gap:8px;}
+    #ade-preview .score-row .big{font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:500;}
+    #ade-preview .score-row .lvl{font-size:12px; color:var(--ink-2);}
+    #ade-preview .score-row .delta{margin-left:auto; font-size:11px; color:var(--pen-green);}
+    #ade-preview .radar{margin:2px auto 4px;}
+    #ade-preview .dims{width:100%; border-collapse:collapse; margin-bottom:10px;}
+    #ade-preview .dims td{font-size:11.5px; padding:2.5px 0; color:var(--ink-2);}
+    #ade-preview .dims td.num{text-align:right; font-family:'IBM Plex Mono',monospace; color:var(--ink);}
+    #ade-preview .dims td.trk{width:64px;}
+    #ade-preview .dims td.trk i{display:block; height:3px; border-radius:2px; background:var(--line); position:relative; overflow:hidden; font-style:normal;}
+    #ade-preview .dims td.trk i::after{content:""; position:absolute; left:0; top:0; bottom:0; width:var(--w); background:var(--inkBlue); border-radius:2px;}
+    #ade-preview .findings{flex:1; min-height:0; overflow:hidden; margin-top:4px;}
+    #ade-preview .findings h3{font-size:11px; font-weight:600; letter-spacing:.12em; color:var(--ink-3); margin-bottom:6px;}
+    #ade-preview .finding{display:flex; gap:8px; padding:7px 8px; border-radius:5px; cursor:pointer; background:transparent;}
+    #ade-preview .finding:hover{background:#FFFFFF;}
+    #ade-preview .finding .sev{flex:none; width:8px; height:8px; border-radius:50%; margin-top:5px;}
+    #ade-preview .sev.hi{background:var(--pen-red);}
+    #ade-preview .sev.mid{border:1.6px solid var(--pen-red);}
+    #ade-preview .sev.sug{border:1.6px solid var(--pen-green);}
+    #ade-preview .finding p{margin:0; font-size:12px; line-height:1.45;}
+    #ade-preview .finding span{display:block; font-size:10.5px; color:var(--ink-3); margin-top:1px;}
+    #ade-preview .eval .cta{font:inherit; font-size:12.5px; width:100%; justify-content:center; display:flex; gap:6px; margin-top:8px; border-radius:6px; padding:8px 0; cursor:pointer; background:var(--inkBlue); border:0; color:#fff;}
+
+    /* 状态栏 */
+    #ade-preview .statusbar{height:30px; flex:none; display:flex; align-items:center; gap:14px; padding:0 14px; background:var(--chrome); border-top:1px solid var(--line); font-size:11px; color:var(--ink-2);}
+    #ade-preview .statusbar .k{padding:1px 7px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink);}
+  </style>
+
+  <div class="titlebar">
+    <span class="app"><i data-lucide="pen-line" aria-hidden="true"></i>ResumeADE</span>
+    <span class="file">李思远_产品经理_简历.ade</span>
+    <span class="chip"><i data-lucide="check" aria-hidden="true" style="width:11px;height:11px"></i>已保存</span>
+    <span class="spacer"></span>
+    <span class="chip"><span class="dot"></span>授权有效</span>
+    <span class="chip mono">v0.1.0</span>
+  </div>
+
+  <div class="main">
+    <aside class="outline" aria-label="大纲">
+      <h2>大纲</h2>
+      <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>基本信息</div>
+      <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>教育经历</div>
+      <div class="tree-item sub">华中科技大学</div>
+      <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>实习经历</div>
+      <div class="tree-item sub active"><i data-lucide="grip-vertical" aria-hidden="true" class="grip" style="width:12px;height:12px;margin-left:0;margin-right:2px"></i>字节跳动 · 产品实习</div>
+      <div class="tree-item sub"><i data-lucide="grip-vertical" aria-hidden="true" class="grip" style="width:12px;height:12px;margin-left:0;margin-right:2px"></i>美团 · 产品运营实习</div>
+      <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>项目经历</div>
+      <div class="tree-item sub">书循环 · 联合创始人</div>
+      <div class="tree-item"><i data-lucide="chevron-down" aria-hidden="true"></i>技能证书</div>
+      <p class="tpl-note">当前模板：<b id="tpl-name">经典单栏</b><br>版式由模板锁定，内容随你</p>
+    </aside>
+
+    <section class="center">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="模板">
+          <button type="button" id="tpl-classic-btn" aria-pressed="true">经典单栏</button>
+          <button type="button" id="tpl-duo-btn" aria-pressed="false">侧栏双栏</button>
+        </div>
+        <span class="zoom mono">92%</span>
+        <span class="spacer"></span>
+        <button class="btn" type="button"><i data-lucide="scan-search" aria-hidden="true"></i>AI 走查</button>
+        <button class="btn primary" type="button"><i data-lucide="gauge" aria-hidden="true"></i>运行评估</button>
+      </div>
+
+      <div class="canvas">
+        <div class="paper-wrap">
+          <article class="paper tpl-classic" id="paper">
+            <!-- 页边批注卡 -->
+            <div class="m-note red" id="note-1" style="top:212px; right:-6px;">
+              <b>缺量化</b>只写「输出 12 份报告」，未说明被采纳数或对决策的影响。
+              <span class="go">修订此块 <i data-lucide="arrow-right" aria-hidden="true" style="width:10px;height:10px"></i></span>
+            </div>
+            <div class="m-note red" id="note-2" style="top:472px; right:-14px;">
+              <b>建议附链接</b>项目亮点足，建议挂仓库/演示链接作加分项。
+            </div>
+            <div class="m-note green" id="note-3" style="top:330px; right:-4px;">
+              <b>可补强</b>GPA 3.6 已不错，附专业排名更具说服力。
+            </div>
+            <!-- 悬浮工具条（跟随选中块） -->
+            <div class="float-bar" style="top:236px; left:452px;">
+              <button type="button" aria-label="加粗"><i data-lucide="bold" aria-hidden="true"></i></button>
+              <button type="button" aria-label="斜体"><i data-lucide="italic" aria-hidden="true"></i></button>
+              <button type="button" aria-label="链接"><i data-lucide="link" aria-hidden="true"></i></button>
+              <span class="v"></span>
+              <button type="button" class="ai"><i data-lucide="sparkles" aria-hidden="true"></i>改写</button>
+            </div>
+
+            <header class="r-head">
+              <div class="name"><b>李思远</b><span class="intent">求职意向：产品经理（26 届）</span></div>
+              <p class="contact">138****2321 · lisiyuan@mail.com · <a href="#github">github.com/lisiyuan</a></p>
+              <div class="rule"></div>
+            </header>
+
+            <div class="r-side">
+              <section class="r-sec r-sec-basic">
+                <h3>基本信息</h3>
+                <div class="photo-slot"><i data-lucide="camera" aria-hidden="true"></i>照片</div>
+                <p>武汉 · 可即时到岗<br>产品方向：B 端 / 数据</p>
+              </section>
+              <section class="r-sec r-sec-skill">
+                <h3>技能</h3>
+                <p>Axure / Figma · SQL（基础）<br>Python（数据分析）· 英语 CET-6</p>
+              </section>
+            </div>
+
+            <div class="r-main">
+              <section class="r-sec r-sec-edu">
+                <h3>教育经历</h3>
+                <div class="entry">
+                  <div class="row"><b>华中科技大学</b><span class="role">软件工程 · 本科</span><span class="date">2022.09 – 2026.06</span></div>
+                  <ul class="bullets">
+                    <li class="pen-u" id="blk-gpa">GPA 3.6 / 4.0，主修产品设计、数据分析方向课程
+                      <svg viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2,5 Q30,2.4 62,4.6 T124,4 T198,5" fill="none" stroke="#C4372B" stroke-width="1.8" stroke-linecap="round" opacity=".9"/><path d="M40,4.6 Q80,2.8 130,4.8" fill="none" stroke="#C4372B" stroke-width="1.2" stroke-linecap="round" opacity=".5"/></svg>
+                    </li>
+                  </ul>
+                </div>
+              </section>
+
+              <section class="r-sec r-sec-exp">
+                <h3>实习经历</h3>
+                <div class="entry">
+                  <div class="row"><b>字节跳动</b><span class="role">产品实习生 · 创作者工具</span><span class="date">2025.06 – 2025.09</span></div>
+                  <ul class="bullets">
+                    <li class="pen-u" id="blk-report">负责创作者后台的调研与需求梳理，输出 12 份竞品分析报告
+                      <svg viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2,4.4 Q36,2.2 70,5 T140,3.6 T198,4.8" fill="none" stroke="#C4372B" stroke-width="2" stroke-linecap="round" opacity=".92"/><path d="M20,5.4 Q90,3 170,5.2" fill="none" stroke="#C4372B" stroke-width="1.1" stroke-linecap="round" opacity=".45"/></svg>
+                    </li>
+                    <li class="diff-host" id="blk-diff"><span class="del">参与搜索改版项目，负责部分数据整理与跟进</span> <span class="ins">主导搜索改版的用户反馈分析，搭建埋点看板，问题定位效率提升 40%</span>
+                      <span class="ai-chip"><span class="tag">AI 建议</span><button type="button" class="ok" aria-label="采纳"><i data-lucide="check" aria-hidden="true" style="width:11px;height:11px"></i></button><button type="button" class="no" aria-label="拒绝"><i data-lucide="x" aria-hidden="true" style="width:11px;height:11px"></i></button></span>
+                    </li>
+                  </ul>
+                </div>
+                <div class="entry">
+                  <div class="row"><b>美团</b><span class="role">产品运营实习生</span><span class="date">2024.06 – 2024.09</span></div>
+                  <ul class="bullets">
+                    <li>负责商家社群运营，策划 3 场促活活动，社群月活跃度提升 25%</li>
+                  </ul>
+                </div>
+              </section>
+
+              <section class="r-sec r-sec-proj">
+                <h3>项目经历</h3>
+                <div class="entry">
+                  <div class="row"><b>校园二手书平台「书循环」</b><span class="role">联合创始人</span><span class="date">2023.03 – 至今</span></div>
+                  <ul class="bullets">
+                    <li class="pen-u" id="blk-proj">负责产品 0 到 1：需求分析、原型设计与 MVP 上线，6 个月积累用户 4000+，促成交易 1200+ 笔
+                      <svg viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2,5 Q44,2.6 84,4.8 T160,3.8 T198,5" fill="none" stroke="#C4372B" stroke-width="1.9" stroke-linecap="round" opacity=".9"/><path d="M56,4.4 Q120,2.6 186,4.6" fill="none" stroke="#C4372B" stroke-width="1.2" stroke-linecap="round" opacity=".5"/></svg>
+                    </li>
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </article>
+        </div>
+        <div class="pagebreak mono">技能证书 → 第 2 页（自动分页）</div>
+      </div>
+    </section>
+
+    <aside class="eval" aria-label="评估报告">
+      <h2>评估报告</h2>
+      <p class="meta mono">10-23 14:02 · glm-4.7 · 提示词包 general v4</p>
+      <div class="score-row">
+        <span class="big">62</span><span class="lvl">综合 · 中</span><span class="delta">较上次 +4</span>
+      </div>
+      <svg class="radar" width="196" height="176" viewBox="0 0 180 176" role="img" aria-label="六维雷达图">
+        <polygon points="90,61 115.1,75.5 115.1,104.5 90,119 64.9,104.5 64.9,75.5" fill="none" stroke="#E4E2DC" stroke-width="1"/>
+        <polygon points="90,32 140.2,61 140.2,119 90,148 39.8,119 39.8,61" fill="none" stroke="#E4E2DC" stroke-width="1"/>
+        <line x1="90" y1="90" x2="90" y2="32" stroke="#E4E2DC"/><line x1="90" y1="90" x2="140.2" y2="61" stroke="#E4E2DC"/><line x1="90" y1="90" x2="140.2" y2="119" stroke="#E4E2DC"/><line x1="90" y1="90" x2="90" y2="148" stroke="#E4E2DC"/><line x1="90" y1="90" x2="39.8" y2="119" stroke="#E4E2DC"/><line x1="90" y1="90" x2="39.8" y2="61" stroke="#E4E2DC"/>
+        <polygon points="90,48.2 120.6,72.3 114.1,103.9 90,121.9 56.9,109.1 50.8,67.4" fill="rgba(51,81,142,.16)" stroke="#33518E" stroke-width="1.6"/>
+        <circle cx="90" cy="48.2" r="2.4" fill="#33518E"/><circle cx="120.6" cy="72.3" r="2.4" fill="#33518E"/><circle cx="114.1" cy="103.9" r="2.4" fill="#33518E"/><circle cx="90" cy="121.9" r="2.4" fill="#33518E"/><circle cx="56.9" cy="109.1" r="2.4" fill="#33518E"/><circle cx="50.8" cy="67.4" r="2.4" fill="#33518E"/>
+        <text x="90" y="20" text-anchor="middle" font-size="10.5" fill="#5A5955">结构 72</text>
+        <text x="146" y="58" font-size="10.5" fill="#5A5955">STAR 61</text>
+        <text x="146" y="132" font-size="10.5" fill="#5A5955">量化 48</text>
+        <text x="90" y="166" text-anchor="middle" font-size="10.5" fill="#5A5955">匹配 55</text>
+        <text x="4" y="132" font-size="10.5" fill="#5A5955">关键词 66</text>
+        <text x="10" y="58" font-size="10.5" fill="#5A5955">清晰 78</text>
+      </svg>
+      <table class="dims"><tbody>
+        <tr><td>结构完整性</td><td class="trk"><i style="--w:72%"></i></td><td class="num">72</td></tr>
+        <tr><td>STAR 描述</td><td class="trk"><i style="--w:61%"></i></td><td class="num">61</td></tr>
+        <tr><td>量化与成果</td><td class="trk"><i style="--w:48%"></i></td><td class="num">48</td></tr>
+        <tr><td>岗位匹配</td><td class="trk"><i style="--w:55%"></i></td><td class="num">55</td></tr>
+      </tbody></table>
+      <div class="findings">
+        <h3>批注 · 4</h3>
+        <div class="finding" data-target="blk-report" role="button" tabindex="0">
+          <span class="sev hi"></span>
+          <p>实习经历缺量化成果<span>字节 · 第 1 条：补充被采纳数/影响</span></p>
+        </div>
+        <div class="finding" data-target="blk-diff" role="button" tabindex="0">
+          <span class="sev hi"></span>
+          <p>「参与/负责部分」表述弱化贡献<span>已给出改写建议（画布内联）</span></p>
+        </div>
+        <div class="finding" data-target="blk-gpa" role="button" tabindex="0">
+          <span class="sev sug"></span>
+          <p>教育经历建议附专业排名<span>GPA 3.6 具备展示价值</span></p>
+        </div>
+        <div class="finding" data-target="blk-proj" role="button" tabindex="0">
+          <span class="sev mid"></span>
+          <p>项目建议附仓库/演示链接<span>岗位 JD 强调作品集</span></p>
+        </div>
+      </div>
+      <button class="cta" type="button">去修订第一处问题<i data-lucide="arrow-right" aria-hidden="true"></i></button>
+    </aside>
+  </div>
+
+  <div class="statusbar mono">
+    <span>deepseek-chat</span><span>会话 3.2k tok</span><span>提示词包 general v4</span>
+    <span style="margin-left:auto"></span>
+    <span>租约剩余 71 天</span><span class="k">Ctrl+K</span><span>命令面板</span>
+  </div>
+
+  <script>
+    (function(){
+      var root=document.getElementById('ade-preview');
+      var paper=root.querySelector('#paper');
+      var cBtn=root.querySelector('#tpl-classic-btn'), dBtn=root.querySelector('#tpl-duo-btn'), tName=root.querySelector('#tpl-name');
+      function setTpl(duo){
+        paper.classList.toggle('tpl-duo',duo); paper.classList.toggle('tpl-classic',!duo);
+        cBtn.setAttribute('aria-pressed',String(!duo)); dBtn.setAttribute('aria-pressed',String(duo));
+        tName.textContent=duo?'侧栏双栏':'经典单栏';
+      }
+      cBtn.addEventListener('click',function(){setTpl(false);});
+      dBtn.addEventListener('click',function(){setTpl(true);});
+      root.querySelectorAll('.finding').forEach(function(f){
+        function go(){
+          var el=document.getElementById(f.getAttribute('data-target'));
+          if(!el){return;}
+          el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+        }
+        f.addEventListener('click',go);
+        f.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+      });
+      try{ lucide.createIcons({attrs:{width:15,height:15}}); }catch(e){}
+    })();
+  </script>
+</div>
