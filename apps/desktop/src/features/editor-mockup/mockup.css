@@ -126,10 +126,21 @@
 .flash-jump { animation: flashjump 0.9s ease-out; }
 @keyframes flashjump { 0% { box-shadow: 0 0 0 0 rgba(51, 81, 142, 0.4); } 100% { box-shadow: 0 0 0 16px rgba(51, 81, 142, 0); } }
 
-/* 悬浮工具条（m1.5 实装版，BubbleMenu 跟随选区） */
-.float-bar.live { position: static; top: auto; left: auto; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-.float-bar.live button { width: 26px; height: 24px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
+/* 悬浮工具条（m1.5 实装版）：样式自成体系（BubbleMenu 外层容器无类名，须按 .float-bar 直接命中）
+   对照预览基线（design-previews）：面板底色+1px 描边+6px 圆角+阴影，按钮 26×24 */
+.float-bar.live {
+  position: static; top: auto; left: auto;
+  display: flex; align-items: center; gap: 2px;
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 6px;
+  padding: 3px 5px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  font-family: var(--ade-font-ui);
+}
+.float-bar.live .v { width: 1px; height: 16px; background: var(--ade-line); margin: 0 4px; }
+.float-bar.live button {
+  width: 26px; height: 24px; border-radius: 4px; color: var(--ade-ink);
+  display: flex; align-items: center; justify-content: center;
+}
 .float-bar.live button:hover { background: var(--ade-hover); }
 .float-bar.live button.on { background: var(--ade-accent-soft); color: var(--ade-accent); }
-.float-bar.live .ai { width: auto; padding: 0 8px; gap: 4px; font-size: 12px; color: var(--ade-accent); }
+.float-bar.live .ai { width: auto; padding: 0 8px; gap: 4px; font-size: 12px; color: var(--ade-accent); display: flex; align-items: center; }
 .float-bar.live .ai:disabled { opacity: 0.4; cursor: default; }
