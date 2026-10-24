@@ -11,6 +11,7 @@ import { resolveShortcut } from '../editor/shortcuts.js';
 import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
 import { CommandPalette } from './CommandPalette.js';
+import { SidebarResizer } from './SidebarResizer.js';
 import { ContextMenuView, useContextMenu, type ContextMenuEntry } from './ContextMenu.js';
 import { sampleDoc } from './sample-data.js';
 import { dims, findings } from './sample-data.js';
@@ -52,6 +53,8 @@ export function EditorMockup() {
   }, []);
   const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
   const editorApiRef = useRef<EditorApi | null>(null);
+  const leftWidth = useMockup((s) => s.leftWidth);
+  const rightWidth = useMockup((s) => s.rightWidth);
 
   // #93：画布右键菜单（两种光标态）。结构复制真实现（同 entry 内复制条目，nanoid 新块）
   const duplicateEntry = (sectionId: string, entryId: string) => {
@@ -125,15 +128,45 @@ export function EditorMockup() {
   return (
     <div className="editor-mock">
       {leftOpen ? (
-        <OutlineTreeLive doc={canvasDoc} onReorderEntry={reorderEntry} />
+        <>
+          <LeftPanel width={leftWidth}>
+            <OutlineTreeLive doc={canvasDoc} onReorderEntry={reorderEntry} />
+          </LeftPanel>
+          <SidebarResizer side="left" />
+        </>
       ) : (
         <Rail side="left" />
       )}
       <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={setCanvasDoc} editorApiRef={editorApiRef}
         onDuplicateEntry={duplicateEntry} />
-      {rightOpen ? <EvalPanel /> : <Rail side="right" />}
+      {rightOpen ? (
+        <>
+          <RightPanel width={rightWidth}>
+            <EvalPanel />
+          </RightPanel>
+          <SidebarResizer side="right" />
+        </>
+      ) : (
+        <Rail side="right" />
+      )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
+  );
+}
+
+/** 侧栏宽度容器（拖拽调宽；原 .m-left/.m-right 固定宽改由此注入） */
+function LeftPanel({ width, children }: { width: number; children: React.ReactNode }) {
+  return (
+    <aside className="m-left" style={{ width }} aria-label="大纲">
+      {children}
+    </aside>
+  );
+}
+function RightPanel({ width, children }: { width: number; children: React.ReactNode }) {
+  return (
+    <aside className="m-right m-eval" style={{ width }} aria-label="评估报告">
+      {children}
+    </aside>
   );
 }
 

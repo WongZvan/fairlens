@@ -13,6 +13,9 @@ interface MockupState {
   zoom: number;
   leftOpen: boolean;
   rightOpen: boolean;
+  /** 侧栏宽度（px，拖拽调宽；localStorage 记忆） */
+  leftWidth: number;
+  rightWidth: number;
   dirty?: boolean; // m1.6 持久层接管前的保存标记占位
   setTemplate: (t: MockTemplate) => void;
   setZoomMode: (m: ZoomMode) => void;
@@ -20,11 +23,16 @@ interface MockupState {
   bumpZoom: (delta: number) => void; // Ctrl+滚轮/±按钮：离开 fit 模式进固定档
   toggleLeft: () => void;
   toggleRight: () => void;
+  setLeftWidth: (w: number) => void;
+  setRightWidth: (w: number) => void;
 }
 
 // 固定档量化到 10% 步进；fit 解析值保留 1% 精度（铺满差 0.3% 也别拍回整数档）
 const quantize = (z: number) => Math.min(1.5, Math.max(0.5, Math.round(z * 10) / 10));
 const quantizeFit = (z: number) => Math.min(1.5, Math.max(0.5, Math.round(z * 100) / 100));
+
+const SIDEBAR_LS = { leftWidth: 'fairlens.leftWidth', rightWidth: 'fairlens.rightWidth' };
+const clampW = (w: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(w)));
 
 export const useMockup = create<MockupState>((set) => ({
   template: 'classic',
@@ -32,10 +40,22 @@ export const useMockup = create<MockupState>((set) => ({
   zoom: 1,
   leftOpen: true,
   rightOpen: true,
+  leftWidth: clampW(Number(localStorage.getItem(SIDEBAR_LS.leftWidth)) || 208, 150, 320),
+  rightWidth: clampW(Number(localStorage.getItem(SIDEBAR_LS.rightWidth)) || 296, 220, 420),
   setTemplate: (template) => set({ template }),
   setZoomMode: (zoomMode) => set({ zoomMode }),
   setResolvedZoom: (zoom) => set({ zoom: quantizeFit(zoom) }),
   bumpZoom: (delta) => set((s) => ({ zoomMode: quantize(s.zoom + delta), zoom: quantize(s.zoom + delta) })),
   toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
   toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
+  setLeftWidth: (w) => {
+    const leftWidth = clampW(w, 150, 320);
+    localStorage.setItem(SIDEBAR_LS.leftWidth, String(leftWidth));
+    set({ leftWidth });
+  },
+  setRightWidth: (w) => {
+    const rightWidth = clampW(w, 220, 420);
+    localStorage.setItem(SIDEBAR_LS.rightWidth, String(rightWidth));
+    set({ rightWidth });
+  },
 }));

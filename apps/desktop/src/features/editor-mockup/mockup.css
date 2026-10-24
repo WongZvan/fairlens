@@ -2,8 +2,8 @@
 .editor-mock { flex: 1; display: flex; min-height: 0; }
 
 .m-left, .m-right { flex: none; background: var(--ade-panel); overflow: hidden; transition: width 240ms; }
-.m-left { width: 208px; border-right: 1px solid var(--ade-line); padding: 12px 10px; }
-.m-right { width: 296px; border-left: 1px solid var(--ade-line); padding: 14px; }
+.m-left { border-right: 1px solid var(--ade-line); padding: 12px 10px; overflow: hidden; }
+.m-right { border-left: 1px solid var(--ade-line); padding: 14px; overflow: hidden; }
 .m-left.closed, .m-right.closed { width: 0; padding: 0; border: none; }
 
 .m-center { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
@@ -169,3 +169,12 @@
 .ctx-item:hover { background: var(--ade-accent-soft); }
 .ctx-item .ctx-hint { margin-left: auto; font-size: 10px; color: var(--ade-muted); }
 .ctx-divider { height: 1px; background: var(--ade-line); margin: 3px 5px; }
+
+
+/* 侧栏拖拽调宽热区（m1.5）：面板内缘 6px，光标 ↔ */
+.sidebar-resizer {
+  flex: none; width: 6px; cursor: col-resize;
+  background: transparent; transition: background 120ms;
+  position: relative; z-index: 5;
+}
+.sidebar-resizer:hover, .sidebar-resizer:active { background: var(--ade-accent-soft); }
