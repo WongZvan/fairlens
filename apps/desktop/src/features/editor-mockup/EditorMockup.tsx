@@ -73,8 +73,15 @@ function CenterPane() {
         <button className="m-btn primary" title={t('editor.mockOnly')}><Sparkles size={14} />{t('editor.evaluate')}</button>
       </div>
       <div className="m-canvas">
-        <div className="paper-host" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
-          <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} />
+        {/*
+          缩放滚动几何（§5.2）：transform 不改布局宽——150% 时纸面视觉 1191px 但布局仍 794px，
+          滚动区按布局算导致两侧不可达。修法：host 显式布局宽=纸面宽×zoom（撑开滚动范围），
+          内层再 scale 且 origin=top left，滚动坐标与视觉严格一致。
+        */}
+        <div className="paper-host" style={{ width: 794 * zoom }}>
+          <div className="paper-scale" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+            <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} />
+          </div>
         </div>
         <div className="pagebreak mono">{t('editor.pagebreak')}</div>
       </div>

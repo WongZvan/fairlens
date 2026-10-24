@@ -28,7 +28,7 @@
 .tpl-note { margin-top: 14px; font-size: 11px; color: var(--ade-muted); padding: 0 4px; }
 
 /* 画布区 */
-.m-canvas { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: center; overflow: auto; padding: 16px 0 6px; }
+.m-canvas { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: safe center; overflow: auto; padding: 16px 0 6px; }
 .pagebreak { display: flex; align-items: center; gap: 10px; width: 70%; margin-top: 10px; color: var(--ade-muted); font-size: 11px; flex: none; }
 .pagebreak::before, .pagebreak::after { content: ''; flex: 1; border-top: 1.5px dashed var(--ade-line); }
 .zoom-ctl { position: absolute; right: 16px; bottom: 12px; z-index: 10; display: flex; align-items: center; gap: 2px; background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 6px; padding: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
@@ -81,3 +81,6 @@
 /* 真画布容器（m1.4）：模板 printCSS 注入后纸面由 Tiptap 渲染 */
 .canvas-wrap { flex: none; }
 .fl-host .ProseMirror { outline: none; }
+
+/* 缩放滚动几何：外层撑布局宽（zoom×纸面宽），内层 scale */
+.paper-scale { transform-origin: top left; }
