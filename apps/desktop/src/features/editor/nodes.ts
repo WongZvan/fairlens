@@ -7,6 +7,7 @@
  */
 import { Link } from '@tiptap/extension-link';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { ResumeDoc, Section } from '@fairlens/shared';
 
 export const BLOCK_ID = 'data-block-id' as const;
@@ -124,10 +125,39 @@ export const DocMeta = Extension.create({
   },
 });
 
-/** mark：三种之外不存在（Link 扩展自带 href；Bold/Italic 由 StarterKit 提供） */
-export const linkMark = Link.configure({ openOnClick: false, autolink: true });
+/** mark：三种之外不存在；编辑态点击不跳转，Ctrl/Meta+点击经系统浏览器开（§5.2） */
+export const linkMark = Link.configure({
+  openOnClick: false,
+  autolink: true,
+  linkOnPaste: false,
+});
+
+/** Ctrl/Meta+点击链接 → openExternal（独立顶层插件：extend(Link) 的 handleClick 会被 Link 内部拦截吞掉——实测） */
+export const linkClickPlugin = Extension.create({
+  name: 'flLinkClick',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('flLinkClickTop'),
+        props: {
+          handleClick: (view, pos, event) => {
+            const { ctrlKey, metaKey } = event as MouseEvent;
+            if (!(ctrlKey || metaKey)) return false;
+            const target = event.target as HTMLElement | null;
+            const href = target?.closest('a')?.getAttribute('href');
+            if (!href) return false;
+            event.preventDefault();
+            import('../../lib/open-external.js').then((m) => m.openExternal(href));
+            return true;
+          },
+        },
+      }),
+    ];
+  },
+});
 
 export const flExtensions = [
+  linkClickPlugin,
   SectionNode,
   SectionHeaderNode,
   EntryNode,

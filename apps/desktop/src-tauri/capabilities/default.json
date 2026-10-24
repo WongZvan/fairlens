@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "FairLens 主窗口能力（最小授权：随里程碑按需扩充）",
   "windows": ["main"],
-  "permissions": ["core:default", "log:default"]
+  "permissions": ["core:default", "log:default", "opener:allow-open-url"]
 }
