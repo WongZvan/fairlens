@@ -64,7 +64,15 @@
 .finding span { display: block; font-size: 10.5px; color: var(--ade-muted); margin-top: 1px; }
 .m-eval .cta { font-size: 12.5px; width: 100%; justify-content: center; display: flex; gap: 6px; margin-top: 8px; border-radius: 6px; padding: 8px 0; background: var(--ade-accent); color: #fff; }
 
-/* 折叠后的边缘细轨（展开键存活于折叠容器之外） */
-/* 折叠后的边缘细轨：14px 幽灵态，hover 才显色 */
-.rail { flex: none; width: 14px; display: flex; align-items: center; justify-content: center; background: transparent; color: var(--ade-muted); opacity: .45; transition: opacity 120ms, color 120ms; }
-.rail:hover { opacity: 1; color: var(--ade-accent); }
+/* 折叠后的抽屉把手：离边 10px 悬浮药丸（避开无边框窗口的边缘缩放热区），面板底色+描边保证两主题清晰 */
+.rail {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 48px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ade-panel); border: 1px solid var(--ade-line);
+  color: var(--ade-ink); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: color 120ms, border-color 120ms, box-shadow 120ms;
+}
+.rail:hover { color: var(--ade-accent); border-color: var(--ade-accent); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2); }
+.rail-left { left: 10px; }
+.rail-right { right: 10px; }
