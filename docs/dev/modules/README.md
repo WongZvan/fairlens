@@ -8,7 +8,7 @@
 | m0.2 | shared 全契约+单测 | 共享 | ✅ 872b440 | [m0/m0.2-shared-contracts.md](m0/m0.2-shared-contracts.md) | feat/m0-scaffold |
 | m0.3 | desktop 应用壳 | 共享 | ✅ 872b440 | [m0/m0.3-desktop-shell.md](m0/m0.3-desktop-shell.md) | feat/m0-scaffold |
 | m0.4 | keygen init+契约冻结 | 共享 | ✅ 872b440 | [m0/m0.4-keygen-contract.md](m0/m0.4-keygen-contract.md) | feat/m0-scaffold |
-| m1.1 | UI 可点击打样 | 基础 | ✅ 764e7ef（待用户过目） | [m1/m1.1-ui-mockup.md](m1/m1.1-ui-mockup.md) | feat/m1-ui-mockup |
+| m1.1 | UI 可点击打样（含激活门/设置壳，九轮反馈） | 基础 | ✅ 4f3b4b7（待最终过目） | [m1/m1.1-ui-mockup.md](m1/m1.1-ui-mockup.md) | feat/m1-ui-mockup |
 | m1.2 | 模板数据层（3 套+printCSS） | 基础 | ⬜ | [m1/m1.2-template-data.md](m1/m1.2-template-data.md) | 待切 |
 | m1.3 | Tiptap 节点+blockId | 基础 | ⬜ | [m1/m1.3-tiptap-nodes.md](m1/m1.3-tiptap-nodes.md) | 待切 |
 | m1.4 | 画布渲染（权限矩阵/粘贴归一化） | 基础 | ⬜ | [m1/m1.4-canvas.md](m1/m1.4-canvas.md) | 待切 |
