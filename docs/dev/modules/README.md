@@ -10,9 +10,9 @@
 | m0.4 | keygen init+契约冻结 | 共享 | ✅ 872b440 | [m0/m0.4-keygen-contract.md](m0/m0.4-keygen-contract.md) | feat/m0-scaffold |
 | m1.1 | UI 可点击打样（含激活门/设置壳，九轮反馈） | 基础 | ✅ 4f3b4b7（待最终过目） | [m1/m1.1-ui-mockup.md](m1/m1.1-ui-mockup.md) | feat/m1-ui-mockup |
 | m1.2 | 模板数据层（3 套+printCSS） | 基础 | ✅ 64478c6 | [m1/m1.2-template-data.md](m1/m1.2-template-data.md) | feat/m1.2-template-data |
-| m1.3 | Tiptap 节点+blockId | 基础 | ✅ | [m1/m1.3-tiptap-nodes.md](m1/m1.3-tiptap-nodes.md) | feat/m1.3-tiptap-nodes |
-| m1.4 | 画布渲染（权限矩阵/粘贴归一化） | 基础 | ⬜ | [m1/m1.4-canvas.md](m1/m1.4-canvas.md) | 待切 |
-| m1.5 | 树/快捷键/命令面板/Ctrl+F | 基础 | ✅（Ctrl+F 面板=M1.6） | [m1/m1.5-tree-shortcuts.md](m1/m1.5-tree-shortcuts.md) | 待切 |
+| m1.3 | Tiptap 节点+blockId | 基础 | ✅ 9066395 | [m1/m1.3-tiptap-nodes.md](m1/m1.3-tiptap-nodes.md) | feat/m1.3-tiptap-nodes |
+| m1.4 | 画布渲染（权限矩阵/粘贴归一化） | 基础 | 🔄 主体已通（ed0c76e 起；结构 gating/背景层/IME 专项挂后续模块） | [m1/m1.4-canvas.md](m1/m1.4-canvas.md) | feat/m1.4-canvas |
+| m1.5 | 树/快捷键/命令面板/Ctrl+F | 基础 | ✅ 92b4cad（Ctrl+F 面板=M1.6） | [m1/m1.5-tree-shortcuts.md](m1/m1.5-tree-shortcuts.md) | feat/m1.5-tree-shortcuts |
 | m1.6 | 持久层+快照+关闭保护 | 基础 | ⬜ | [m1/m1.6-persist-snapshot.md](m1/m1.6-persist-snapshot.md) | 待切 |
 | m1.7 | 导入管线（LLM 接入点留 m3.5） | 基础 | ⬜ | [m1/m1.7-import.md](m1/m1.7-import.md) | 待切 |
 | m1.8 | 简历库首页 | 基础 | ⬜ | [m1/m1.8-library-home.md](m1/m1.8-library-home.md) | 待切 |
