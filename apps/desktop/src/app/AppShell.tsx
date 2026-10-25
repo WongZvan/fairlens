@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivationGate } from './ActivationGate.js';
 import { SettingsGear, SettingsWindow } from './SettingsWindow.js';
 import { CloseGuardDialog, collectPendingIssues, resolveGuardMode, type CloseGuardMode, type CloseIntent } from './CloseGuard.js';
-import { ToastHost } from './Toast.js';
+import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { useLicense } from '../stores/license.js';
@@ -29,7 +29,15 @@ export function AppShell() {
       setView('library');
       return;
     }
-    if (isTauri) await getCurrentWindow().destroy(); // 放行关闭（绕过 onCloseRequested 钩子）
+    if (isTauri) {
+      try {
+        await getCurrentWindow().destroy(); // 放行关闭（绕过 onCloseRequested 钩子）
+      } catch (err) {
+        // 权限/系统层失败必须可见——防再次出现"拦截后放不了行"的死局
+        console.error('[window] destroy failed', err);
+        toast('关闭窗口失败：请截图上报（可暂时用任务管理器退出）');
+      }
+    }
   };
 
   /** §5.7 关闭保护：save/discard=弹窗动作；无参=先 flush 再判定是否需要弹窗 */
@@ -161,15 +169,22 @@ function TitleButtons({ onSettings }: { onSettings: () => void }) {
   const isTauri = '__TAURI_INTERNALS__' in globalThis;
   const win = isTauri ? getCurrentWindow() : undefined;
   const glyph = { light: '☀', dark: '☾', system: '🖥' }[mode];
+  // 窗口命令失败必须可见（m1.6 缺陷教训：权限被拒曾静默失败=三键看似无效）
+  const winCmd = (label: string, fn: () => Promise<void>) => () => {
+    fn().catch((err) => {
+      console.error(`[window] ${label} failed`, err);
+      toast(`窗口操作失败（${label}）：请截图上报`);
+    });
+  };
   return (
     <div className="wbtns">
       <button aria-label={t('titlebar.theme', { theme: t(`theme.${mode}`) })} onClick={cycle} title={t(`theme.${mode}`)}>{glyph}</button>
       <SettingsGear onClick={onSettings} />
       {win && (
         <>
-          <button aria-label={t('titlebar.windowMin')} onClick={() => void win.minimize()}>─</button>
-          <button aria-label={t('titlebar.windowMax')} onClick={() => void win.toggleMaximize()}>□</button>
-          <button aria-label={t('titlebar.windowClose')} className="close" onClick={() => void win.close()}>✕</button>
+          <button aria-label={t('titlebar.windowMin')} onClick={winCmd('最小化', () => win.minimize())}>─</button>
+          <button aria-label={t('titlebar.windowMax')} onClick={winCmd('最大化', () => win.toggleMaximize())}>□</button>
+          <button aria-label={t('titlebar.windowClose')} className="close" onClick={winCmd('关闭', () => win.close())}>✕</button>
         </>
       )}
     </div>
