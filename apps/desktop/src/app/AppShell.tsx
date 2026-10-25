@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, Minus, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
@@ -182,9 +182,9 @@ function TitleButtons({ onSettings }: { onSettings: () => void }) {
       <SettingsGear onClick={onSettings} />
       {win && (
         <>
-          <button aria-label={t('titlebar.windowMin')} onClick={winCmd('最小化', () => win.minimize())}>─</button>
-          <button aria-label={t('titlebar.windowMax')} onClick={winCmd('最大化', () => win.toggleMaximize())}>□</button>
-          <button aria-label={t('titlebar.windowClose')} className="close" onClick={winCmd('关闭', () => win.close())}>✕</button>
+          <button aria-label={t('titlebar.windowMin')} onClick={winCmd('最小化', () => win.minimize())}><Minus size={14} strokeWidth={2} /></button>
+          <button aria-label={t('titlebar.windowMax')} onClick={winCmd('最大化', () => win.toggleMaximize())}><Square size={12} strokeWidth={2} /></button>
+          <button aria-label={t('titlebar.windowClose')} className="close" onClick={winCmd('关闭', () => win.close())}><X size={15} strokeWidth={2} /></button>
         </>
       )}
     </div>

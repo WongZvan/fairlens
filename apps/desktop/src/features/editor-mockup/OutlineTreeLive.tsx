@@ -25,6 +25,15 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
   const toggleLeft = useMockup((s) => s.toggleLeft);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  // 更严过滤（m1.6 反馈拍板）：entry 有 bullets 才进大纲（org 空壳不显示）；
+  // section 在过滤后 entries/basicFields/skills 全空时不渲染；全空显示空态。
+  const visibleSections = doc.sections
+    .map((sec) => ({ sec, entries: sec.entries.filter((e) => e.bullets.length > 0) }))
+    .filter(
+      ({ sec, entries }) =>
+        entries.length > 0 || (sec.basicFields?.length ?? 0) > 0 || (sec.skills?.length ?? 0) > 0,
+    );
+
   const scrollTo = (blockId: string) => {
     const el = document.querySelector(`[data-block-id="${blockId}"]`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -38,35 +47,48 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
         <PanelLeftCloseInline />{t('editor.collapse')}
       </button>
       <h2 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: 'var(--ade-muted)', margin: '2px 4px 8px' }}>{t('editor.outline')}</h2>
-      {doc.sections.map((sec) => (
-        <div key={sec.id}>
-          <div className="tree-item" role="button" tabIndex={0} onClick={() => scrollTo(sec.id)} onKeyDown={(e) => e.key === 'Enter' && scrollTo(sec.id)}>
-            <ChevronDown size={14} />{t(SECTION_TYPE_KEY[sec.type] ?? 'paper.basic')}
+      {visibleSections.length === 0 ? (
+        <p className="tpl-note" style={{ color: 'var(--ade-muted)' }}>{t('editor.outlineEmpty')}</p>
+      ) : (
+        visibleSections.map(({ sec, entries }) => (
+          <div key={sec.id}>
+            <div className="tree-item" role="button" tabIndex={0} onClick={() => scrollTo(sec.id)} onKeyDown={(e) => e.key === 'Enter' && scrollTo(sec.id)}>
+              <ChevronDown size={14} />{t(SECTION_TYPE_KEY[sec.type] ?? 'paper.basic')}
+            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(e) => {
+                const { active, over } = e;
+                if (!over || active.id === over.id) return;
+                // 过滤后的展示序 ≠ 原数组序：按 entry id 回定位原索引（防拖拽错位）
+                const from = sec.entries.findIndex((en) => en.id === active.id);
+                const to = sec.entries.findIndex((en) => en.id === over.id);
+                if (from === -1 || to === -1) return;
+                onReorderEntry(sec.id, from, to);
+              }}
+            >
+              <SortableContext items={entries.map((en) => en.id)} strategy={verticalListSortingStrategy}>
+                {entries.map((entry) => (
+                  <SortableEntry
+                    key={entry.id}
+                    id={entry.id}
+                    label={`${entry.org || t('editor.untitledEntry')}${entry.role ? ' · ' + entry.role : ''}`}
+                    onClick={() => scrollTo(entry.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={(e) => {
-              const { active, over } = e;
-              if (!over || active.id === over.id) return;
-              onReorderEntry(sec.id, Number(active.id), Number(over.id));
-            }}
-          >
-            <SortableContext items={sec.entries.map((_, i) => i)} strategy={verticalListSortingStrategy}>
-              {sec.entries.map((entry, idx) => (
-                <SortableEntry key={entry.id} idx={idx} label={`${entry.org}${entry.role ? ' · ' + entry.role : ''}`} onClick={() => scrollTo(entry.id)} />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </div>
-      ))}
+        ))
+      )}
       <p className="tpl-note">{t('editor.tplNote')}</p>
     </aside>
   );
 }
 
-function SortableEntry({ idx, label, onClick }: { idx: number; label: string; onClick: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: idx });
+function SortableEntry({ id, label, onClick }: { id: string; label: string; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div
       className="tree-item sub"

@@ -102,6 +102,8 @@ export default {
     currentTemplate: '当前模板',
     tplNote: '版式由模板锁定，内容随你',
     outline: '大纲',
+    outlineEmpty: '大纲将随内容生成——先写下第一行',
+    untitledEntry: '未命名条目',
     evalPanel: '评估报告',
     showOutline: '展开大纲',
     hideOutline: '收起大纲',

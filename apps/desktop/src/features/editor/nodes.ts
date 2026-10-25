@@ -260,9 +260,11 @@ export function pmToResumeDoc(doc: PMNode, meta?: { templateId: string; style?: 
           const entry: Record<string, unknown> = {
             id: String(e.attrs?.id ?? ''),
             org: String(e.attrs?.org ?? ''),
+            // 契约 Bullet.runs min(1)：删空文本的 bullet（PM 空段）不序列化——曾流入大纲/快照造成"空壳条目"（m1.6 反馈）
             bullets: (e.content ?? [])
               .filter((n): n is PMNode & { type: 'flBullet' } => n.type === 'flBullet')
-              .map((b) => ({ id: String(b.attrs?.id ?? ''), runs: runsOf(b) })),
+              .map((b) => ({ id: String(b.attrs?.id ?? ''), runs: runsOf(b) }))
+              .filter((b) => b.runs.length > 0),
           };
           for (const k of ['role', 'start', 'end', 'ongoing', 'pageBreakBefore'] as const) {
             const v = e.attrs?.[k];

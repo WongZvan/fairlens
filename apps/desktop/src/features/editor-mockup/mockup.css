@@ -3,7 +3,7 @@
 
 .m-left, .m-right { flex: none; background: var(--ade-panel); overflow: hidden; transition: width 240ms; }
 .m-left { border-right: 1px solid var(--ade-line); padding: 12px 10px; overflow: hidden; }
-.m-right { border-left: 1px solid var(--ade-line); padding: 14px; overflow: hidden; }
+.m-right { border-left: 1px solid var(--ade-line); padding: 14px; overflow: hidden auto; } /* 纵向滚动：CTA 不再被裁（m1.6 反馈） */
 .m-left.closed, .m-right.closed { width: 0; padding: 0; border: none; }
 
 .m-center { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
@@ -171,9 +171,9 @@
 .ctx-divider { height: 1px; background: var(--ade-line); margin: 3px 5px; }
 
 
-/* 侧栏拖拽调宽热区（m1.5）：面板内缘 6px，光标 ↔ */
+/* 侧栏拖拽调宽热区（m1.5）：面板内缘，光标 ↔；6→8px（m1.6 反馈：命中太难） */
 .sidebar-resizer {
-  flex: none; width: 6px; cursor: col-resize;
+  flex: none; width: 8px; cursor: col-resize;
   background: transparent; transition: background 120ms;
   position: relative; z-index: 5;
 }

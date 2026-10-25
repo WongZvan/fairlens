@@ -61,6 +61,19 @@ describe('m1.3 ResumeDoc ↔ ProseMirror 往返', () => {
     expect(() => ResumeDoc.parse(pmToResumeDoc(resumeDocToPm(sampleDoc())))).not.toThrow();
   });
 
+  it('空 bullet（画布删空文本的空段）不序列化——契约 runs min(1)，大纲/快照不产生空壳条目（m1.6 反馈）', () => {
+    const pm = resumeDocToPm(sampleDoc());
+    // 模拟画布删空第一条 bullet 的文本：flBullet 内容清空（PM 空段仍保留可继续输入）
+    const entry = pm.content?.[1]?.type === 'flSection' ? pm.content[1].content?.find((n) => n.type === 'flEntry') : undefined;
+    const firstBullet = entry?.content?.find((n) => n.type === 'flBullet');
+    if (firstBullet) firstBullet.content = [];
+    const back = pmToResumeDoc(pm, { templateId: sampleDoc().templateId });
+    const expEntry = back.sections[1]!.entries[0]!;
+    expect(expEntry.bullets).toHaveLength(0); // 空 bullet 被丢弃
+    expect(expEntry.org).toBe('字节跳动'); // entry 元数据保留
+    expect(() => ResumeDoc.parse(back)).not.toThrow(); // 不再产出违反 runs min(1) 的数据
+  });
+
   it('三种 mark 保真：bold/italic/link(href) 位置与值不漂移', () => {
     const back = pmToResumeDoc(resumeDocToPm(sampleDoc()));
     const runs = back.sections[1]!.entries[0]!.bullets[0]!.runs;

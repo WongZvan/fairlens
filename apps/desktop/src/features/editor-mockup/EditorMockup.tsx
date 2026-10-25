@@ -170,10 +170,10 @@ export function EditorMockup() {
         onDuplicateEntry={duplicateEntry} />
       {rightOpen ? (
         <>
+          <SidebarResizer side="right" />
           <RightPanel width={rightWidth}>
             <EvalPanel />
           </RightPanel>
-          <SidebarResizer side="right" />
         </>
       ) : (
         <Rail side="right" />
@@ -240,7 +240,7 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
     const items: ContextMenuEntry[] = [];
     if (entryId && sectionId) {
       items.push(
-        { label: '复制此条目', hint: 'Ctrl+D', run: () => onDuplicateEntry(sectionId, entryId) },
+        { label: '创建条目副本', hint: 'Ctrl+D', run: () => onDuplicateEntry(sectionId, entryId) },
         { divider: true },
       );
     }
