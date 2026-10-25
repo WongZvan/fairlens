@@ -8,7 +8,7 @@
 |---|---|
 | 里程碑 | M1 进行中（6/8）：**m1.1–m1.6 已收口**（m1.6=e224273）；M0 已收口（tag v0.1.0-m0） |
 | 当前模块 | 下一 **m1.7 导入管线**（LLM 接入点留 m3.5）；m1.1 打样待用户最终过目 |
-| 当前分支 | feat/m1.6（m1.6 已收口，待并入 dev）；dev=d696a95；main=e3956fe（按流程 M1 整体收口时合并，落后属预期） |
+| 当前分支 | dev=09ecebf（m1.6 已 squash 并入并推送，feat/m1.6 已删）；main=e3956fe（按流程 M1 整体收口时合并，落后属预期） |
 | 已落地 | 编辑器核心全通：真 Tiptap 画布/3 套模板/Ctrl+K 面板/快捷键全集/悬浮工具条(悬停门控)/右键菜单/侧栏拖拽调宽/缩放三态/激活门/**m1.6 持久层**（packages/core 首落/SQLite 迁移/自动保存防抖+失焦保存/关闭保护双模式/快照四态 diff+双栏对比+回滚/settings 四键预留）——实录见 `modules/m1/` 六文件 |
 | 未落地 | m1.7–m1.8；packages/core 后续（diff-apply 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5） |
 
@@ -31,7 +31,7 @@
 2. GitHub 分支保护三步（Settings→Rulesets，清单见 02 手册②）
 3. CI 首跑确认四 job 全绿
 4. m1.1 打样最终过目（九轮反馈后整体观感）
-5. **m1.6 tauri 真机冒烟**：`pnpm tauri dev` 起 Rust 真窗（cargo 编译约 10–20 分钟首跑）——验 SQLite 真持久层（fairlens_dev.db 落盘/重启数据在）、窗口三键（npm API 修复后首验）、关闭保护弹窗（Tauri onCloseRequested 路径）
+5. **m1.6 tauri 真机冒烟**——**自动部分已过**（2026-10-25 首跑 `pnpm tauri:dev` 成功：fairlens.exe 起窗、`%APPDATA%\com.fairlens.desktop\fairlens_dev.db` 生成+WAL、_sqlx_migrations+附录 B 五表建齐、resumes 已有真机写入的示例简历行）；**剩余人工操作项**：编辑→关窗→重开数据仍在（真持久层核心验收）/窗口三键/关闭保护弹窗（Tauri onCloseRequested 路径）/Ctrl+S toast/快照对话框真机过一遍。启动命令已固化：项目根 `pnpm tauri:dev`（@tauri-apps/cli 已入 devDeps；注意勿在主目录裸跑 `pnpm tauri dev`——cwd 无 package.json 会报 NO_IMPORTER_MANIFEST_FOUND）
 
 **占位清理账**（接手人必读）
 - ~~mockup store `dirty` 占位~~（m1.6 已接管：editor-doc store；mockup.dirty 字段已删）
@@ -48,3 +48,4 @@
 - #87–#89 设置窗/激活门/状态栏定案；#92 键位+面板填充；#93 右键菜单与入口分工；#94 工具条悬停门控+侧栏调宽——均已实装（总账 94 条）
 - 2026-10-25 m1.6 策略 A（装 Rust 全量）定案（decisions/）；§3.6 固化勾选一致性核对；总账编号漂移修复（#100 重复→#101/#102）——第五轮记账缺口（总账无条目+用户级 Changelog 漏行+SOP 侧 3 条固化未寻获）已直报待拍板
 - 2026-10-25 m1.6 收口：总账 #103（策略 A）/ #104（CI 门禁补 apps/*）；快照 diff 四态注记；窗口 API npm 化（withGlobalTauri 缺陷即修）；模块 MD 补录规格（双栏对比/失焦保存/800ms）已照做
+- 2026-10-25 tauri 启动入口补齐（@tauri-apps/cli 入 devDeps，根 script `tauri:dev`）；tauri dev 首跑通过（编译 30.7s 复用缓存）；SQLite 真持久层落盘验证通过（详见悬挂事项⑤）
