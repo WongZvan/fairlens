@@ -13,6 +13,10 @@ import {
   ResumeDoc,
   ResumeRecord,
   ResourceRegistry,
+  SettingValueSchemas,
+  SnapshotRow,
+  SnapshotTrigger,
+  ResumeRow,
   SupplementPack,
   TemplateManifest,
   validateDocStyleAgainstManifest,
@@ -189,5 +193,41 @@ describe('AI 连接与资源契约', () => {
   it('JobDescription / ResourceRegistry 最小合法样本', () => {
     expect(JobDescription.parse({ id, title: '产品经理', rawText: 'JD 文本' }).company).toBeUndefined();
     expect(ResourceRegistry.parse({ version: 1, verticals: [], templates: [], guides: [] }).version).toBe(1);
+  });
+});
+
+describe('持久层契约（m1.6，附录 B）', () => {
+  it('SnapshotRow 合法解析与 trigger 枚举拒绝', () => {
+    const row = SnapshotRow.parse({
+      id, resumeId: 'Cd4lA0qR3zX2', doc: doc(), trigger: 'manual', createdAt: '2026-10-25T10:00:00+08:00',
+    });
+    expect(row.trigger).toBe('manual');
+    expect(SnapshotRow.safeParse({ ...row, trigger: 'auto' }).success).toBe(false);
+    expect(SnapshotTrigger.safeParse('pre-eval').success).toBe(true);
+  });
+
+  it('SnapshotRow：label 可选；doc 必为 ResumeDoc', () => {
+    const base = { id, resumeId: 'Cd4lA0qR3zX2', doc: doc(), trigger: 'ai-accept', createdAt: '2026-10-25T10:00:00+08:00' } as const;
+    expect(SnapshotRow.parse(base).label).toBeUndefined();
+    expect(SnapshotRow.safeParse({ ...base, doc: { ...doc(), templateId: '' } }).success).toBe(false);
+  });
+
+  it('ResumeRow = ResumeRecord + createdAt/updatedAt', () => {
+    const row = ResumeRow.parse({ id, title: '李思远·产品', doc: doc(), createdAt: '2026-10-25T09:00:00+08:00', updatedAt: '2026-10-25T09:30:00+08:00' });
+    expect(row.verticalId).toBe('general');
+    expect(ResumeRow.safeParse({ ...row, createdAt: '' }).success).toBe(false);
+  });
+
+  it('SettingValueSchemas：autosave 布尔 / bgMode 四态 / bgOpacity 0–100 整数 / bgImage 可空', () => {
+    expect(SettingValueSchemas.autosave.safeParse(true).success).toBe(true);
+    expect(SettingValueSchemas.autosave.safeParse('yes').success).toBe(false);
+    expect(SettingValueSchemas.bgMode.safeParse('theme').success).toBe(true);
+    expect(SettingValueSchemas.bgMode.safeParse('auto').success).toBe(false);
+    expect(SettingValueSchemas.bgFit.safeParse('cover').success).toBe(true);
+    expect(SettingValueSchemas.bgOpacity.safeParse(100).success).toBe(true);
+    expect(SettingValueSchemas.bgOpacity.safeParse(101).success).toBe(false);
+    expect(SettingValueSchemas.bgOpacity.safeParse(50.5).success).toBe(false);
+    expect(SettingValueSchemas.bgImage.safeParse(null).success).toBe(true);
+    expect(SettingValueSchemas.bgImage.safeParse('').success).toBe(false);
   });
 });

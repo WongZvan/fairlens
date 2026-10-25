@@ -21,6 +21,7 @@ serde_json = "1"
 
 # 里程碑增量（按需解锁，勿提前引入）：
 # M1: tauri-plugin-dialog / tauri-plugin-updater
-# M2: tauri-plugin-sql(features sqlite) / machine-uid
+# M2: machine-uid（tauri-plugin-sql 已于 m1.6 解锁：本地持久层）
 # M3: tauri-plugin-http
 # M5: CDP printToPDF（tauri devtools）
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }

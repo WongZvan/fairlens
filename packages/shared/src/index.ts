@@ -7,3 +7,4 @@ export * from './license.js';
 export * from './llm.js';
 export * from './resources.js';
 export * from './lease-api.js';
+export * from './persistence.js';

@@ -1,0 +1,100 @@
+import Database from '@tauri-apps/plugin-sql';
+import type { PersistencePort } from '@fairlens/core';
+import { ResumeRow, SnapshotRow, type ResumeRow as ResumeRowT, type SnapshotRow as SnapshotRowT } from '@fairlens/shared';
+
+/**
+ * tauri-plugin-sql 适配（生产路径）。
+ * 连接串必须与 Rust 侧 add_migrations 的 key 逐字一致（lib.rs，dev 库独立=环境分离 #36）。
+ */
+const DB_URL = import.meta.env.DEV ? 'sqlite:fairlens_dev.db' : 'sqlite:fairlens.db';
+
+let dbPromise: Promise<Database> | null = null;
+const db = () => (dbPromise ??= Database.load(DB_URL));
+
+type DbRecord = Record<string, unknown>;
+
+const resumeFromDb = (r: DbRecord): ResumeRowT =>
+  ResumeRow.parse({
+    id: r.id,
+    title: r.title,
+    verticalId: r.vertical_id,
+    status: r.status,
+    doc: JSON.parse(r.doc_json as string),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+
+const snapshotFromDb = (r: DbRecord): SnapshotRowT =>
+  SnapshotRow.parse({
+    id: r.id,
+    resumeId: r.resume_id,
+    doc: JSON.parse(r.doc_json as string),
+    label: r.label ?? undefined,
+    trigger: r.trigger,
+    createdAt: r.created_at,
+  });
+
+export function createTauriSqlAdapter(): PersistencePort {
+  return {
+    async listResumeMetas() {
+      const rows = await (await db()).select<DbRecord[]>(
+        'SELECT id, title, vertical_id, status, updated_at FROM resumes WHERE status = $1 ORDER BY updated_at DESC',
+        ['active'],
+      );
+      return rows.map((r) => ({
+        id: r.id as string,
+        title: r.title as string,
+        verticalId: r.vertical_id as string,
+        status: r.status as 'active' | 'archived',
+        updatedAt: r.updated_at as string,
+      }));
+    },
+
+    async getResume(id) {
+      const rows = await (await db()).select<DbRecord[]>('SELECT * FROM resumes WHERE id = $1', [id]);
+      return rows[0] ? resumeFromDb(rows[0]) : null;
+    },
+
+    async upsertResume(row) {
+      await (await db()).execute(
+        `INSERT INTO resumes(id, title, vertical_id, template_id, doc_json, status, created_at, updated_at)
+         VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT(id) DO UPDATE SET title = $2, vertical_id = $3, template_id = $4, doc_json = $5, status = $6, updated_at = $8`,
+        [row.id, row.title, row.verticalId, row.doc.templateId, JSON.stringify(row.doc), row.status, row.createdAt, row.updatedAt],
+      );
+    },
+
+    async deleteResume(id) {
+      await (await db()).execute('DELETE FROM resumes WHERE id = $1', [id]);
+    },
+
+    async listSnapshots(resumeId) {
+      const rows = await (await db()).select<DbRecord[]>(
+        'SELECT * FROM resume_snapshots WHERE resume_id = $1 ORDER BY created_at DESC',
+        [resumeId],
+      );
+      return rows.map(snapshotFromDb);
+    },
+
+    async insertSnapshot(row) {
+      await (await db()).execute(
+        `INSERT INTO resume_snapshots(id, resume_id, doc_json, template_id, label, trigger, created_at)
+         VALUES($1, $2, $3, $4, $5, $6, $7)`,
+        [row.id, row.resumeId, JSON.stringify(row.doc), row.doc.templateId, row.label ?? null, row.trigger, row.createdAt],
+      );
+    },
+
+    async getSettingRaw(key) {
+      const rows = await (await db()).select<DbRecord[]>('SELECT value_json FROM settings WHERE key = $1', [key]);
+      return rows[0] ? JSON.parse(rows[0].value_json as string) : undefined;
+    },
+
+    async setSettingRaw(key, value) {
+      await (await db()).execute(
+        `INSERT INTO settings(key, value_json) VALUES($1, $2)
+         ON CONFLICT(key) DO UPDATE SET value_json = $2`,
+        [key, JSON.stringify(value)],
+      );
+    },
+  };
+}

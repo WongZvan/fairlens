@@ -13,7 +13,7 @@ import Text from '@tiptap/extension-text';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { FloatingToolbar } from './FloatingToolbar.js';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { DocStyle, ResumeDoc } from '@fairlens/shared';
 import { validateDocStyleAgainstManifest } from '@fairlens/shared';
 import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
@@ -33,9 +33,11 @@ export interface CanvasEditorProps {
   onReady?: (api: EditorApi) => void;
   /** 结构 gating（§5.2）：增删条目等命令经 manifest 校验；编辑自由 */
   onStructureGate?: (manifestId: string) => void;
+  /** 只读渲染（快照对比双栏用，m1.6） */
+  readOnly?: boolean;
 }
 
-export function CanvasEditor({ doc, onDocChange, onReady }: CanvasEditorProps) {
+export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEditorProps) {
   const builtin = getBuiltinTemplate(doc.templateId);
   const manifest = builtin?.manifest;
 
@@ -57,14 +59,35 @@ export function CanvasEditor({ doc, onDocChange, onReady }: CanvasEditorProps) {
       Placeholder.configure({ placeholder: '写下这条经历…' }),
     ],
     content: resumeDocToPm(doc),
+    editable: !readOnly,
     editorProps: {
       attributes: { class: 'fl-paper' },
       handlePaste: pasteNormalization,
     },
     onUpdate: ({ editor }) => {
-      onDocChange(pmToResumeDoc(editor.getJSON(), { templateId: doc.templateId, style: doc.style }));
+      const next = pmToResumeDoc(editor.getJSON(), { templateId: doc.templateId, style: doc.style });
+      lastEmitted.current = next;
+      onDocChange(next);
     },
-  }, [doc.templateId]);
+  }, [doc.templateId, readOnly]);
+
+  // 外部 doc 注入同步（m1.6 快照回滚是首个外部注入场景）：编辑器自身回流引用相等不写回，
+  // 仅真正的外部变更（回滚/库切换）重置内容——emitUpdate:false 防二次落盘与光标打断
+  const lastEmitted = useRef(doc);
+  const lastTemplateId = useRef(doc.templateId);
+  useEffect(() => {
+    if (doc.templateId !== lastTemplateId.current) {
+      // 模板重建路径：useEditor 已按新 doc 初始化内容
+      lastTemplateId.current = doc.templateId;
+      lastEmitted.current = doc;
+      return;
+    }
+    if (doc === lastEmitted.current) return;
+    lastEmitted.current = doc;
+    if (editor && !editor.isDestroyed) {
+      editor.commands.setContent(resumeDocToPm(doc), { emitUpdate: false });
+    }
+  }, [doc, editor]);
 
   // 模板 CSS 注入（编辑样式=导出样式：同一 printCSS 进 <style>）
   const templateCss = builtin?.printCss ?? '';

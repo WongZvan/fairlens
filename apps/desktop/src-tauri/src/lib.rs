@@ -2,13 +2,22 @@
 //! M0 骨架：log + single-instance；后续里程碑按 Cargo.toml 注释解锁插件，
 //! invoke 命令清单见 docs/01 附录 A（snake_case）。
 
+mod db;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 环境分离（#36）：dev 库独立文件，与用户数据隔离
+    let db_url = if cfg!(debug_assertions) { "sqlite:fairlens_dev.db" } else { "sqlite:fairlens.db" };
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(db_url, db::migrations())
+                .build(),
+        )
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             // 二次启动：聚焦既有窗口（文件参数转发=M5 文件关联时接入）
             if let Some(w) = app.get_webview_window("main") {

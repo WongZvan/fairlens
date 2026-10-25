@@ -50,3 +50,58 @@
 /* m1.1：标题栏返回按钮 */
 .titlebar .back-btn { width: 30px; height: 28px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
 .titlebar .back-btn:hover { background: var(--ade-hover); }
+
+/* ---- m1.6：关闭保护/快照弹层与 toast ---- */
+.guard-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.guard-box {
+  width: 440px; max-width: calc(100vw - 48px);
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  padding: 18px;
+}
+.guard-box h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.guard-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.guard-box ul { margin: 6px 0; padding-left: 18px; font-size: 12.5px; }
+.snap-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow: auto; }
+.snap-list li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; border: 1px solid var(--ade-line); border-radius: 6px; padding: 6px 10px; }
+.snap-list .m-btn { margin-left: auto; }
+.toast-host {
+  position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%);
+  z-index: 130; display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.toast {
+  background: var(--ade-ink); color: var(--ade-panel);
+  font-size: 12px; padding: 7px 14px; border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  animation: toast-in 0.18s ease-out;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.snapshot-box { width: 860px; max-width: calc(100vw - 48px); max-height: calc(100vh - 80px); overflow: auto; }
+.snap-save-row { display: flex; gap: 8px; margin: 8px 0 12px; }
+.snap-label-input {
+  flex: 1; font-size: 12.5px; padding: 6px 10px;
+  border: 1px solid var(--ade-line); border-radius: 5px;
+  background: var(--ade-bench, transparent); color: var(--ade-ink);
+}
+.snap-list li.on { border-color: var(--ade-accent); }
+.snap-list .snap-pick { flex: 1; text-align: left; font-size: 12.5px; color: var(--ade-ink); }
+.snap-compare { margin-top: 12px; border-top: 1px solid var(--ade-line); padding-top: 10px; }
+.snap-diff-side h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--ade-muted); font-weight: 500; }
+.snap-diff-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.snap-diff-list li {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px;
+  border: 1px solid var(--ade-line); border-radius: 4px; padding: 3px 8px;
+}
+.snap-diff-list .sev-tag { border-radius: 3px; padding: 1px 5px; font-size: 10.5px; }
+.diff-added .sev-tag { background: rgba(48, 145, 92, 0.16); color: #2c8a5a; }
+.diff-removed .sev-tag { background: rgba(200, 60, 60, 0.14); color: var(--ade-pen-red); text-decoration: line-through; }
+.diff-changed .sev-tag { background: rgba(214, 168, 49, 0.18); color: #a37f18; }
+.snap-diff-list .kind { color: var(--ade-muted); font-size: 10.5px; }
+.snap-panes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.snap-pane { border: 1px solid var(--ade-line); border-radius: 6px; padding: 8px; max-height: 300px; overflow: auto; }
+.snap-pane h4 { margin: 0 0 6px; font-size: 11.5px; color: var(--ade-muted); font-weight: 500; }
+.snap-pane .fl-paper { transform: scale(0.62); transform-origin: top left; pointer-events: none; }

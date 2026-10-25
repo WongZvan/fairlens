@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"FairLens 主窗口能力（最小授权：随里程碑按需扩充）","local":true,"windows":["main"],"permissions":["core:default","log:default","opener:allow-open-url","sql:allow-load","sql:allow-select","sql:allow-execute","sql:allow-close"]}}

@@ -5,7 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
+import { useEditorDoc } from '../../stores/editor-doc.js';
 import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
+import { SnapshotDialog } from './SnapshotDialog.js';
+import { toast } from '../../app/Toast.js';
 import { nanoid } from '../../lib/nanoid.js';
 import { resolveShortcut } from '../editor/shortcuts.js';
 import { commandRegistry } from '../editor/command-registry.js';
@@ -13,7 +16,6 @@ import { OutlineTreeLive } from './OutlineTreeLive.js';
 import { CommandPalette } from './CommandPalette.js';
 import { SidebarResizer } from './SidebarResizer.js';
 import { ContextMenuView, useContextMenu, type ContextMenuEntry } from './ContextMenu.js';
-import { sampleDoc } from './sample-data.js';
 import { dims, findings } from './sample-data.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
@@ -37,6 +39,24 @@ export function EditorMockup() {
         id: 'view.toggle-right', title: '收起/展开评估面板', hint: '', keywords: ['评估', '侧栏'],
         run: () => useMockup.getState().toggleRight(),
       }),
+      commandRegistry.register({
+        id: 'file.save', title: '立即保存', hint: 'Ctrl+S', keywords: ['保存'],
+        run: async () => {
+          await useEditorDoc.getState().saveNow();
+          toast('已保存');
+        },
+      }),
+      commandRegistry.register({
+        id: 'file.snapshot-create', title: '保存快照', keywords: ['快照', '版本'],
+        run: async () => {
+          await useEditorDoc.getState().createSnapshot();
+          toast('快照已保存');
+        },
+      }),
+      commandRegistry.register({
+        id: 'file.snapshot-restore', title: '回滚到快照…', keywords: ['快照', '回滚', '版本'],
+        run: () => setSnapOpen(true),
+      }),
 
 
 
@@ -51,14 +71,18 @@ export function EditorMockup() {
     ];
     return () => offs.forEach((off) => off());
   }, []);
-  const [canvasDoc, setCanvasDoc] = useState(sampleDoc);
   const editorApiRef = useRef<EditorApi | null>(null);
+  const [snapOpen, setSnapOpen] = useState(false);
+  const canvasDoc = useEditorDoc((s) => s.doc);
+  const applyDoc = useEditorDoc((s) => s.applyDoc);
   const leftWidth = useMockup((s) => s.leftWidth);
   const rightWidth = useMockup((s) => s.rightWidth);
 
   // #93：画布右键菜单（两种光标态）。结构复制真实现（同 entry 内复制条目，nanoid 新块）
   const duplicateEntry = (sectionId: string, entryId: string) => {
-    setCanvasDoc((d) => ({
+    const d = useEditorDoc.getState().doc;
+    if (!d) return;
+    useEditorDoc.getState().applyDoc({
       ...d,
       sections: d.sections.map((sec) => {
         if (sec.id !== sectionId) return sec;
@@ -74,17 +98,19 @@ export function EditorMockup() {
         entries.splice(idx + 1, 0, copy);
         return { ...sec, entries };
       }),
-    }));
+    });
   };
   const reorderEntry = (sectionId: string, from: number, to: number) => {
-    setCanvasDoc((d) => ({
+    const d = useEditorDoc.getState().doc;
+    if (!d) return;
+    useEditorDoc.getState().applyDoc({
       ...d,
       sections: d.sections.map((sec) =>
         sec.id === sectionId
           ? { ...sec, entries: sec.entries.map((e, i, arr) => (i === from ? arr[to]! : i === to ? arr[from]! : e)) }
           : sec,
       ),
-    }));
+    });
   };
 
   // 命令事件：返回简历库
@@ -110,7 +136,7 @@ export function EditorMockup() {
           break;
         case 'save':
           e.preventDefault();
-          useMockup.setState({ dirty: false }); // 持久层 m1.6 接管；先清 dirty 标记模拟
+          void useEditorDoc.getState().saveNow().then(() => toast('已保存'));
           break;
         case 'evaluate':
         case 'revise-block':
@@ -125,6 +151,9 @@ export function EditorMockup() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  if (!canvasDoc) {
+    return <div className="editor-mock" aria-busy="true" />; // openCurrent 异步就绪前的空帧
+  }
   return (
     <div className="editor-mock">
       {leftOpen ? (
@@ -137,7 +166,7 @@ export function EditorMockup() {
       ) : (
         <Rail side="left" />
       )}
-      <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={setCanvasDoc} editorApiRef={editorApiRef}
+      <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={applyDoc} editorApiRef={editorApiRef}
         onDuplicateEntry={duplicateEntry} />
       {rightOpen ? (
         <>
@@ -150,6 +179,7 @@ export function EditorMockup() {
         <Rail side="right" />
       )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <SnapshotDialog open={snapOpen} onClose={() => setSnapOpen(false)} />
     </div>
   );
 }
