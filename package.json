@@ -9,8 +9,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @fairlens/desktop dev",
-    "tauri:dev": "pnpm --filter @fairlens/desktop tauri dev",
-    "dev:kill": "powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 1420 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Get-Process fairlens -ErrorAction SilentlyContinue | Stop-Process -Force\"",
+    "tauri:dev": "pnpm dev:kill && pnpm --filter @fairlens/desktop tauri dev",
+    "dev:kill": "powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 1420 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Get-Process fairlens -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0\"",
     "build": "pnpm -r --filter './packages/*' --filter './tools/*' build",
     "test": "vitest run",
     "lint": "eslint .",
