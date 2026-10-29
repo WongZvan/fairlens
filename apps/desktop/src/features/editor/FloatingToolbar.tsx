@@ -1,23 +1,212 @@
 /**
- * 悬浮工具条（m1.5 收尾，§5.2）：选中文字 + 光标悬停于选区之上时浮现——加粗/斜体/链接 + AI 改写入口。
- * 显示条件（docs/01 §5.2，用户反馈定案）：
- *   ① 真实文字选区（from!==to）；
- *   ② 光标（鼠标）位于选区矩形内（用户主动把光标放上去才出现，不遮阅读）；
- *   ③ 右键菜单未打开（职责分离 #93）。
+ * 悬浮工具条（m1.5 收尾，§5.2；m1.6 反馈轮 #106 修可达性）
+ * 显示条件：① 真实文字选区（from!==to）；② 光标位于「选区矩形 ∪ 工具条自身 ∪ 过渡走廊」内（用户主动靠近才出现，不遮阅读）；
+ *          ③ 右键菜单未打开（职责分离 #93）。
+ * 本次修复的三个实证根因：
+ *   1. 旧判定框只取选区两端光标 ±4px，而工具条悬在选区上方 8px → 移动途中有 4px 死区，工具条永远够不到；
+ *   2. 内层隐藏时外层 BubbleMenu 容器仍可命中 → 点中即清空文本选区 → 门控条件失效、不重新选中永不恢复；
+ *   3. portal 位于 .paper-scale（zoom 变换）内，fit-width 非 100% 时绝对定位按缩放坐标错算 → appendTo body + fixed。
  * 链接编辑态：prompt 在 Tauri/IAB 被静默吞（实测），改应用内行内输入行。
  */
 // v3：BubbleMenu 移到 @tiptap/react/menus 子路径（floating-ui 可选依赖）
 import { BubbleMenu } from '@tiptap/react/menus';
 import type { Editor } from '@tiptap/react';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  pointInRects,
+  reachableRects,
+  rectsFromClientRects,
+  rectsFromEndpoints,
+  type Rect,
+} from './toolbar-hover.js';
 
-export function FloatingToolbar({ editor }: { editor: Editor | null }) {
+/** 鼠标离开可达区后的隐藏宽限：快速斜向移动不闪断 */
+const HIDE_GRACE_MS = 150;
+const HOVER_PAD_PX = 8;
+/** 显式 pluginKey：获得可控的 meta 通道（'show'/'hide'/'updatePosition'），供意外隐藏后自愈复显 */
+const BUBBLE_PLUGIN_KEY = 'fl-bubble';
+
+declare global {
+  interface Window {
+    /** dev-only 诊断日志（浮层被移除/焦点变化的时间线，定位 hide 诱因用） */
+    __flBubbleLog?: Array<Record<string, unknown>>;
+  }
+}
+
+export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; readOnly?: boolean }) {
   const [linkEditing, setLinkEditing] = useState(false);
   const [linkDraft, setLinkDraft] = useState('https://');
-  // ② 光标是否悬停在选区矩形内（selectionchange/mousemove 双驱动）
-  const [hoverOnSelection, setHoverOnSelection] = useState(false);
-  if (!editor) return null;
+  // 光标是否位于可达区（选区 ∪ 工具条 ∪ 走廊）
+  const [reachable, setReachable] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+  const mouseRef = useRef({ x: -1, y: -1 });
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 工具条最近一次几何：插件 hide() 会把元素 remove（脱离文档），此时仍要能判定"光标在其上" */
+  const lastBarRect = useRef<Rect | null>(null);
+
+  // 可达区重算：真实多行选区矩形 + 工具条矩形 + 走廊
+  const computeReachable = useCallback(() => {
+    if (!editor) return false;
+    const { from, to, empty } = editor.state.selection;
+    if (empty || from === to) return false;
+    let selRects: Rect[] = [];
+    const domSel = window.getSelection();
+    if (domSel && domSel.rangeCount > 0 && !domSel.isCollapsed) {
+      selRects = rectsFromClientRects(domSel.getRangeAt(0).getClientRects());
+    }
+    if (selRects.length === 0) {
+      // 退化：PM 选区可用但 DOM selection 不可读（如多 range）→ 端点包围盒
+      try {
+        const a = editor.view.coordsAtPos(from);
+        const b = editor.view.coordsAtPos(to);
+        selRects = rectsFromEndpoints({ x: a.left, y: a.top }, { x: b.left, y: b.bottom });
+      } catch {
+        return false;
+      }
+    }
+    const bar = barRef.current;
+    const box = bar && bar.isConnected ? bar.getBoundingClientRect() : null;
+    if (box) {
+      lastBarRect.current = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+    }
+    const toolbarRect = lastBarRect.current;
+    return pointInRects(mouseRef.current, reachableRects(selRects, toolbarRect), HOVER_PAD_PX);
+  }, [editor]);
+
+  const refresh = useCallback(() => {
+    const next = computeReachable();
+    if (next) {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+      setReachable(true);
+      // 自愈：插件任何一次 hide() 都会把元素 remove 出文档；选区仍有效且光标在可达区时强制复显
+      if (editor && !editor.isDestroyed && !document.querySelector('.float-bar')) {
+        editor.view.dispatch(editor.state.tr.setMeta(BUBBLE_PLUGIN_KEY, 'show'));
+      }
+      return;
+    }
+    if (!hideTimer.current) {
+      hideTimer.current = setTimeout(() => {
+        hideTimer.current = null;
+        setReachable(false);
+      }, HIDE_GRACE_MS);
+    }
+  }, [computeReachable, editor]);
+
+  // 鼠标/选区/滚动驱动重算
+  useEffect(() => {
+    if (!editor) return;
+    const onMouseMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
+      refresh();
+    };
+    const onMouseUp = () => setTimeout(refresh, 0);
+    document.addEventListener('mousemove', onMouseMove, { passive: true });
+    document.addEventListener('selectionchange', refresh);
+    document.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('scroll', refresh, true);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('selectionchange', refresh);
+      document.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('scroll', refresh, true);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+  }, [editor, refresh]);
+
+  // 隐藏时外层容器不接收指针：否则不可见浮层会吞掉 mousedown → 清空选区 → 永不恢复（#106 实证）
+  const visible = reachable || linkEditing;
+  useEffect(() => {
+    const wrap = barRef.current?.parentElement;
+    if (wrap) wrap.style.pointerEvents = visible ? 'auto' : 'none';
+  }, [visible]);
+
+  // Ctrl+K（选中文字）经 fl:insert-link 进入链接编辑态
+  useEffect(() => {
+    const onInsertLink = () => {
+      if (!editor || editor.isDestroyed) return;
+      setLinkDraft('https://');
+      setLinkEditing(true);
+      setReachable(true);
+    };
+    window.addEventListener('fl:insert-link', onInsertLink);
+    return () => window.removeEventListener('fl:insert-link', onInsertLink);
+  }, [editor]);
+
+  // 右键菜单开/关与画布滚动：派发空事务，让 BubbleMenu 的 shouldShow 与定位重新求值
+  useEffect(() => {
+    if (!editor) return;
+    let raf = 0;
+    const bump = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!editor.isDestroyed) editor.view.dispatch(editor.state.tr);
+      });
+    };
+    const onCtxMenuChanged = () => {
+      bump();
+      refresh();
+    };
+    window.addEventListener('fl:ctx-menu-changed', onCtxMenuChanged);
+    window.addEventListener('scroll', bump, true);
+    window.addEventListener('resize', bump);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('fl:ctx-menu-changed', onCtxMenuChanged);
+      window.removeEventListener('scroll', bump, true);
+      window.removeEventListener('resize', bump);
+    };
+  }, [editor, refresh]);
+
+  // 定点修复（#106 实证诱因）：插件在 editor blur 时无条件 hide()（element.remove()），
+  // 且该路径绕过自定义 shouldShow —— 表现为工具条"移入即消失、不重新选中永不恢复"。
+  // 对策：blur 后若选区仍非空，立即复显元素、让 DOM 常驻；真实可见性仍由我们的可达区门控决定。
+  useEffect(() => {
+    if (!editor) return;
+    const onBlur = () => {
+      setTimeout(() => {
+        if (editor.isDestroyed) return;
+        const { from, to } = editor.state.selection;
+        if (from !== to && !document.querySelector('.float-bar')) {
+          editor.view.dispatch(editor.state.tr.setMeta(BUBBLE_PLUGIN_KEY, 'show'));
+        }
+      }, 0);
+    };
+    editor.on('blur', onBlur);
+    return () => {
+      editor.off('blur', onBlur);
+    };
+  }, [editor]);
+
+  // dev-only 诊断：记录浮层被移除的时刻与焦点/选区上下文（定位 hide 诱因；生产构建不启用）
+  useEffect(() => {
+    if (!import.meta.env.DEV || !editor) return;
+    const log = (window.__flBubbleLog ??= []);
+    const rec = (t: string, extra: Record<string, unknown> = {}) =>
+      log.push({ t, at: Math.round(performance.now()), from: editor.state.selection.from, to: editor.state.selection.to, active: document.activeElement?.className || document.activeElement?.tagName || null, ctxMenu: !!document.querySelector('.ctx-menu'), ...extra });
+    const onBlur = (payload: { event?: FocusEvent }) => rec('editor-blur', { related: (payload?.event?.relatedTarget as HTMLElement | null)?.className ?? null });
+    const onFocus = () => rec('editor-focus');
+    editor.on('blur', onBlur as never);
+    editor.on('focus', onFocus as never);
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const n of Array.from(m.removedNodes)) {
+          if (n instanceof HTMLElement && (n.classList.contains('float-bar') || n.querySelector?.('.float-bar'))) rec('removed');
+        }
+      }
+    });
+    mo.observe(document.body, { childList: true });
+    return () => {
+      mo.disconnect();
+      editor.off('blur', onBlur as never);
+      editor.off('focus', onFocus as never);
+    };
+  }, [editor]);
+
+  if (!editor || readOnly) return null;
 
   const applyLink = () => {
     const url = linkDraft.trim();
@@ -27,62 +216,26 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
     }
   };
 
-  // 选区矩形（视口坐标）；每次 selectionchange 后重算
-  useEffect(() => {
-    const updateHover = () => {
-      const { state, view } = editor;
-      const { from, to, empty } = state.selection;
-      if (empty || from === to) {
-        setHoverOnSelection((prev) => (prev ? false : prev)); // 值不变不触发渲染
-        return;
-      }
-      try {
-        const a = view.coordsAtPos(from);
-        const b = view.coordsAtPos(to);
-        const rect = {
-          left: Math.min(a.left, b.left),
-          right: Math.max(a.right, b.right),
-          top: Math.min(a.top, b.top),
-          bottom: Math.max(a.bottom, b.bottom),
-        };
-        const next =
-          lastMouse.x >= rect.left - 4 &&
-          lastMouse.x <= rect.right + 4 &&
-          lastMouse.y >= rect.top - 4 &&
-          lastMouse.y <= rect.bottom + 4;
-        setHoverOnSelection((prev) => (prev === next ? prev : next)); // 值相同跳过渲染（防抖）
-      } catch {
-        setHoverOnSelection(false);
-      }
-    };
-    const onMouseMove = (e: MouseEvent) => {
-      lastMouse.x = e.clientX;
-      lastMouse.y = e.clientY;
-      updateHover();
-    };
-    // mouseup 后延迟一帧重估（拖选结束 PM 稳定期内不抖）
-    const onMouseUp = () => setTimeout(updateHover, 60);
-    document.addEventListener('selectionchange', updateHover);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    return () => {
-      document.removeEventListener('selectionchange', updateHover);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [editor]);
-
   return (
     <BubbleMenu
       editor={editor}
-      options={{ placement: 'top', offset: 8 }}
+      pluginKey={BUBBLE_PLUGIN_KEY}
+      updateDelay={0}
+      appendTo={() => document.body}
+      options={{ placement: 'top', offset: 8, strategy: 'fixed' }}
       shouldShow={({ from, to }) => from !== to && !document.querySelector('.ctx-menu')}
     >
       <div
+        ref={barRef}
         className="float-bar live"
         role="toolbar"
         aria-label="文字格式"
-        style={{ visibility: hoverOnSelection || linkEditing ? 'visible' : 'hidden' }}
+        style={{ visibility: visible ? 'visible' : 'hidden' }}
+        onMouseDown={(e) => {
+          // 点击工具条自身不得清空编辑器选区；输入框需要正常聚焦
+          if ((e.target as HTMLElement).tagName === 'INPUT') return;
+          e.preventDefault();
+        }}
       >
         {linkEditing ? (
           <div className="link-edit">
@@ -134,18 +287,5 @@ export function FloatingToolbar({ editor }: { editor: Editor | null }) {
         )}
       </div>
     </BubbleMenu>
-  );
-}
-
-/** 最近鼠标位置（模块级；mousemove 跟踪） */
-const lastMouse = { x: -1, y: -1 };
-if (typeof document !== 'undefined') {
-  document.addEventListener(
-    'mousemove',
-    (e) => {
-      lastMouse.x = e.clientX;
-      lastMouse.y = e.clientY;
-    },
-    { passive: true },
   );
 }

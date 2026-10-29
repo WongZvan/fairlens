@@ -24,6 +24,17 @@ import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 export interface EditorApi {
   undo: () => void;
   redo: () => void;
+  /** 复制选区（focus + 原生 copy，经 ProseMirror 序列化=保留节点结构） */
+  copy: () => void;
+  /** 剪切选区（同上，cut 事件由 PM 处理） */
+  cut: () => void;
+  /** 粘贴系统剪贴板：text/html 走 schema 白名单解析；仅纯文本走文本插入 */
+  paste: () => Promise<void>;
+  selectAll: () => void;
+  /** 光标所在条目（右键菜单/ Ctrl+D 复制条目定位用） */
+  getActiveEntry: () => { sectionId: string; entryId: string } | null;
+  /** 派发空事务：让依赖事务的 UI（悬浮工具条 shouldShow/定位）重新求值 */
+  refresh: () => void;
 }
 
 export interface CanvasEditorProps {
@@ -93,7 +104,55 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
   const templateCss = builtin?.printCss ?? '';
   const styleVars = resolveStyleVars(manifest, effectiveStyle);
   useEffect(() => {
-    if (editor && onReady) onReady({ undo: () => editor.chain().focus().undo().run(), redo: () => editor.chain().focus().redo().run() });
+    if (!editor || !onReady) return;
+    const findEntry = () => {
+      const { $from } = editor.state.selection;
+      for (let d = $from.depth; d > 0; d -= 1) {
+        const node = $from.node(d);
+        if (node.type.name === 'flEntry') {
+          const section = d > 1 ? $from.node(d - 1) : null;
+          return { sectionId: String(section?.attrs.id ?? ''), entryId: String(node.attrs.id ?? '') };
+        }
+      }
+      return null;
+    };
+    const insertPlainText = (text: string) => {
+      const nodes: Array<Record<string, unknown>> = [];
+      text.replace(/\r\n/g, '\n').split('\n').forEach((line, i) => {
+        if (i > 0) nodes.push({ type: 'hardBreak' });
+        if (line.length > 0) nodes.push({ type: 'text', text: line });
+      });
+      if (nodes.length > 0) editor.chain().focus().insertContent(nodes).run();
+    };
+    onReady({
+      undo: () => editor.chain().focus().undo().run(),
+      redo: () => editor.chain().focus().redo().run(),
+      copy: () => {
+        editor.chain().focus().run();
+        document.execCommand('copy');
+      },
+      cut: () => {
+        editor.chain().focus().run();
+        document.execCommand('cut');
+      },
+      paste: async () => {
+        editor.chain().focus().run();
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          if (item.types.includes('text/html')) {
+            const html = await (await item.getType('text/html')).text();
+            // insertContent(html) 经 schema 解析——白名单/节点归一化自动生效（与 handlePaste 同源规则）
+            editor.chain().focus().insertContent(html).run();
+            return;
+          }
+        }
+        const text = await navigator.clipboard.readText();
+        if (text) insertPlainText(text);
+      },
+      selectAll: () => editor.chain().focus().selectAll().run(),
+      getActiveEntry: findEntry,
+      refresh: () => editor.view.dispatch(editor.state.tr),
+    });
   }, [editor, onReady]);
 
   return (
@@ -101,7 +160,7 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       <style>{templateCss}</style>
       <div className="fl-host" style={styleVars as React.CSSProperties} data-template={doc.templateId}>
         <EditorContent editor={editor} />
-        <FloatingToolbar editor={editor} />
+        <FloatingToolbar editor={editor} readOnly={readOnly} />
       </div>
       <PageGuides />
     </div>

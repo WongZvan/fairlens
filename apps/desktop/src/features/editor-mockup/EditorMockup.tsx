@@ -15,7 +15,8 @@ import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
 import { CommandPalette } from './CommandPalette.js';
 import { SidebarResizer } from './SidebarResizer.js';
-import { ContextMenuView, useContextMenu, type ContextMenuEntry } from './ContextMenu.js';
+import { ContextMenuView, useContextMenu } from './ContextMenu.js';
+import { buildCanvasMenuItems } from './canvas-menu.js';
 import { dims, findings } from './sample-data.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
@@ -120,6 +121,19 @@ export function EditorMockup() {
     return () => window.removeEventListener('fl:back-library', onBack);
   }, []);
 
+  // #106：右键默认折叠选区 → 菜单拿不到选区态。document 捕获阶段拦住右键盘默认折叠（React 合成层不够早）
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (e.button !== 2) return;
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest('.ProseMirror')) return;
+      const s = window.getSelection();
+      if (s && !s.isCollapsed && s.toString().trim().length > 0) e.preventDefault();
+    };
+    document.addEventListener('mousedown', onDown, true);
+    return () => document.removeEventListener('mousedown', onDown, true);
+  }, []);
+
   // 全局快捷键（§5.10；编辑器内键位由 Tiptap 自理，此处管全局态）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -138,6 +152,18 @@ export function EditorMockup() {
           e.preventDefault();
           void useEditorDoc.getState().saveNow().then(() => toast('已保存'));
           break;
+        case 'insert-link':
+          // #106：选中文字按 Ctrl+K → 工具条进入链接编辑态（此前 resolveShortcut 有路由但无人消费）
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('fl:insert-link'));
+          break;
+        case 'duplicate-block': {
+          // #106：Ctrl+D 复制当前条目（此前无消费方，会触发浏览器"添加书签"）
+          e.preventDefault();
+          const target = editorApiRef.current?.getActiveEntry();
+          if (target && target.sectionId && target.entryId) duplicateEntry(target.sectionId, target.entryId);
+          break;
+        }
         case 'evaluate':
         case 'revise-block':
         case 'find':
@@ -231,20 +257,28 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
   const setCanvasDoc = onCanvasDocChange;
   const ctx = useContextMenu();
 
-  // #93 右键菜单：bullet 上=结构命令（复制条目/粘贴）；选区=文字命令；空白=通用
+  // #93/#106 右键菜单：有选区=文字命令（剪切/复制/粘贴/全选）+ 条目副本；无选区=结构命令
   const openCanvasMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     const target = e.target as HTMLElement;
-    const entryId = target.closest('[data-type="fl-entry"]')?.getAttribute('data-block-id') ?? undefined;
-    const sectionId = target.closest('[data-type="fl-section"]')?.getAttribute('data-block-id') ?? '';
-    const items: ContextMenuEntry[] = [];
-    if (entryId && sectionId) {
-      items.push(
-        { label: '创建条目副本', hint: 'Ctrl+D', run: () => onDuplicateEntry(sectionId, entryId) },
-        { divider: true },
-      );
-    }
-    items.push({ label: '粘贴', hint: 'Ctrl+V', run: () => navigator.clipboard.readText().then((t) => t && document.execCommand('insertText', false, t)).catch(() => {}) });
+    const hitEntryId = target.closest('[data-type="fl-entry"]')?.getAttribute('data-block-id') ?? undefined;
+    const hitSectionId = target.closest('[data-type="fl-section"]')?.getAttribute('data-block-id') ?? '';
+    const api = editorApiRef.current;
+    const domSel = window.getSelection();
+    const hasSelection = !!domSel && !domSel.isCollapsed && domSel.toString().trim().length > 0;
+    // 选区起点在条目内时 PM 可给出精确条目；否则回落 DOM 命中（右键落点）
+    const entry = api?.getActiveEntry() ?? (hitEntryId && hitSectionId ? { sectionId: hitSectionId, entryId: hitEntryId } : null);
+    const items = buildCanvasMenuItems({
+      hasSelection,
+      entry: entry && entry.sectionId ? entry : null,
+      actions: {
+        cut: () => api?.cut(),
+        copy: () => api?.copy(),
+        paste: () => void api?.paste().catch(() => toast('粘贴失败：剪贴板不可读或格式不支持')),
+        selectAll: () => api?.selectAll(),
+        duplicate: (sectionId, entryId) => onDuplicateEntry(sectionId, entryId),
+      },
+    });
     ctx.open(e.clientX, e.clientY, items);
   };
   const hostRef = useRef<HTMLDivElement>(null);
@@ -317,6 +351,12 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
         className="m-canvas"
         ref={canvasRef}
         onContextMenu={openCanvasMenu}
+        // #106：右键默认折叠选区 → 菜单拿不到选区态。capture 阶段拦住右键盘的默认折叠，保留选区
+        onMouseDownCapture={(e) => {
+          if (e.button !== 2) return;
+          const s = window.getSelection();
+          if (s && !s.isCollapsed && s.toString().trim().length > 0) e.preventDefault();
+        }}
       >
         {/*
           缩放滚动几何（§5.2）：transform 不改布局宽。外层显式布局宽=纸面宽×zoom 撑开滚动范围，

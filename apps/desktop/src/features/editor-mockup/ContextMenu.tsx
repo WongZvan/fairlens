@@ -59,6 +59,12 @@ export function ContextMenuView({ state, onClose }: { state: ContextMenuState | 
     };
   }, [state, onClose]);
 
+  // 菜单开/关派发事件：悬浮工具条的 shouldShow 依赖 .ctx-menu 是否在 DOM，而开关菜单不产生 PM 事务
+  // → 由工具条侧派发空事务重新求值，否则会粘在隐藏态（#106）
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('fl:ctx-menu-changed'));
+  }, [state]);
+
   if (!state || !pos) return null;
   return (
     <div className="ctx-menu" style={{ left: pos.left, top: pos.top }} role="menu" ref={ref}>
