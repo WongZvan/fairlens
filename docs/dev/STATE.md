@@ -33,6 +33,8 @@
 4. m1.1 打样最终过目（九轮反馈后整体观感）
 5. **m1.6 tauri 真机冒烟**——**自动部分已过**（2026-10-25 首跑 `pnpm tauri:dev` 成功：fairlens.exe 起窗、`%APPDATA%\com.fairlens.desktop\fairlens_dev.db` 生成+WAL、_sqlx_migrations+附录 B 五表建齐、resumes 已有真机写入的示例简历行）；**收口后反馈轮四项已修待复验**（右栏 resizer 真内缘+CTA 纵向滚动可达 / 三键换 lucide / 大纲更严过滤含空 bullet 契约修复 / 右键文案「创建条目副本」）；**剩余人工操作项**：编辑→关窗→重开数据仍在（真持久层核心验收）/三键与标题栏拖动真机验（lucide 图标仅真窗可见）/关闭保护弹窗（Tauri onCloseRequested 路径）/Ctrl+S toast/快照对话框真机过一遍/大纲拖拽排序回归。启动命令已固化：项目根 `pnpm tauri:dev`（@tauri-apps/cli 已入 devDeps；注意勿在主目录裸跑 `pnpm tauri dev`——cwd 无 package.json 会报 NO_IMPORTER_MANIFEST_FOUND；改 capabilities 后须见 `Compiling fairlens` 才算重编）
 
+6. **m1.5 选区交互（#106）真机复验**：拖选→工具条出现在选区上方（含适应宽度 0.8 缩放）/鼠标移入工具条不消失且可点 B/I/链接/点击后选区仍在/Ctrl+K 插链接/Ctrl+D 复制条目/选区右键五项（剪切·复制·粘贴·全选·创建条目副本）/关菜单后鼠标回选区工具条恢复。已浏览器冒烟通过，真窗未验（浮层定位走 appendTo body + fixed，真窗 WebView2 需确认）；**黑底「实习经历」已判定为系统层浮窗（输入法候选窗，不在我方 DOM），非应用缺陷**
+
 **占位清理账**（接手人必读）
 - ~~mockup store `dirty` 占位~~（m1.6 已接管：editor-doc store；mockup.dirty 字段已删）
 - `edit.entry-duplicate` 占位命令（真实现已在右键菜单；m1.8 面板接）与 Ctrl+F 吞键（m1.6 内联查找——实际未做，Ctrl+F 仍吞键占位，见下方更正）

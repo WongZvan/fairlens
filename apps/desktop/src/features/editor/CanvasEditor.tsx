@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { DocStyle, ResumeDoc } from '@fairlens/shared';
 import { validateDocStyleAgainstManifest } from '@fairlens/shared';
 import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
-import { usePasteNormalization } from './use-paste-normalization.js';
+import { usePasteNormalization, normalizePlainText } from './use-paste-normalization.js';
 import { resolveStyleVars } from './style-vars.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 
@@ -116,9 +116,11 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       }
       return null;
     };
-    const insertPlainText = (text: string) => {
+    const insertPlainText = (raw: string) => {
+      // 复用粘贴归一化：换行 \r\n 归一 + 连续空行折叠（与 handlePaste 同规则）
+      const text = normalizePlainText(raw);
       const nodes: Array<Record<string, unknown>> = [];
-      text.replace(/\r\n/g, '\n').split('\n').forEach((line, i) => {
+      text.split('\n').forEach((line, i) => {
         if (i > 0) nodes.push({ type: 'hardBreak' });
         if (line.length > 0) nodes.push({ type: 'text', text: line });
       });
