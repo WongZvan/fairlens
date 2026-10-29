@@ -38,6 +38,7 @@
 **占位清理账**（接手人必读）
 - ~~mockup store `dirty` 占位~~（m1.6 已接管：editor-doc store；mockup.dirty 字段已删）
 - `edit.entry-duplicate` 占位命令（真实现已在右键菜单；m1.8 面板接）与 Ctrl+F 吞键（m1.6 内联查找——实际未做，Ctrl+F 仍吞键占位，见下方更正）
+- **Ctrl+Shift+V 仅文本粘贴仍未接通**：shortcuts 有 `paste-plain` 路由、`use-paste-normalization` 有 `__plainOnly` 分支，但无写入方/消费方（实际仍是原生粘贴）——随粘贴气泡 UI 一并做（m1.4 剩余项）
 - **更正**：Ctrl+F 内联查找不在 m1.6 任务清单（导航表 m1.5 行「Ctrl+F 面板=M1.6」指面板入口沿用）——真内联查找仍待后续模块排期
 - m1.4 剩余：结构 gating→m1.5 命令层、背景层 #86（settings 四键已预留，背景渲染待 m2.3 配置 UI 接）、IME 专项、粘贴气泡 UI
 
