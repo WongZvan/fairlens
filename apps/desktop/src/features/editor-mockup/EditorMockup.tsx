@@ -84,6 +84,7 @@ export function EditorMockup() {
   const [snapOpen, setSnapOpen] = useState(false);
   const canvasDoc = useEditorDoc((s) => s.doc);
   const applyDoc = useEditorDoc((s) => s.applyDoc);
+  const loadError = useEditorDoc((s) => s.lastError);
   const leftWidth = useMockup((s) => s.leftWidth);
   const rightWidth = useMockup((s) => s.rightWidth);
 
@@ -188,7 +189,22 @@ export function EditorMockup() {
   }, []);
 
   if (!canvasDoc) {
-    return <div className="editor-mock" aria-busy="true" />; // openCurrent 异步就绪前的空帧
+    // 不再留白（#109）：区分"仍在加载"与"加载失败"，后者给出可见错误与重试入口
+    return (
+      <div className="editor-mock" aria-busy="true" style={{ display: 'grid', placeItems: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: 420 }}>
+          {loadError ? (
+            <>
+              <p className="muted">简历加载失败，已回退为空文档。错误信息：</p>
+              <pre className="mono small" style={{ whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto' }}>{loadError}</pre>
+              <button className="m-btn primary" onClick={() => void useEditorDoc.getState().openCurrent()}>重试</button>
+            </>
+          ) : (
+            <p className="muted">正在加载简历…</p>
+          )}
+        </div>
+      </div>
+    );
   }
   return (
     <div className="editor-mock">

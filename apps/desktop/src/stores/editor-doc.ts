@@ -60,15 +60,27 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
 
     async openCurrent() {
       const port = persistence();
-      const meta = (await port.listResumeMetas())[0] ?? null;
-      let row: ResumeRow | null = meta ? await port.getResume(meta.id) : null;
+      let row: ResumeRow | null = null;
+      let loadError: string | null = null;
+      try {
+        const meta = (await port.listResumeMetas())[0] ?? null;
+        row = meta ? await port.getResume(meta.id) : null;
+      } catch (err) {
+        // 旧数据/适配器异常：不让编辑区留白——记录错误并走新建兜底（#109）
+        loadError = String(err);
+        console.error('[editor-doc] 加载当前简历失败，回退新建示例', err);
+      }
       if (!row) {
         const now = new Date().toISOString();
         row = { id: nanoid(), title: '示例简历', verticalId: 'general', doc: sampleDoc, status: 'active', createdAt: now, updatedAt: now };
-        await port.upsertResume(row);
+        try {
+          await port.upsertResume(row);
+        } catch (err) {
+          loadError = loadError ? `${loadError} / ${String(err)}` : String(err);
+        }
       }
       currentRow = row;
-      const autosave = parseSettingValue('autosave', await port.getSettingRaw('autosave'));
+      const autosave = parseSettingValue('autosave', await port.getSettingRaw('autosave').catch(() => undefined));
       controller?.destroy();
       controller = createAutosave<ResumeDoc>({
         delayMs: AUTOSAVE_DELAY_MS,
@@ -76,7 +88,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
         onStatus: (s) => set({ saveStatus: s, dirty: s === 'pending' || s === 'saving' || s === 'error' }),
         onError: (err) => set({ lastError: String(err) }),
       });
-      set({ ready: true, resumeId: row.id, doc: row.doc, autosave, saveStatus: 'saved', dirty: false, lastError: null });
+      set({ ready: true, resumeId: row.id, doc: row.doc, autosave, saveStatus: 'saved', dirty: false, lastError: loadError });
     },
 
     applyDoc(doc) {

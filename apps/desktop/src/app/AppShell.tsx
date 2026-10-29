@@ -8,6 +8,7 @@ import { CloseGuardDialog, collectPendingIssues, resolveGuardMode, type CloseGua
 import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
 import { useEditorDoc } from '../stores/editor-doc.js';
+import { repairAllResumes } from '../lib/persistence/index.js';
 import { useLicense } from '../stores/license.js';
 
 /** 应用壳：标题栏 + 主区（路由骨架 library|editor；dev 面路由 m4/m5 懒加载挂载） */
@@ -22,6 +23,11 @@ export function AppShell() {
   useEffect(() => {
     if (view === 'editor' && activated) void useEditorDoc.getState().openCurrent();
   }, [view, activated]);
+
+  // #109：激活后一次性修复历史坏数据（旧换序缺陷写入的 null 条目/空 runs）
+  useEffect(() => {
+    if (activated) void repairAllResumes();
+  }, [activated]);
 
   const proceedClose = async (intent: CloseIntent) => {
     setGuard(null);

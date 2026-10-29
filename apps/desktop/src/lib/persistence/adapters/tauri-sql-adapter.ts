@@ -1,6 +1,7 @@
 import Database from '@tauri-apps/plugin-sql';
 import type { PersistencePort } from '@fairlens/core';
 import { ResumeRow, SnapshotRow, type ResumeRow as ResumeRowT, type SnapshotRow as SnapshotRowT } from '@fairlens/shared';
+import { repairResumeDoc } from '../repair-doc.js';
 
 /**
  * tauri-plugin-sql 适配（生产路径）。
@@ -13,26 +14,33 @@ const db = () => (dbPromise ??= Database.load(DB_URL));
 
 type DbRecord = Record<string, unknown>;
 
-const resumeFromDb = (r: DbRecord): ResumeRowT =>
-  ResumeRow.parse({
+const resumeFromDb = (r: DbRecord): ResumeRowT => {
+  // 旧数据修复（#109）：早期版本存过 runs=[] 的 bullet，直接 zod 会整行拒绝 → 编辑器空白
+  const doc = repairResumeDoc(JSON.parse(r.doc_json as string));
+  if (!doc) throw new Error(`resume ${String(r.id)}: doc_json 无法修复（结构无法识别）`);
+  return ResumeRow.parse({
     id: r.id,
     title: r.title,
     verticalId: r.vertical_id,
     status: r.status,
-    doc: JSON.parse(r.doc_json as string),
+    doc,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   });
+};
 
-const snapshotFromDb = (r: DbRecord): SnapshotRowT =>
-  SnapshotRow.parse({
+const snapshotFromDb = (r: DbRecord): SnapshotRowT => {
+  const doc = repairResumeDoc(JSON.parse(r.doc_json as string));
+  if (!doc) throw new Error(`snapshot ${String(r.id)}: doc_json 无法修复`);
+  return SnapshotRow.parse({
     id: r.id,
     resumeId: r.resume_id,
-    doc: JSON.parse(r.doc_json as string),
+    doc,
     label: r.label ?? undefined,
     trigger: r.trigger,
     createdAt: r.created_at,
   });
+};
 
 export function createTauriSqlAdapter(): PersistencePort {
   return {
@@ -52,7 +60,21 @@ export function createTauriSqlAdapter(): PersistencePort {
 
     async getResume(id) {
       const rows = await (await db()).select<DbRecord[]>('SELECT * FROM resumes WHERE id = $1', [id]);
-      return rows[0] ? resumeFromDb(rows[0]) : null;
+      if (!rows[0]) return null;
+      const row = resumeFromDb(rows[0]);
+      // 自愈写回（#109）：修复过旧数据则落库，避免每次加载重复修复、也让库本身收敛
+      try {
+        const raw = JSON.parse(rows[0].doc_json as string);
+        if (JSON.stringify(raw) !== JSON.stringify(row.doc)) {
+          await (await db()).execute(
+            `UPDATE resumes SET doc_json = $2, template_id = $3, updated_at = $4 WHERE id = $1`,
+            [row.id, JSON.stringify(row.doc), row.doc.templateId, row.updatedAt],
+          );
+        }
+      } catch (err) {
+        console.warn('[persistence] 修复回写失败（不影响本次加载）', err);
+      }
+      return row;
     },
 
     async upsertResume(row) {
