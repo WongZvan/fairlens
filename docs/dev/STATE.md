@@ -15,6 +15,7 @@
 ## 环境实录（跨会话必知，细节见 notes/）
 
 - **Rust 已装**（1.99.1，2026-10-25 发现——此前实录过时）；cargo 首拉走 `~/.cargo/config.toml` proxy=127.0.0.1:7897（系统代理 2334 已死会被 libcurl 拾取）；tauri-plugin-sql 已接入（迁移 v1=附录 B DDL）
+- **tauri dev 中断会残留进程**（Ctrl+C/关终端后 `fairlens.exe` 与 vite 可能存活）→ 二启动报 `Port 1420 already in use` 但仍拉窗；先跑 `pnpm dev:kill`（清 1420 端口+fairlens.exe）再启动
 - git 本地代理=7897（全局 2334 失效，会间歇掉线，掉线时本地提交不丢、恢复后推送）；npm registry 直连（~/.npmrc 死代理已删，有备份）
 - pnpm 11 构建许可=pnpm-workspace.yaml `allowBuilds`；契约校验已做 CRLF 归一；.gitattributes 统一 LF
 - 分支保护待用户在 GitHub 开启（CI 已就绪）
@@ -33,11 +34,13 @@
 4. m1.1 打样最终过目（九轮反馈后整体观感）
 5. **m1.6 tauri 真机冒烟**——**自动部分已过**（2026-10-25 首跑 `pnpm tauri:dev` 成功：fairlens.exe 起窗、`%APPDATA%\com.fairlens.desktop\fairlens_dev.db` 生成+WAL、_sqlx_migrations+附录 B 五表建齐、resumes 已有真机写入的示例简历行）；**收口后反馈轮四项已修待复验**（右栏 resizer 真内缘+CTA 纵向滚动可达 / 三键换 lucide / 大纲更严过滤含空 bullet 契约修复 / 右键文案「创建条目副本」）；**剩余人工操作项**：编辑→关窗→重开数据仍在（真持久层核心验收）/三键与标题栏拖动真机验（lucide 图标仅真窗可见）/关闭保护弹窗（Tauri onCloseRequested 路径）/Ctrl+S toast/快照对话框真机过一遍/大纲拖拽排序回归。启动命令已固化：项目根 `pnpm tauri:dev`（@tauri-apps/cli 已入 devDeps；注意勿在主目录裸跑 `pnpm tauri dev`——cwd 无 package.json 会报 NO_IMPORTER_MANIFEST_FOUND；改 capabilities 后须见 `Compiling fairlens` 才算重编）
 
-6. **m1.5 选区交互（#106）真机复验**：拖选→工具条出现在选区上方（含适应宽度 0.8 缩放）/鼠标移入工具条不消失且可点 B/I/链接/点击后选区仍在/Ctrl+K 插链接/Ctrl+D 复制条目/选区右键五项（剪切·复制·粘贴·全选·创建条目副本）/关菜单后鼠标回选区工具条恢复。已浏览器冒烟通过，真窗未验（浮层定位走 appendTo body + fixed，真窗 WebView2 需确认）；**黑底「实习经历」已判定为系统层浮窗（输入法候选窗，不在我方 DOM），非应用缺陷**
+6. **m1.5 选区交互（#106/#107）真机复验**：拖选→工具条出现在选区上方（含适应宽度 0.8 缩放）/鼠标移入工具条不消失且可点 B/I/链接/点击后选区仍在/Ctrl+K 插链接/Ctrl+D 复制**当前要点**/选区右键五项（剪切·复制·粘贴·全选·创建条目副本）/关菜单后鼠标回选区工具条恢复/**拖选过程中不出现工具条**/**链接输入态在改选后自动退出**/**画布内拖动选中文字不再改变版式**。已浏览器冒烟通过，真窗未验（浮层定位走 appendTo body + fixed，真窗 WebView2 需确认）；**黑底「实习经历」已判定为系统层浮窗（输入法候选窗，不在我方 DOM），非应用缺陷**
+
+7. **#107 窗口/设置项真机复验**：设置→通用「自动保存」开关可切换（关→编辑显示"未保存"、关窗弹三键框；浏览器已验证开关与手工模式，真窗待验关闭弹窗）/最大化与还原图标随状态切换/底部状态栏可拖动窗口/**大纲拖拽换序不再蓝屏**（已加 ErrorBoundary + moveEntry 纯函数；如再出现错误卡片，请把屏上信息发我）
 
 **占位清理账**（接手人必读）
 - ~~mockup store `dirty` 占位~~（m1.6 已接管：editor-doc store；mockup.dirty 字段已删）
-- `edit.entry-duplicate` 占位命令（真实现已在右键菜单；m1.8 面板接）与 Ctrl+F 吞键（m1.6 内联查找——实际未做，Ctrl+F 仍吞键占位，见下方更正）
+- `edit.entry-duplicate` 占位命令已消除（#107：命令面板同名命令=复制当前要点，真实现）；Ctrl+F 吞键仍占位（内联查找待后续模块，见下方更正）
 - **Ctrl+Shift+V 仅文本粘贴仍未接通**：shortcuts 有 `paste-plain` 路由、`use-paste-normalization` 有 `__plainOnly` 分支，但无写入方/消费方（实际仍是原生粘贴）——随粘贴气泡 UI 一并做（m1.4 剩余项）
 - **更正**：Ctrl+F 内联查找不在 m1.6 任务清单（导航表 m1.5 行「Ctrl+F 面板=M1.6」指面板入口沿用）——真内联查找仍待后续模块排期
 - m1.4 剩余：结构 gating→m1.5 命令层、背景层 #86（settings 四键已预留，背景渲染待 m2.3 配置 UI 接）、IME 专项、粘贴气泡 UI

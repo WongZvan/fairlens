@@ -20,6 +20,7 @@ import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
 import { usePasteNormalization, normalizePlainText } from './use-paste-normalization.js';
 import { resolveStyleVars } from './style-vars.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
+import { nanoid } from '../../lib/nanoid.js';
 
 export interface EditorApi {
   undo: () => void;
@@ -33,6 +34,8 @@ export interface EditorApi {
   selectAll: () => void;
   /** 光标所在条目（右键菜单/ Ctrl+D 复制条目定位用） */
   getActiveEntry: () => { sectionId: string; entryId: string } | null;
+  /** 复制光标所在「要点」（Ctrl+D 的块级语义，§5.6；返回 false=光标不在要点上） */
+  duplicateActiveBullet: () => boolean;
   /** 派发空事务：让依赖事务的 UI（悬浮工具条 shouldShow/定位）重新求值 */
   refresh: () => void;
 }
@@ -74,6 +77,13 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     editorProps: {
       attributes: { class: 'fl-paper' },
       handlePaste: pasteNormalization,
+      // 版式保护（#107）：禁止把选中文字拖走改版式——换序统一走左侧大纲拖拽
+      handleDOMEvents: {
+        dragstart: (_view, event) => {
+          event.preventDefault();
+          return true;
+        },
+      },
     },
     onUpdate: ({ editor }) => {
       const next = pmToResumeDoc(editor.getJSON(), { templateId: doc.templateId, style: doc.style });
@@ -153,6 +163,19 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       },
       selectAll: () => editor.chain().focus().selectAll().run(),
       getActiveEntry: findEntry,
+      duplicateActiveBullet: () => {
+        const { $from } = editor.state.selection;
+        for (let d = $from.depth; d > 0; d -= 1) {
+          const node = $from.node(d);
+          if (node.type.name !== 'flBullet') continue;
+          const pos = $from.after(d);
+          // 同一 bullet 节点复制一份（nanoid 新 id，runs 原样）——走 PM 事务，保留撤销栈
+          const clone = node.type.create({ ...node.attrs, id: nanoid() }, node.content, node.marks);
+          editor.chain().focus().insertContentAt(pos, clone.toJSON()).run();
+          return true;
+        }
+        return false;
+      },
       refresh: () => editor.view.dispatch(editor.state.tr),
     });
   }, [editor, onReady]);

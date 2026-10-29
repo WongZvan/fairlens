@@ -1,6 +1,7 @@
 import { Settings, ShieldCheck, SunMoon, SlidersHorizontal, Plug, Info } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEditorDoc } from '../stores/editor-doc.js';
 
 /**
  * 设置窗口壳（m1.1 打样；真功能=m2.3）。
@@ -10,6 +11,15 @@ import { useTranslation } from 'react-i18next';
 export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'activation' | 'appearance' | 'general' | 'llm' | 'about'>('appearance');
+  // 注释承诺「点遮罩/Esc 即关」——补上 Esc（此前只实现了遮罩点击）
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
   if (!open) return null;
   const nav: Array<{ id: typeof tab; label: string; icon: React.ReactNode }> = [
     { id: 'activation', label: t('settings.activation'), icon: <ShieldCheck size={15} /> },
@@ -41,7 +51,11 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
             ))}
           </nav>
           <div className="settings-pane">
-            <p className="muted">{t('settings.mockNote', { module: 'm2.3' })}</p>
+            {tab === 'general' ? (
+              <GeneralPane />
+            ) : (
+              <p className="muted">{t('settings.mockNote', { module: 'm2.3' })}</p>
+            )}
           </div>
         </div>
       </div>
@@ -49,8 +63,26 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
   );
 }
 
-/** 标题栏齿轮（把 M0 的 disabled 占位点亮为打样入口） */
-export function SettingsGear({ onClick }: { onClick: () => void }) {
+/** 通用页：自动保存开关（§5.7 双模式唯一的用户入口；真面板其余项仍归 m2.3） */
+function GeneralPane() {
+  const { t } = useTranslation();
+  const autosave = useEditorDoc((s) => s.autosave);
+  return (
+    <section>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={autosave}
+          onChange={(e) => void useEditorDoc.getState().setAutosave(e.target.checked)}
+        />
+        <span>{t('settings.autosave')}</span>
+      </label>
+      <p className="muted small" style={{ marginTop: 6 }}>{t('settings.autosaveDesc')}</p>
+    </section>
+  );
+}
+
+/** 标题栏齿轮（把 M0 的 disabled 占位点亮为打样入口） */export function SettingsGear({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation();
   return (
     <button aria-label={t('titlebar.settings')} title={t('titlebar.settings')} className="gear" onClick={onClick}>

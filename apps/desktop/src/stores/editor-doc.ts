@@ -37,6 +37,8 @@ interface EditorDocState {
   listSnapshots(): Promise<SnapshotRow[]>;
   /** 一键回滚：以快照 doc 覆盖当前并立即落盘（快照留档，可再次回滚） */
   restoreSnapshot(id: string): Promise<void>;
+  /** 设置→通用「自动保存」开关（§5.7；写 settings 表，跨会话生效） */
+  setAutosave(value: boolean): Promise<void>;
 }
 
 export const useEditorDoc = create<EditorDocState>((set, get) => {
@@ -130,6 +132,15 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       controller?.discardPending(); // 回滚基线替换：丢弃挂起变更
       set({ doc: snap.doc, dirty: false });
       await persistDoc(snap.doc);
+    },
+
+    async setAutosave(value) {
+      await persistence().setSettingRaw('autosave', value);
+      set({ autosave: value });
+      // 切到自动保存：把手动模式下积压的未保存变更立即落盘（避免"看似已保存"的假象）
+      if (value && get().dirty) {
+        await get().saveNow();
+      }
     },
   };
 });

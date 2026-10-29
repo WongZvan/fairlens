@@ -35,3 +35,7 @@
 /* 状态栏授权指示（原"在线"占位语义替换） */
 .statusbar .lic { display: inline-flex; align-items: center; gap: 5px; color: var(--ade-ink); }
 .statusbar .lic .dot.warn { background: var(--ade-pen-red); }
+
+/* 通用页：自动保存开关（#107） */
+.settings-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ade-ink); cursor: pointer; }
+.settings-toggle input { width: 14px; height: 14px; accent-color: var(--ade-accent); }

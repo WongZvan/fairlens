@@ -17,6 +17,7 @@ import { CommandPalette } from './CommandPalette.js';
 import { SidebarResizer } from './SidebarResizer.js';
 import { ContextMenuView, useContextMenu } from './ContextMenu.js';
 import { buildCanvasMenuItems } from './canvas-menu.js';
+import { moveEntry } from './entry-order.js';
 import { dims, findings } from './sample-data.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
@@ -62,8 +63,15 @@ export function EditorMockup() {
 
 
       commandRegistry.register({
-        id: 'edit.entry-duplicate', title: '复制当前条目', hint: 'Ctrl+D', keywords: ['复制', '条目'],
-        devOnly: false, run: () => console.log('[m1.5] 复制条目请用画布右键菜单（需先选中条目）'),
+        id: 'edit.entry-duplicate', title: '复制当前要点', hint: 'Ctrl+D', keywords: ['复制', '要点', '块'],
+        devOnly: false,
+        run: () => {
+          // #107：与 Ctrl+D 同语义（要点级）；光标不在要点上时退化为复制所属条目
+          const api = editorApiRef.current;
+          if (api?.duplicateActiveBullet()) return;
+          const target = api?.getActiveEntry();
+          if (target && target.sectionId && target.entryId) duplicateEntry(target.sectionId, target.entryId);
+        },
       }),
       commandRegistry.register({
         id: 'dev.reload-packs', title: '[开发] 重载提示词包', devOnly: true,
@@ -104,13 +112,13 @@ export function EditorMockup() {
   const reorderEntry = (sectionId: string, from: number, to: number) => {
     const d = useEditorDoc.getState().doc;
     if (!d) return;
+    const sec = d.sections.find((s) => s.id === sectionId);
+    if (!sec) return;
+    const entries = moveEntry(sec.entries, from, to);
+    if (entries === sec.entries) return; // 同位/越界：无需更新（#107）
     useEditorDoc.getState().applyDoc({
       ...d,
-      sections: d.sections.map((sec) =>
-        sec.id === sectionId
-          ? { ...sec, entries: sec.entries.map((e, i, arr) => (i === from ? arr[to]! : i === to ? arr[from]! : e)) }
-          : sec,
-      ),
+      sections: d.sections.map((s) => (s.id === sectionId ? { ...s, entries } : s)),
     });
   };
 
@@ -158,9 +166,11 @@ export function EditorMockup() {
           window.dispatchEvent(new CustomEvent('fl:insert-link'));
           break;
         case 'duplicate-block': {
-          // #106：Ctrl+D 复制当前条目（此前无消费方，会触发浏览器"添加书签"）
+          // #107：Ctrl+D = 复制当前「要点」（块级语义，§5.6）；光标不在要点上则退化为复制所属条目
           e.preventDefault();
-          const target = editorApiRef.current?.getActiveEntry();
+          const api = editorApiRef.current;
+          if (api?.duplicateActiveBullet()) break;
+          const target = api?.getActiveEntry();
           if (target && target.sectionId && target.entryId) duplicateEntry(target.sectionId, target.entryId);
           break;
         }

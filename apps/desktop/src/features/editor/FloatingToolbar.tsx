@@ -44,6 +44,14 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 工具条最近一次几何：插件 hide() 会把元素 remove（脱离文档），此时仍要能判定"光标在其上" */
   const lastBarRect = useRef<Rect | null>(null);
+  /** 鼠标按下（拖选中）期间一律不显示工具条（#107：逐字拖选时工具条不该跟随） */
+  const pointerDownRef = useRef(false);
+  /** 链接编辑态绑定进入时的选区：选区一变即退出（#107） */
+  const linkEditingRef = useRef(false);
+  const linkSelRef = useRef<{ from: number; to: number } | null>(null);
+  useEffect(() => {
+    linkEditingRef.current = linkEditing;
+  }, [linkEditing]);
 
   // 可达区重算：真实多行选区矩形 + 工具条矩形 + 走廊
   const computeReachable = useCallback(() => {
@@ -75,6 +83,19 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
   }, [editor]);
 
   const refresh = useCallback(() => {
+    // 拖选中：一律隐藏，松手后按光标位置重新判定（#107）
+    if (pointerDownRef.current) {
+      setReachable(false);
+      return;
+    }
+    // 链接编辑态随选区失效（#107）：选区变化即退出，避免在旧选区上残留输入行
+    if (linkEditingRef.current && linkSelRef.current && editor && !editor.isDestroyed) {
+      const { from, to } = editor.state.selection;
+      if (from !== linkSelRef.current.from || to !== linkSelRef.current.to) {
+        linkSelRef.current = null;
+        setLinkEditing(false);
+      }
+    }
     const next = computeReachable();
     if (next) {
       if (hideTimer.current) {
@@ -101,15 +122,25 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
     if (!editor) return;
     const onMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
-      refresh();
+      if (!pointerDownRef.current) refresh();
     };
-    const onMouseUp = () => setTimeout(refresh, 0);
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      pointerDownRef.current = true;
+      setReachable(false);
+    };
+    const onMouseUp = () => {
+      pointerDownRef.current = false;
+      setTimeout(refresh, 0);
+    };
     document.addEventListener('mousemove', onMouseMove, { passive: true });
+    document.addEventListener('mousedown', onMouseDown, { passive: true });
     document.addEventListener('selectionchange', refresh);
     document.addEventListener('mouseup', onMouseUp);
     window.addEventListener('scroll', refresh, true);
     return () => {
       document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mousedown', onMouseDown);
       document.removeEventListener('selectionchange', refresh);
       document.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('scroll', refresh, true);
@@ -128,6 +159,8 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
   useEffect(() => {
     const onInsertLink = () => {
       if (!editor || editor.isDestroyed) return;
+      const { from, to } = editor.state.selection;
+      linkSelRef.current = { from, to };
       setLinkDraft('https://');
       setLinkEditing(true);
       setReachable(true);
@@ -213,6 +246,7 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
     if (/^(https?:|mailto:)/i.test(url)) {
       editor.chain().focus().setLink({ href: url }).run();
       setLinkEditing(false);
+      linkSelRef.current = null;
     }
   };
 
@@ -245,13 +279,16 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
               onChange={(e) => setLinkDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') applyLink();
-                if (e.key === 'Escape') setLinkEditing(false);
+                if (e.key === 'Escape') {
+                  setLinkEditing(false);
+                  linkSelRef.current = null;
+                }
               }}
               aria-label="链接地址"
               spellCheck={false}
             />
             <button onClick={applyLink} aria-label="确认链接">✓</button>
-            <button onClick={() => setLinkEditing(false)} aria-label="取消">✕</button>
+            <button onClick={() => { setLinkEditing(false); linkSelRef.current = null; }} aria-label="取消">✕</button>
           </div>
         ) : (
           <>
@@ -277,6 +314,8 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
                   editor.chain().focus().unsetLink().run();
                   return;
                 }
+                const { from, to } = editor.state.selection;
+                linkSelRef.current = { from, to }; // 绑定当前选区：选区一变即自动退出（#107）
                 setLinkDraft('https://');
                 setLinkEditing(true);
               }}

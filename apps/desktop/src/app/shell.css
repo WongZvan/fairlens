@@ -105,3 +105,6 @@
 .snap-pane { border: 1px solid var(--ade-line); border-radius: 6px; padding: 8px; max-height: 300px; overflow: auto; }
 .snap-pane h4 { margin: 0 0 6px; font-size: 11.5px; color: var(--ade-muted); font-weight: 500; }
 .snap-pane .fl-paper { transform: scale(0.62); transform-origin: top left; pointer-events: none; }
+
+/* 状态栏可拖动（#107）：子元素不拦截 data-tauri-drag-region 的命中 */
+.statusbar > * { pointer-events: none; }

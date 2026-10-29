@@ -12,10 +12,17 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  /** 注册表版本：命令在面板首次渲染之后才注册（EditorMockup effect），不订阅会缓存空列表（#107） */
+  const [registryVersion, setRegistryVersion] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const isDev = useLicense((s) => s.role === 'dev');
 
-  const results = useMemo(() => commandRegistry.search(query, isDev), [query, isDev]);
+  useEffect(() => commandRegistry.subscribe(() => setRegistryVersion((v) => v + 1)), []);
+
+  const results = useMemo(
+    () => commandRegistry.search(query, isDev),
+    [query, isDev, registryVersion],
+  );
 
   useEffect(() => {
     if (open) {

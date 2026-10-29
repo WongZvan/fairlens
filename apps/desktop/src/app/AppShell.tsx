@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText, Minus, Square, X } from 'lucide-react';
+import { ArrowLeft, Copy, FileText, Minus, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
@@ -168,6 +168,21 @@ function TitleButtons({ onSettings }: { onSettings: () => void }) {
   const cycle = useThemeCycle();
   const isTauri = '__TAURI_INTERNALS__' in globalThis;
   const win = isTauri ? getCurrentWindow() : undefined;
+  // 最大化/还原图标随窗口状态切换（#107）：初始化读 isMaximized，resize 事件同步
+  const [maximized, setMaximized] = useState(false);
+  useEffect(() => {
+    if (!win) return;
+    let unlisten: (() => void) | undefined;
+    void win.isMaximized().then(setMaximized).catch(() => {});
+    void win
+      .onResized(() => {
+        void win.isMaximized().then(setMaximized).catch(() => {});
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
+    return () => unlisten?.();
+  }, [win]);
   const glyph = { light: '☀', dark: '☾', system: '🖥' }[mode];
   // 窗口命令失败必须可见（m1.6 缺陷教训：权限被拒曾静默失败=三键看似无效）
   const winCmd = (label: string, fn: () => Promise<void>) => () => {
@@ -183,7 +198,12 @@ function TitleButtons({ onSettings }: { onSettings: () => void }) {
       {win && (
         <>
           <button aria-label={t('titlebar.windowMin')} onClick={winCmd('最小化', () => win.minimize())}><Minus size={14} strokeWidth={2} /></button>
-          <button aria-label={t('titlebar.windowMax')} onClick={winCmd('最大化', () => win.toggleMaximize())}><Square size={12} strokeWidth={2} /></button>
+          <button
+            aria-label={maximized ? t('titlebar.windowRestore') : t('titlebar.windowMax')}
+            onClick={winCmd(maximized ? '还原' : '最大化', () => win.toggleMaximize())}
+          >
+            {maximized ? <Copy size={13} strokeWidth={2} /> : <Square size={12} strokeWidth={2} />}
+          </button>
           <button aria-label={t('titlebar.windowClose')} className="close" onClick={winCmd('关闭', () => win.close())}><X size={15} strokeWidth={2} /></button>
         </>
       )}
@@ -222,7 +242,7 @@ function StatusBar() {
   const { t } = useTranslation();
   const activated = useLicense((s) => s.activated);
   return (
-    <footer className="statusbar mono">
+    <footer className="statusbar mono" data-tauri-drag-region>
       <span className="lic">
         <i className={activated ? 'dot ok' : 'dot warn'} />
         {activated ? t('status.activated') : t('status.unactivated')}
