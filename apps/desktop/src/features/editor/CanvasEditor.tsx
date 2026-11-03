@@ -17,6 +17,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { DocStyle, ResumeDoc } from '@fairlens/shared';
 import { validateDocStyleAgainstManifest } from '@fairlens/shared';
 import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
+import { pickAppendTarget } from './blank-click.js';
+import { TextSelection } from '@tiptap/pm/state';
 import { usePasteNormalization, normalizePlainText } from './use-paste-normalization.js';
 import { resolveStyleVars } from './style-vars.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
@@ -180,10 +182,79 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     });
   }, [editor, onReady]);
 
+  /**
+   * #114 点纸面空白新增要点：条目下方空白 / 纸面底部空白 → 在该条目末尾追加一条要点。
+   * 点文字（要点/标题/链接）不拦截，交给编辑器默认光标。
+   */
+  const appendBulletToEntry = (entryId: string) => {
+    if (!editor || editor.isDestroyed) return;
+    editor.commands.command(({ tr, state }) => {
+      let target = -1;
+      state.doc.descendants((node, pos) => {
+        if (node.type.name === 'flEntry' && String(node.attrs.id) === entryId) target = pos + node.nodeSize - 1;
+      });
+      if (target < 0) return false;
+      const bulletType = state.schema.nodes.flBullet;
+      if (!bulletType) return false;
+      const bullet = bulletType.create({ id: nanoid() });
+      tr.insert(target, bullet);
+      tr.setSelection(TextSelection.near(tr.doc.resolve(target + 1)));
+      return true;
+    });
+    editor.commands.focus();
+  };
+
+  const onPaperMouseDownCapture = (e: React.MouseEvent) => {
+    if (readOnly || !editor || editor.isDestroyed) return;
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey) return;
+    const target = e.target as HTMLElement;
+    const onText = !!target.closest(
+      'li[data-type="fl-bullet"], header[data-type="fl-entry-header"], header[data-type="fl-section-header"], a',
+    );
+    const entryEl = target.closest('article[data-type="fl-entry"]') as HTMLElement | null;
+    const sectionEl = target.closest('section[data-type="fl-section"]') as HTMLElement | null;
+    const paper = editor.view.dom;
+
+    const lastBulletBottom = (entry: HTMLElement) => {
+      const bullets = entry.querySelectorAll('li[data-type="fl-bullet"]');
+      const last = bullets[bullets.length - 1] as HTMLElement | undefined;
+      return (last ?? entry).getBoundingClientRect().bottom;
+    };
+    const boxOf = (el: HTMLElement) => {
+      const id = el.getAttribute('data-block-id');
+      return id ? { entryId: id, lastBulletBottom: lastBulletBottom(el) } : null;
+    };
+
+    const hitEntry = entryEl ? boxOf(entryEl) : null;
+    // 分区空白（条目之间/分区内边距）：取点击位置上方最近的条目
+    let aboveEntryInSection: { entryId: string; lastBulletBottom: number } | null = null;
+    if (sectionEl && !entryEl) {
+      const entries = Array.from(sectionEl.querySelectorAll('article[data-type="fl-entry"]')) as HTMLElement[];
+      const above = entries.filter((el) => el.getBoundingClientRect().top <= e.clientY).pop();
+      if (above) aboveEntryInSection = boxOf(above);
+    }
+    // 纸面底部空白：文档最后一个条目
+    const allSections = Array.from(paper.querySelectorAll('section[data-type="fl-section"]')) as HTMLElement[];
+    const lastSection = allSections[allSections.length - 1];
+    const lastEntries = lastSection ? (Array.from(lastSection.querySelectorAll('article[data-type="fl-entry"]')) as HTMLElement[]) : [];
+    const lastEntryEl = lastEntries[lastEntries.length - 1] ?? null;
+    const lastEntryInDoc = lastEntryEl && !entryEl && !sectionEl
+      ? (() => {
+          const id = lastEntryEl.getAttribute('data-block-id');
+          return id ? { entryId: id, lastEntryBottom: lastBulletBottom(lastEntryEl) } : null;
+        })()
+      : null;
+
+    const entryId = pickAppendTarget({ onText, hitEntry, aboveEntryInSection, lastEntryInDoc, clickY: e.clientY });
+    if (!entryId) return;
+    e.preventDefault();
+    appendBulletToEntry(entryId);
+  };
+
   return (
     <div className="canvas-wrap">
       <style>{templateCss}</style>
-      <div className="fl-host" style={styleVars as React.CSSProperties} data-template={doc.templateId}>
+      <div className="fl-host" style={styleVars as React.CSSProperties} data-template={doc.templateId} onMouseDownCapture={onPaperMouseDownCapture}>
         <EditorContent editor={editor} />
         <FloatingToolbar editor={editor} readOnly={readOnly} />
       </div>
