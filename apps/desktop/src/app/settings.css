@@ -39,3 +39,13 @@
 /* 通用页：自动保存开关（#107） */
 .settings-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ade-ink); cursor: pointer; }
 .settings-toggle input { width: 14px; height: 14px; accent-color: var(--ade-accent); }
+
+/* 通用页：自动/手动分段切换（#111） */
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--ade-ink); }
+.settings-seg { display: flex; border: 1px solid var(--ade-line); border-radius: 6px; overflow: hidden; }
+.settings-seg button { padding: 5px 16px; font-size: 12px; color: var(--ade-muted); background: transparent; }
+.settings-seg button:hover { color: var(--ade-ink); }
+.settings-seg button[aria-pressed='true'] {
+  background: var(--ade-accent-soft); color: var(--ade-ink);
+  box-shadow: inset 0 -2px 0 var(--ade-accent);
+}

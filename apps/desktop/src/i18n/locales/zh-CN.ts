@@ -63,6 +63,8 @@ export default {
     appearance: '外观',
     general: '通用',
     autosave: '自动保存',
+    autosaveAuto: '自动',
+    autosaveManual: '手动',
     autosaveDesc: '开启（默认）：编辑后自动落盘，关闭窗口时同步保存，仅在存在未完成状态时提示。关闭：Word 式手动保存（Ctrl+S），有未保存更改时关闭窗口会弹「保存 / 不保存 / 取消」。',
     llm: '模型连接',
     about: '关于',

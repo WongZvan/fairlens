@@ -1,5 +1,5 @@
-/* 激活门（#110/#88）：420×520 小窗形态——窗口即门，自带顶部拖动区与最小化/关闭 */
-.gate { height: 100%; display: flex; flex-direction: column; background: var(--ade-bench); }
+/* 激活门（#110/#111）：420×520 小窗——窗口即门，内容铺满面板色（无外围台面层），顶部自带拖动区与最小化/关闭 */
+.gate { height: 100%; display: flex; flex-direction: column; background: var(--ade-panel); }
 .gate-chrome { height: 40px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px; }
 .gate-chrome button {
   width: 34px; height: 28px; border-radius: 4px; color: var(--ade-muted);
@@ -7,11 +7,10 @@
 }
 .gate-chrome button:hover { background: var(--ade-hover); color: var(--ade-ink); }
 .gate-chrome button.close:hover { background: var(--ade-pen-red); color: #fff; }
-.gate-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 24px 32px; }
+.gate-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 30px 40px; }
 .gate-card {
-  width: 100%; max-width: 360px; padding: 28px 32px 24px; text-align: center;
-  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 10px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  width: 100%; max-width: 360px; text-align: center; background: transparent;
+  border: none; border-radius: 0; box-shadow: none; padding: 0;
 }
 .gate-logo { font-size: 13px; letter-spacing: 0.1em; color: var(--ade-accent); margin-bottom: 18px; }
 .gate-card h1 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }

@@ -108,3 +108,7 @@
 
 /* 状态栏可拖动（#107）：子元素不拦截 data-tauri-drag-region 的命中 */
 .statusbar > * { pointer-events: none; }
+
+/* 状态栏保存状态（#111）：纯文字，异常态红色 */
+.statusbar .save { color: var(--ade-ink); }
+.statusbar .save.warn { color: var(--ade-pen-red); }

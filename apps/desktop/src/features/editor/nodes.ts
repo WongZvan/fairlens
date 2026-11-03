@@ -10,6 +10,7 @@ import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { ResumeDoc, Section } from '@fairlens/shared';
 import { nanoid as nanoidGen } from '../../lib/nanoid.js';
+import { hrefFromLinkMouseDown } from '../../lib/link-click.js';
 const nanoid12 = () => nanoidGen(12);
 
 export const BLOCK_ID = 'data-block-id' as const;
@@ -181,7 +182,7 @@ export const contextMenuForward = Extension.create({
   },
 });
 
-/** Ctrl/Meta+点击链接 → openExternal（独立顶层插件：extend(Link) 的 handleClick 会被 Link 内部拦截吞掉——实测） */
+/** Ctrl/Meta+点击链接 → openExternal（#111：改挂 mousedown——PM 的 handleClick 依赖内部鼠标序列，实测不触发） */
 export const linkClickPlugin = Extension.create({
   name: 'flLinkClick',
   addProseMirrorPlugins() {
@@ -189,15 +190,15 @@ export const linkClickPlugin = Extension.create({
       new Plugin({
         key: new PluginKey('flLinkClickTop'),
         props: {
-          handleClick: (view, pos, event) => {
-            const { ctrlKey, metaKey } = event as MouseEvent;
-            if (!(ctrlKey || metaKey)) return false;
-            const target = event.target as HTMLElement | null;
-            const href = target?.closest('a')?.getAttribute('href');
-            if (!href) return false;
-            event.preventDefault();
-            import('../../lib/open-external.js').then((m) => m.openExternal(href));
-            return true;
+          handleDOMEvents: {
+            mousedown: (_view, raw) => {
+              const e = raw as MouseEvent;
+              const href = hrefFromLinkMouseDown(e);
+              if (!href) return false;
+              e.preventDefault(); // 阻止光标落入链接文本
+              void import('../../lib/open-external.js').then((m) => m.openExternal(href));
+              return true;
+            },
           },
         },
       }),

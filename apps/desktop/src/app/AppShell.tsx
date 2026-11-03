@@ -132,6 +132,18 @@ export function AppShell() {
   );
 }
 
+/** 顶栏激活状态（#111）：保留绿点+「已激活」；保存状态移到状态栏 */
+function ActivationChip() {
+  const { t } = useTranslation();
+  const activated = useLicense((s) => s.activated);
+  return (
+    <span className="chip">
+      <i className={activated ? 'dot ok' : 'dot warn'} />
+      {activated ? t('status.activated') : t('status.unactivated')}
+    </span>
+  );
+}
+
 function TitleBarConnector({ onBack, onSettings }: { onBack?: () => void; onSettings: () => void }) {
   const { t } = useTranslation();
   return (
@@ -143,8 +155,8 @@ function TitleBarConnector({ onBack, onSettings }: { onBack?: () => void; onSett
       ) : (
         <span className="app mono" data-tauri-drag-region>FAIRLENS</span>
       )}
-      <span className="muted file" data-tauri-drag-region>{t('status.m1')} · {t('license.unactivated')}</span>
-      <SaveStatusChip />
+      <span className="muted file" data-tauri-drag-region>{t('status.m1')}</span>
+      <ActivationChip />
       <TitleButtons onSettings={onSettings} />
     </header>
   );
@@ -173,16 +185,14 @@ function useActivationWindowShape(activated: boolean, isTauri: boolean) {
   }, [activated, isTauri]);
 }
 
-/** 标题栏保存状态 chip（#107 真实化；#110 由纯函数决定展示态，手动模式明确标注） */
-function SaveStatusChip() {
+/** 状态栏保存状态（#111 从顶栏移入；纯文字，无圆点；异常态警示色） */
+function SaveStatusText() {
   const { t } = useTranslation();
   const autosave = useEditorDoc((s) => s.autosave);
   const status = useEditorDoc((s) => s.saveStatus);
   const dirty = useEditorDoc((s) => s.dirty);
   const { key, warn } = saveChipState({ autosave, status, dirty });
-  return (
-    <span className="chip"><i className={warn ? 'dot warn' : 'dot ok'} /> {t(`saveStatus.${key}`)}</span>
-  );
+  return <span className={warn ? 'save warn' : 'save'}>{t(`saveStatus.${key}`)}</span>;
 }
 
 /** 窗口三键与主题循环（从 M0 TitleBar 迁入；isTauri 守卫 web 调试）。
@@ -262,16 +272,12 @@ function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
   );
 }
 
-/** 状态栏（M0 组件迁入文件以集中壳层） */
+/** 状态栏（M0 组件迁入文件以集中壳层；#111 保存状态显示在此） */
 function StatusBar() {
   const { t } = useTranslation();
-  const activated = useLicense((s) => s.activated);
   return (
     <footer className="statusbar mono" data-tauri-drag-region>
-      <span className="lic">
-        <i className={activated ? 'dot ok' : 'dot warn'} />
-        {activated ? t('status.activated') : t('status.unactivated')}
-      </span>
+      <SaveStatusText />
       <span className="muted">{t('status.commandHint')}</span>
     </footer>
   );

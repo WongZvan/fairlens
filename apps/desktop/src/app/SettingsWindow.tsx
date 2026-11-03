@@ -63,21 +63,21 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
   );
 }
 
-/** 通用页：自动保存开关（§5.7 双模式唯一的用户入口；真面板其余项仍归 m2.3） */
+/** 通用页：自动保存模式（自动/手动分段切换；#111 取代原来的复选框） */
 function GeneralPane() {
   const { t } = useTranslation();
   const autosave = useEditorDoc((s) => s.autosave);
+  const setAutosave = (v: boolean) => void useEditorDoc.getState().setAutosave(v);
   return (
     <section>
-      <label className="settings-toggle">
-        <input
-          type="checkbox"
-          checked={autosave}
-          onChange={(e) => void useEditorDoc.getState().setAutosave(e.target.checked)}
-        />
+      <div className="settings-row">
         <span>{t('settings.autosave')}</span>
-      </label>
-      <p className="muted small" style={{ marginTop: 6 }}>{t('settings.autosaveDesc')}</p>
+        <div className="settings-seg" role="group" aria-label={t('settings.autosave')}>
+          <button aria-pressed={autosave} onClick={() => setAutosave(true)}>{t('settings.autosaveAuto')}</button>
+          <button aria-pressed={!autosave} onClick={() => setAutosave(false)}>{t('settings.autosaveManual')}</button>
+        </div>
+      </div>
+      <p className="muted small" style={{ marginTop: 8 }}>{t('settings.autosaveDesc')}</p>
     </section>
   );
 }
