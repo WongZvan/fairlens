@@ -4,13 +4,28 @@
 
 FairLens 面向按批次组织的面试候选人（客户方授权激活），提供：真 A4 画布编辑器（版式由模板锁定、内容随你）、AI 块级修订（内联 diff）、全篇评估（六维雷达 + 红笔批注）、双轨导出（定稿 PDF/Word + 批注版 HTML/长图）、简历库与 .fairlens 归档迁移。数据全本地，AI 走用户自有 Key 直连。
 
-**当前状态**：✅ 设计基线 v0.1 已封版（四轮审计 36 项闭环）｜⏳ 开发未启动（待 M0 脚手架）
+**当前状态**：✅ 设计基线 v0.1 已封版（四轮审计 36 项闭环）｜🚧 **M1 开发中（6/8 模块收口：m1.1–m1.6；下一 m1.7 导入管线）**｜dev 分支活跃
+
+> 开发进度唯一快照：`docs/dev/STATE.md`（每模块收尾同步）；决策总账与逐字段契约见 `docs/01-技术开发文档.md`。
+
+## 快速开始（开发者）
+
+```bash
+pnpm install          # 安装依赖（Node ≥20 + pnpm 11）
+pnpm test             # 单测（当前 110 绿）
+pnpm lint && pnpm typecheck
+pnpm tauri:dev        # 真窗开发（自动清理残留 vite/fairlens.exe；首次 cargo 编译较久）
+pnpm dev              # 仅浏览器前端（localhost:1420）
+pnpm dev:kill         # 清理残留进程 / 释放 1420
+```
+
+打样激活码（格式校验态，真验签=M2）：`FL-2026-Q4XY-8F3K`。
 
 ## 文档索引
 
 | 文档 | 内容 |
 |---|---|
-| [docs/01-技术开发文档.md](docs/01-技术开发文档.md) | **唯一事实源**：PRD + 逐字段数据契约（zod）+ 架构 + 开发流程（分支/环境分离/测试门禁/分模块顺序）+ UI 设计系统 + 成本部署手册 + 决策总账 82 条 + 1.0 路线图 |
+| [docs/01-技术开发文档.md](docs/01-技术开发文档.md) | **唯一事实源**：PRD + 逐字段数据契约（zod）+ 架构 + 开发流程（分支/环境分离/测试门禁/分模块顺序）+ UI 设计系统 + 成本部署手册 + 决策总账 114 条 + 1.0 路线图 |
 | [docs/02-开发启动手册.md](docs/02-开发启动手册.md) | 开发前流程顺序：远程仓库/分支保护/环境准备/M0 启动/里程碑节奏/外部资源时机表 |
 | [docs/design-previews/](docs/design-previews/) | 五份设计基线预览（M1 UI 打样的在库参照）：亮色主界面 / 夜墨深色（含设置窗） / 模型连接页 / 四声部字体 / 简历库+导出下拉 |
 
@@ -20,7 +35,8 @@ FairLens 面向按批次组织的面试候选人（客户方授权激活），�
 fairlens/
 ├─ apps/desktop/        # Tauri 2 桌面应用（React+TS；src-tauri Rust 薄层 <300 行）
 ├─ packages/shared/     # ✅ M0：全契约（zod 逐字段，含全部预留类型）
-├─ packages/{core,prompts}/   # M1–M3 生成
+├─ packages/core/       # ✅ M1：diff / autosave / settings / persistence-port
+├─ packages/prompts/    # M1–M3 生成
 ├─ functions/lease/     # 契约已冻结（lease-api.v1.json）；端点实现=M2
 ├─ tools/keygen/        # ✅ M0：init（双环境密钥对）；issue 等=M2/M5
 └─ keys/                # 本地密钥（gitignore，绝不入仓）
