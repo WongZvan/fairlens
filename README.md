@@ -29,7 +29,7 @@ pnpm dev:kill         # 清理残留进程 / 释放 1420
 | [docs/02-开发启动手册.md](docs/02-开发启动手册.md) | 开发前流程顺序：远程仓库/分支保护/环境准备/M0 启动/里程碑节奏/外部资源时机表 |
 | [docs/design-previews/](docs/design-previews/) | 五份设计基线预览（M1 UI 打样的在库参照）：亮色主界面 / 夜墨深色（含设置窗） / 模型连接页 / 四声部字体 / 简历库+导出下拉 |
 
-## 仓库结构（M0 已落地；core/prompts 于 M1–M3 生成）
+## 仓库结构（M0–M1 已落地；prompts 于 M1–M3 生成）
 
 ```
 fairlens/
