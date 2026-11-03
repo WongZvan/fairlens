@@ -12,7 +12,7 @@ FairLens 面向按批次组织的面试候选人（客户方授权激活），�
 
 ```bash
 pnpm install          # 安装依赖（Node ≥20 + pnpm 11）
-pnpm test             # 单测（当前 110 绿）
+pnpm test             # 单测（本仓当前全绿；计数见 CI/STATE）
 pnpm lint && pnpm typecheck
 pnpm tauri:dev        # 真窗开发（自动清理残留 vite/fairlens.exe；首次 cargo 编译较久）
 pnpm dev              # 仅浏览器前端（localhost:1420）
