@@ -10,7 +10,7 @@ import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { repairAllResumes } from '../lib/persistence/index.js';
-import { saveChipState } from './save-status.js';
+import { saveStatusView } from './save-status.js';
 import { useLicense } from '../stores/license.js';
 
 /** 应用壳：标题栏 + 主区（路由骨架 library|editor；dev 面路由 m4/m5 懒加载挂载） */
@@ -31,8 +31,10 @@ export function AppShell() {
     if (activated) void repairAllResumes();
   }, [activated]);
 
-  // #110：激活门按 #88 的 420×520 小窗形态（单窗近似；真独立窗口=m2.3）
+  // #110：激活门按 #88 的 420×450 小窗形态（单窗近似；真独立窗口=m2.3）
   useActivationWindowShape(activated, isTauri);
+  // #112：最大化时取消圆角（贴合屏幕四角）
+  useMaximizedClass(isTauri);
 
   const proceedClose = async (intent: CloseIntent) => {
     setGuard(null);
@@ -162,7 +164,29 @@ function TitleBarConnector({ onBack, onSettings }: { onBack?: () => void; onSett
   );
 }
 
-/** 激活门窗口形态（#110/#88）：未激活=420×520 小窗，激活后恢复 1280×800 并居中 */
+/** #112：把窗口最大化状态写到 <html data-maximized>，供 CSS 取消圆角 */
+function useMaximizedClass(isTauri: boolean) {
+  useEffect(() => {
+    if (!isTauri) return;
+    const win = getCurrentWindow();
+    let unlisten: (() => void) | undefined;
+    const sync = () => {
+      void win
+        .isMaximized()
+        .then((m) => {
+          document.documentElement.dataset.maximized = m ? 'true' : 'false';
+        })
+        .catch(() => {});
+    };
+    sync();
+    void win.onResized(sync).then((fn) => {
+      unlisten = fn;
+    });
+    return () => unlisten?.();
+  }, [isTauri]);
+}
+
+/** 激活门窗口形态（#110/#112）：未激活=420×450 小窗，激活后恢复 1280×800 并居中 */
 function useActivationWindowShape(activated: boolean, isTauri: boolean) {
   useEffect(() => {
     if (!isTauri) return;
@@ -174,8 +198,8 @@ function useActivationWindowShape(activated: boolean, isTauri: boolean) {
           await win.setSize(new LogicalSize(1280, 800));
         } else {
           // 必须先放宽最小尺寸，否则 setSize 会被配置里的 minWidth 夹住
-          await win.setMinSize(new LogicalSize(420, 520));
-          await win.setSize(new LogicalSize(420, 520));
+          await win.setMinSize(new LogicalSize(420, 380));
+          await win.setSize(new LogicalSize(420, 380));
         }
         await win.center();
       } catch (err) {
@@ -185,14 +209,19 @@ function useActivationWindowShape(activated: boolean, isTauri: boolean) {
   }, [activated, isTauri]);
 }
 
-/** 状态栏保存状态（#111 从顶栏移入；纯文字，无圆点；异常态警示色） */
+/** 状态栏保存指示（#112）：圆点=模式（绿自动/红手动），文字=模式 + 即时状态 */
 function SaveStatusText() {
   const { t } = useTranslation();
   const autosave = useEditorDoc((s) => s.autosave);
   const status = useEditorDoc((s) => s.saveStatus);
   const dirty = useEditorDoc((s) => s.dirty);
-  const { key, warn } = saveChipState({ autosave, status, dirty });
-  return <span className={warn ? 'save warn' : 'save'}>{t(`saveStatus.${key}`)}</span>;
+  const view = saveStatusView({ autosave, status, dirty });
+  return (
+    <span className={view.warn ? 'save warn' : 'save'}>
+      <i className={`dot ${view.dot}`} />
+      {t(`saveStatus.${view.modeKey}`)} · {t(`saveStatus.${view.stateKey}`)}
+    </span>
+  );
 }
 
 /** 窗口三键与主题循环（从 M0 TitleBar 迁入；isTauri 守卫 web 调试）。

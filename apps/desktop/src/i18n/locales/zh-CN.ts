@@ -11,7 +11,7 @@ export default {
   },
   theme: { light: '浅色', dark: '深色', system: '跟随系统' },
   nav: { backLibrary: '返回简历库' },
-  saveStatus: { saved: '已保存', saving: '保存中…', error: '保存失败', unsaved: '未保存', savedManual: '已保存（手动）' },
+  saveStatus: { saved: '已保存', saving: '保存中…', error: '保存失败', unsaved: '未保存', savedManual: '已保存（手动）', auto: '自动保存', manual: '手动保存' },
   closeGuard: {
     title: '关闭前确认',
     unsavedNote: '你有尚未保存的更改。',

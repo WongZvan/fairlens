@@ -1,5 +1,11 @@
 /* 激活门（#110/#111）：420×520 小窗——窗口即门，内容铺满面板色（无外围台面层），顶部自带拖动区与最小化/关闭 */
-.gate { height: 100%; display: flex; flex-direction: column; background: var(--ade-panel); }
+.gate {
+  height: 100%; display: flex; flex-direction: column;
+  background: var(--ade-panel);
+  /* 透明窗口圆角（#112） */
+  border-radius: 14px; overflow: hidden; border: 1px solid var(--ade-line);
+}
+html[data-maximized='true'] .gate { border-radius: 0; }
 .gate-chrome { height: 40px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px; }
 .gate-chrome button {
   width: 34px; height: 28px; border-radius: 4px; color: var(--ade-muted);
@@ -7,10 +13,11 @@
 }
 .gate-chrome button:hover { background: var(--ade-hover); color: var(--ade-ink); }
 .gate-chrome button.close:hover { background: var(--ade-pen-red); color: #fff; }
-.gate-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 30px 40px; }
+.gate-body { flex: 1; display: flex; flex-direction: column; padding: 10px 30px 18px; }
 .gate-card {
-  width: 100%; max-width: 360px; text-align: center; background: transparent;
-  border: none; border-radius: 0; box-shadow: none; padding: 0;
+  width: 100%; max-width: 360px; margin: 0 auto; text-align: center;
+  background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 0;
+  flex: 1; display: flex; flex-direction: column;
 }
 .gate-logo { font-size: 13px; letter-spacing: 0.1em; color: var(--ade-accent); margin-bottom: 18px; }
 .gate-card h1 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
@@ -30,4 +37,5 @@
   background: var(--ade-accent); color: #fff; font-size: 13px;
 }
 .gate-btn:disabled { opacity: 0.4; cursor: default; }
-.gate-hint { font-size: 11px; margin: 14px 0 0; }
+.gate-hint { font-size: 11px; }
+.gate-card > .gate-hint { margin: auto 0 0; } /* 吸底（#112）：需压过 .gate-card > .muted 的优先级 */

@@ -1,5 +1,11 @@
 /* 应用壳布局（标题栏/主区/状态栏）与标题栏细节 */
-.shell { display: flex; flex-direction: column; height: 100%; }
+.shell {
+  display: flex; flex-direction: column; height: 100%;
+  /* 透明窗口圆角（#112）：主窗 10px；最大化时由 html[data-maximized] 取消 */
+  background: var(--ade-bench);
+  border-radius: 10px; overflow: hidden;
+}
+html[data-maximized='true'] .shell { border-radius: 0; }
 
 .titlebar {
   flex: none;
@@ -109,6 +115,7 @@
 /* 状态栏可拖动（#107）：子元素不拦截 data-tauri-drag-region 的命中 */
 .statusbar > * { pointer-events: none; }
 
-/* 状态栏保存状态（#111）：纯文字，异常态红色 */
-.statusbar .save { color: var(--ade-ink); }
+/* 状态栏保存指示（#112）：绿点=自动 / 红点=手动；状态文字异常时红色 */
+.statusbar .save { display: inline-flex; align-items: center; gap: 5px; color: var(--ade-ink); }
 .statusbar .save.warn { color: var(--ade-pen-red); }
+.dot.warn { background: var(--ade-pen-red); }

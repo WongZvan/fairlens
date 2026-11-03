@@ -14,10 +14,13 @@
       {
         "title": "FairLens",
         "width": 420,
-        "height": 520,
+        "height": 380,
         "minWidth": 420,
-        "minHeight": 520,
+        "minHeight": 380,
         "decorations": false,
+        "transparent": true,
+        "noRedirectionBitmap": true,
+        "shadow": false,
         "dragDropEnabled": false
       }
     ],
