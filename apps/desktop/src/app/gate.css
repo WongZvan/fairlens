@@ -1,11 +1,15 @@
-/* 激活门：Claude 登录式独立小窗——固定尺寸居中，无主窗口 chrome（标题栏/状态栏/主题钮不出现） */
-.gate {
-  position: fixed; inset: 0;
+/* 激活门（#110/#88）：420×520 小窗形态——窗口即门，自带顶部拖动区与最小化/关闭 */
+.gate { height: 100%; display: flex; flex-direction: column; background: var(--ade-bench); }
+.gate-chrome { height: 40px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px; }
+.gate-chrome button {
+  width: 34px; height: 28px; border-radius: 4px; color: var(--ade-muted);
   display: flex; align-items: center; justify-content: center;
-  background: var(--ade-bench);
 }
+.gate-chrome button:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.gate-chrome button.close:hover { background: var(--ade-pen-red); color: #fff; }
+.gate-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 24px 32px; }
 .gate-card {
-  width: 360px; padding: 32px 36px 28px; text-align: center;
+  width: 100%; max-width: 360px; padding: 28px 32px 24px; text-align: center;
   background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 10px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
 }

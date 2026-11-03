@@ -1,6 +1,7 @@
 import { ArrowLeft, Copy, FileText, Minus, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { useTranslation } from 'react-i18next';
 import { ActivationGate } from './ActivationGate.js';
 import { SettingsGear, SettingsWindow } from './SettingsWindow.js';
@@ -9,6 +10,7 @@ import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { repairAllResumes } from '../lib/persistence/index.js';
+import { saveChipState } from './save-status.js';
 import { useLicense } from '../stores/license.js';
 
 /** 应用壳：标题栏 + 主区（路由骨架 library|editor；dev 面路由 m4/m5 懒加载挂载） */
@@ -28,6 +30,9 @@ export function AppShell() {
   useEffect(() => {
     if (activated) void repairAllResumes();
   }, [activated]);
+
+  // #110：激活门按 #88 的 420×520 小窗形态（单窗近似；真独立窗口=m2.3）
+  useActivationWindowShape(activated, isTauri);
 
   const proceedClose = async (intent: CloseIntent) => {
     setGuard(null);
@@ -145,24 +150,38 @@ function TitleBarConnector({ onBack, onSettings }: { onBack?: () => void; onSett
   );
 }
 
-/** 标题栏保存状态 chip（m1.6 真实化：自动模式跟随状态机；手动模式跟随 dirty） */
+/** 激活门窗口形态（#110/#88）：未激活=420×520 小窗，激活后恢复 1280×800 并居中 */
+function useActivationWindowShape(activated: boolean, isTauri: boolean) {
+  useEffect(() => {
+    if (!isTauri) return;
+    const win = getCurrentWindow();
+    void (async () => {
+      try {
+        if (activated) {
+          await win.setMinSize(new LogicalSize(1152, 720));
+          await win.setSize(new LogicalSize(1280, 800));
+        } else {
+          // 必须先放宽最小尺寸，否则 setSize 会被配置里的 minWidth 夹住
+          await win.setMinSize(new LogicalSize(420, 520));
+          await win.setSize(new LogicalSize(420, 520));
+        }
+        await win.center();
+      } catch (err) {
+        console.error('[window] 激活门窗口形态设置失败', err);
+      }
+    })();
+  }, [activated, isTauri]);
+}
+
+/** 标题栏保存状态 chip（#107 真实化；#110 由纯函数决定展示态，手动模式明确标注） */
 function SaveStatusChip() {
   const { t } = useTranslation();
   const autosave = useEditorDoc((s) => s.autosave);
   const status = useEditorDoc((s) => s.saveStatus);
   const dirty = useEditorDoc((s) => s.dirty);
-  const label = autosave
-    ? status === 'error'
-      ? t('saveStatus.error')
-      : status === 'pending' || status === 'saving'
-        ? t('saveStatus.saving')
-        : t('saveStatus.saved')
-    : dirty
-      ? t('saveStatus.unsaved')
-      : t('saveStatus.saved');
-  const warn = autosave ? status === 'error' : dirty;
+  const { key, warn } = saveChipState({ autosave, status, dirty });
   return (
-    <span className="chip"><i className={warn ? 'dot warn' : 'dot ok'} /> {label}</span>
+    <span className="chip"><i className={warn ? 'dot warn' : 'dot ok'} /> {t(`saveStatus.${key}`)}</span>
   );
 }
 

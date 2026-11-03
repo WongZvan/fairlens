@@ -110,6 +110,8 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     },
 
     async flushPending() {
+      // 手动模式（§5.7 Word 式）：不 flush、不改写 dirty——未保存状态由用户保存/丢弃决定
+      if (!get().autosave) return;
       if (controller) await controller.flush();
       set({ dirty: controller?.dirty() ?? false });
     },
@@ -147,12 +149,19 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     },
 
     async setAutosave(value) {
-      await persistence().setSettingRaw('autosave', value);
-      set({ autosave: value });
-      // 切到自动保存：把手动模式下积压的未保存变更立即落盘（避免"看似已保存"的假象）
-      if (value && get().dirty) {
-        await get().saveNow();
+      if (value === get().autosave) return;
+      // 切到手动前先落盘：清掉自动模式的挂起计时器，避免旧计时器稍后把新改动的 dirty 冲掉
+      if (!value && get().dirty) await get().saveNow();
+      try {
+        await persistence().setSettingRaw('autosave', value);
+      } catch (err) {
+        // 写库失败：保持原模式并留痕（不再静默停在旧状态）
+        set({ lastError: String(err) });
+        return;
       }
+      set({ autosave: value, saveStatus: 'saved' });
+      // 切到自动：把手动模式下积压的未保存变更立即落盘
+      if (value && get().dirty) await get().saveNow();
     },
   };
 });

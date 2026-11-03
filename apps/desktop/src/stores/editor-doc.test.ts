@@ -70,6 +70,46 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
     expect(useEditorDoc.getState().doc?.sections[1]!.entries[0]!.org).toBe('阿里');
   });
 
+  it('手动模式：flushPending 不得清掉未保存标记（#110 关窗保护回归）', async () => {
+    await useEditorDoc.getState().openCurrent();
+    const { persistence } = await import('../lib/persistence/index.js');
+    await persistence().setSettingRaw('autosave', false);
+    await useEditorDoc.getState().openCurrent(); // 重读 settings → autosave=false
+
+    const changed = doc();
+    changed.sections[1]!.entries[0]!.org = '百度';
+    useEditorDoc.getState().applyDoc(changed);
+    expect(useEditorDoc.getState().dirty).toBe(true);
+
+    await useEditorDoc.getState().flushPending(); // 关窗/返回库前的 flush
+    expect(useEditorDoc.getState().dirty).toBe(true); // 手动模式必须保留 dirty → 触发三键框
+  });
+
+  it('setAutosave(false)：先把挂起的自动保存落盘，再把旧计时器清零（#110）', async () => {
+    const { persistence } = await import('../lib/persistence/index.js');
+    await persistence().setSettingRaw('autosave', true); // 前序用例可能已改设置，显式复位
+    await useEditorDoc.getState().openCurrent();
+    expect(useEditorDoc.getState().autosave).toBe(true);
+    const changed = doc();
+    changed.sections[1]!.entries[0]!.org = '小米';
+    useEditorDoc.getState().applyDoc(changed); // 自动模式：进入防抖等待
+    expect(useEditorDoc.getState().dirty).toBe(true);
+
+    await useEditorDoc.getState().setAutosave(false); // 切手动：应先落盘
+    expect(useEditorDoc.getState().autosave).toBe(false);
+    expect(useEditorDoc.getState().dirty).toBe(false); // 落盘完成
+
+    // 切回自动再编辑 → 防抖保存恢复
+    await useEditorDoc.getState().setAutosave(true);
+    const again = doc();
+    again.sections[1]!.entries[0]!.org = '网易';
+    useEditorDoc.getState().applyDoc(again);
+    expect(useEditorDoc.getState().dirty).toBe(true);
+    await vi.advanceTimersByTimeAsync(800);
+    expect(useEditorDoc.getState().dirty).toBe(false);
+    expect(useEditorDoc.getState().doc?.sections[1]!.entries[0]!.org).toBe('网易');
+  });
+
   it('快照：createSnapshot→listSnapshots→restoreSnapshot 立即落盘回滚内容', async () => {
     await useEditorDoc.getState().openCurrent();
     const base = useEditorDoc.getState().doc!;

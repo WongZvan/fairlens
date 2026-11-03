@@ -126,6 +126,11 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
     };
     const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      const t = e.target as HTMLElement | null;
+      // 点工具条自身不算"开始拖选"——否则按下瞬间会被隐藏，click 永远不命中（#110）
+      if (t?.closest?.('.float-bar')) return;
+      // 只有画布内的按下才抑制（大纲拖拽等不影响工具条）
+      if (!t?.closest?.('.ProseMirror')) return;
       pointerDownRef.current = true;
       setReachable(false);
     };
