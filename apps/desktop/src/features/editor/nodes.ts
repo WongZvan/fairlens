@@ -7,7 +7,8 @@
  */
 import { Link } from '@tiptap/extension-link';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
+import type { MarkType, Node as PMDocNode } from '@tiptap/pm/model';
 import type { ResumeDoc, Section } from '@fairlens/shared';
 import { nanoid as nanoidGen } from '../../lib/nanoid.js';
 import { hrefFromLinkMouseDown } from '../../lib/link-click.js';
@@ -117,6 +118,30 @@ export const BulletNode = Node.create({
     return {
       Enter: () => {
         if (!this.editor.isActive('flBullet')) return false;
+        // #113（用户拍板：空行不属于内容）：空要点上按 Enter → 删除该行，光标落到上一要点末尾
+        const { state } = this.editor;
+        const { $from } = state.selection;
+        for (let d = $from.depth; d > 0; d -= 1) {
+          const node = $from.node(d);
+          if (node.type.name !== 'flBullet') continue;
+          if (node.textContent.trim().length > 0) break;
+          // 保留至少一条要点（否则 entry 无法继续输入）
+          const entry = d > 1 ? $from.node(d - 1) : null;
+          let bulletCount = 1;
+          if (entry) {
+            bulletCount = 0;
+            entry.forEach((child) => {
+              if (child.type.name === 'flBullet') bulletCount += 1;
+            });
+          }
+          if (bulletCount <= 1) break;
+          const from = $from.before(d);
+          const to = $from.after(d);
+          const tr = state.tr.delete(from, to);
+          tr.setSelection(TextSelection.near(tr.doc.resolve(Math.max(1, from - 1)), -1));
+          this.editor.view.dispatch(tr);
+          return true;
+        }
         return this.editor.chain().focus().splitBlock({ keepMarks: false }).updateAttributes('flBullet', { id: nanoid12() }).run();
       },
       'Shift-Enter': () => this.editor.commands.insertContent({ type: 'hardBreak' }),
@@ -206,9 +231,54 @@ export const linkClickPlugin = Extension.create({
   },
 });
 
+/**
+ * #113：收集链接文本节点中"首/尾空白"的区间（PM 会把空白与相邻文字合并成一个节点，
+ * 所以不能只判"整节点纯空白"）。规则：剥掉链接文字首尾的空白标记，正文内部空格仍属链接。
+ */
+export function collectWhitespaceLinkRanges(doc: PMDocNode, linkType: MarkType): Array<{ from: number; to: number }> {
+  const ranges: Array<{ from: number; to: number }> = [];
+  doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return;
+    if (!linkType.isInSet(node.marks)) return;
+    const text = node.text;
+    const lead = text.length - text.replace(/^\s+/, '').length;
+    const trail = text.length - text.replace(/\s+$/, '').length;
+    if (lead === text.length) {
+      ranges.push({ from: pos, to: pos + text.length }); // 整段纯空白
+      return;
+    }
+    if (lead > 0) ranges.push({ from: pos, to: pos + lead });
+    if (trail > 0) ranges.push({ from: pos + text.length - trail, to: pos + text.length });
+  });
+  return ranges;
+}
+
+/** #113：纯空白文本自动脱链——Tiptap Link 的 inclusive 跟随 autolink，空格会被并入链接导致下划线延长 */
+export const linkWhitespaceGuard = Extension.create({
+  name: 'flLinkWhitespaceGuard',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('flLinkWhitespaceGuard'),
+        appendTransaction: (trs, _old, state) => {
+          if (!trs.some((t) => t.docChanged)) return null;
+          const linkType = state.schema.marks.link;
+          if (!linkType) return null;
+          const ranges = collectWhitespaceLinkRanges(state.doc, linkType);
+          if (ranges.length === 0) return null;
+          const tr = state.tr;
+          for (const r of ranges) tr.removeMark(r.from, r.to, linkType);
+          return tr;
+        },
+      }),
+    ];
+  },
+});
+
 export const flExtensions = [
   contextMenuForward,
   linkClickPlugin,
+  linkWhitespaceGuard,
   HardBreakNode,
   SectionNode,
   SectionHeaderNode,

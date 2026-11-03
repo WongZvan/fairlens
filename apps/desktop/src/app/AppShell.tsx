@@ -19,7 +19,13 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [guard, setGuard] = useState<{ mode: CloseGuardMode; intent: CloseIntent } | null>(null);
   const activated = useLicense((s) => s.activated);
+  const hydrated = useLicense((s) => s.hydrated);
   const isTauri = '__TAURI_INTERNALS__' in globalThis;
+
+  // #113：启动先读回打样级激活记忆，避免每次重开都弹门
+  useEffect(() => {
+    void useLicense.getState().hydrate();
+  }, []);
 
   // m1.6：进入编辑器时对齐当前简历（最近编辑优先，空库建示例；选择逻辑 m1.8 库首页接管）
   useEffect(() => {
@@ -108,6 +114,14 @@ export function AppShell() {
     return () => window.removeEventListener('blur', onBlur);
   }, []);
 
+  if (!hydrated) {
+    // 激活记忆读回前的极简占位（避免先闪门再跳主壳）
+    return (
+      <div className="gate">
+        <div className="gate-body"><p className="muted">正在启动…</p></div>
+      </div>
+    );
+  }
   if (!activated) {
     return <ActivationGate />; // 激活门=独立小窗形态（无主窗口 chrome：标题栏/状态栏/主题钮一概不出现）
   }

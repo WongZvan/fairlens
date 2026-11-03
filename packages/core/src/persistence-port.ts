@@ -20,4 +20,6 @@ export interface PersistencePort {
   // settings（value_json 由 adapter 序列化；undefined=未设置→调用方回落默认）
   getSettingRaw(key: SettingKey): Promise<unknown>;
   setSettingRaw(key: SettingKey, value: unknown): Promise<void>;
+  /** 清除设置键（#113：重置激活记忆） */
+  deleteSetting(key: SettingKey): Promise<void>;
 }

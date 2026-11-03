@@ -51,7 +51,7 @@ export function ActivationGate() {
               autoFocus
             />
           </div>
-          <button className="gate-btn" disabled={!valid} onClick={activate}>
+          <button className="gate-btn" disabled={!valid} onClick={() => void activate(code.trim().toUpperCase())}>
             {t('gate.action')}
           </button>
           <p className="gate-hint muted">{t('gate.hint')}</p>

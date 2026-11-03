@@ -118,5 +118,9 @@ export function createTauriSqlAdapter(): PersistencePort {
         [key, JSON.stringify(value)],
       );
     },
+
+    async deleteSetting(key) {
+      await (await db()).execute('DELETE FROM settings WHERE key = $1', [key]);
+    },
   };
 }

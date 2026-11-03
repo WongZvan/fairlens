@@ -8,6 +8,7 @@ export const SETTING_DEFAULTS: Record<Key, unknown> = {
   bgImage: null,
   bgOpacity: 100,
   bgFit: 'contain',
+  license: null, // #113：未激活时无记忆
 };
 
 export type SettingValueOf<K extends Key> = z.infer<(typeof SettingValueSchemas)[K]>;

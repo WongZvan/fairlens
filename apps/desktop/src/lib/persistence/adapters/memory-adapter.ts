@@ -36,5 +36,8 @@ export function createMemoryAdapter(): PersistencePort {
     async setSettingRaw(key, value) {
       settings.set(key, structuredClone(value));
     },
+    async deleteSetting(key) {
+      settings.delete(key);
+    },
   };
 }

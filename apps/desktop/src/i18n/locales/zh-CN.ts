@@ -60,6 +60,11 @@ export default {
   settings: {
     title: '设置',
     activation: '激活管理',
+    activationState: '激活状态',
+    activatedMock: '已激活（打样态）',
+    unactivatedMock: '未激活',
+    activationMockNote: '打样态激活记忆仅保存在本机数据库，不做验签；正式版（M2）将改为 License 验签 + 设备绑定，换机需在原设备解绑。',
+    resetActivation: '重置激活（清除本机记忆）',
     appearance: '外观',
     general: '通用',
     autosave: '自动保存',

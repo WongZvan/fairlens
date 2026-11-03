@@ -2,6 +2,7 @@ import { Settings, ShieldCheck, SunMoon, SlidersHorizontal, Plug, Info } from 'l
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEditorDoc } from '../stores/editor-doc.js';
+import { useLicense } from '../stores/license.js';
 
 /**
  * 设置窗口壳（m1.1 打样；真功能=m2.3）。
@@ -53,6 +54,8 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
           <div className="settings-pane">
             {tab === 'general' ? (
               <GeneralPane />
+            ) : tab === 'activation' ? (
+              <ActivationPane />
             ) : (
               <p className="muted">{t('settings.mockNote', { module: 'm2.3' })}</p>
             )}
@@ -60,6 +63,29 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
         </div>
       </div>
     </div>
+  );
+}
+
+/** 激活管理页（#113 打样态）：显示本机激活记忆 + 重置（真验签/解绑=M2） */
+function ActivationPane() {
+  const { t } = useTranslation();
+  const activated = useLicense((s) => s.activated);
+  return (
+    <section>
+      <div className="settings-row">
+        <span>{t('settings.activationState')}</span>
+        <span className="muted">{activated ? t('settings.activatedMock') : t('settings.unactivatedMock')}</span>
+      </div>
+      <p className="muted small" style={{ marginTop: 8 }}>{t('settings.activationMockNote')}</p>
+      <button
+        className="m-btn"
+        style={{ marginTop: 10 }}
+        disabled={!activated}
+        onClick={() => void useLicense.getState().reset()}
+      >
+        {t('settings.resetActivation')}
+      </button>
+    </section>
   );
 }
 

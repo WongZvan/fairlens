@@ -30,10 +30,10 @@ export const ResumeRow = ResumeRecord.extend({
 export type ResumeRow = z.infer<typeof ResumeRow>;
 
 /**
- * settings 表 key（m1.6 范围）：autosave=§5.7 双模式开关（默认 true）；
- * bgMode/bgImage/bgOpacity/bgFit=#86 画布背景四键预留（消费方 m1.4 背景层/m2.3 配置 UI）
+ * settings 表 key：autosave=§5.7 双模式开关（默认 true）；bgMode/bgImage/bgOpacity/bgFit=#86 画布背景四键预留；
+ * license=打样级激活记忆（#113，明确非真安全——M2 换真 License 验签+设备指纹）
  */
-export const SettingKey = z.enum(['autosave', 'bgMode', 'bgImage', 'bgOpacity', 'bgFit']);
+export const SettingKey = z.enum(['autosave', 'bgMode', 'bgImage', 'bgOpacity', 'bgFit', 'license']);
 export type SettingKey = z.infer<typeof SettingKey>;
 
 export const BgMode = z.enum(['light', 'dark', 'theme', 'custom']);
@@ -42,6 +42,13 @@ export type BgMode = z.infer<typeof BgMode>;
 export const BgFit = z.enum(['contain', 'center', 'tile', 'cover']);
 export type BgFit = z.infer<typeof BgFit>;
 
+/** 打样级激活记忆（#113）：仅用于免重复弹门；不作为授权凭据（真验签=M2） */
+export const LicenseMemory = z.object({
+  activatedAt: z.string().min(1),
+  code: z.string().optional(),
+});
+export type LicenseMemory = z.infer<typeof LicenseMemory>;
+
 /** 按键分型的 value_json schema（parse/默认值编排在 core/settings） */
 export const SettingValueSchemas = {
   autosave: z.boolean(),
@@ -49,4 +56,5 @@ export const SettingValueSchemas = {
   bgImage: z.string().min(1).nullable(), // 应用数据目录内相对路径；null=清除
   bgOpacity: z.number().int().min(0).max(100),
   bgFit: BgFit,
+  license: LicenseMemory,
 } as const;
