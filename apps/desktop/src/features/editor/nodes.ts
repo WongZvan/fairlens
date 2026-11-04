@@ -12,6 +12,7 @@ import type { MarkType, Node as PMDocNode } from '@tiptap/pm/model';
 import type { ResumeDoc, Section } from '@fairlens/shared';
 import { nanoid as nanoidGen } from '../../lib/nanoid.js';
 import { hrefFromLinkMouseDown } from '../../lib/link-click.js';
+import { isSafeHref } from './link-policy.js';
 const nanoid12 = () => nanoidGen(12);
 
 export const BLOCK_ID = 'data-block-id' as const;
@@ -117,6 +118,8 @@ export const BulletNode = Node.create({
     // Enter：当前 bullet 内新起一条 bullet（同 entry 语义）；Shift+Enter：同 bullet 软换行
     return {
       Enter: () => {
+        // IME 合成态：Enter 属于输入法候选确认，不拆要点（m1.4 尾项）
+        if (this.editor.view.composing) return false;
         if (!this.editor.isActive('flBullet')) return false;
         // #113（用户拍板：空行不属于内容）：空要点上按 Enter → 删除该行，光标落到上一要点末尾
         const { state } = this.editor;
@@ -144,7 +147,10 @@ export const BulletNode = Node.create({
         }
         return this.editor.chain().focus().splitBlock({ keepMarks: false }).updateAttributes('flBullet', { id: nanoid12() }).run();
       },
-      'Shift-Enter': () => this.editor.commands.insertContent({ type: 'hardBreak' }),
+      'Shift-Enter': () => {
+        if (this.editor.view.composing) return false;
+        return this.editor.commands.insertContent({ type: 'hardBreak' });
+      },
     };
   },
   parseHTML() {
@@ -182,6 +188,9 @@ export const linkMark = Link.configure({
   openOnClick: false,
   autolink: true,
   linkOnPaste: false,
+  // 注入面在 schema 层强制（§9）：仅 http/https/mailto。库默认放行 ftp/tel/sms 等，必须收窄。
+  isAllowedUri: (url, { defaultValidate }) => isSafeHref(url) && defaultValidate(url),
+  shouldAutoLink: (url) => isSafeHref(url),
 });
 
 /** 右键菜单转发（#93）：PM 默认吞 contextmenu 的 stopPropagation → React onContextMenu 收不到。

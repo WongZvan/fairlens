@@ -6,6 +6,7 @@
  * 关闭惯例（Word/Web 右键）：点击菜单外任意处 / Esc 即关。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { isComposingKey } from '../editor/ime.js';
 
 export interface ContextMenuItem {
   label: string;
@@ -50,7 +51,10 @@ export function ContextMenuView({ state, onClose }: { state: ContextMenuState | 
     const onDown = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest('.ctx-menu')) onClose();
     };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      // IME 合成态的 Esc 是取消候选，不关菜单
+      if (e.key === 'Escape' && !isComposingKey(e)) onClose();
+    };
     document.addEventListener('mousedown', onDown, { capture: true });
     document.addEventListener('keydown', onKey);
     return () => {

@@ -64,7 +64,10 @@ export function SnapshotDialog({ open, onClose }: { open: boolean; onClose: () =
             placeholder={t('snapshot.labelPlaceholder')}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void create()}
+            onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return; // IME 合成态：Enter 确认候选，不创建快照
+              if (e.key === 'Enter') void create();
+            }}
           />
           <button className="m-btn primary" onClick={() => void create()}>{t('snapshot.saveNow')}</button>
         </div>

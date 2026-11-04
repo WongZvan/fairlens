@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { useLicense } from '../stores/license.js';
+import { isComposingKey } from '../features/editor/ime.js';
 
 /**
  * 设置窗口壳（m1.1 打样；真功能=m2.3）。
@@ -16,7 +17,7 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !isComposingKey(e)) onClose();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);

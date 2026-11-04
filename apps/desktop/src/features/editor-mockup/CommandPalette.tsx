@@ -51,6 +51,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             aria-label={t('palette.placeholder')}
             onChange={(e) => { setQuery(e.target.value); setActive(0); }}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return; // IME 合成态：Enter/方向键交输入法
               if (e.key === 'Escape') onClose();
               if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, results.length - 1)); }
               if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }

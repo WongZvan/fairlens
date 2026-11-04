@@ -3,8 +3,10 @@
  * - 编辑器内：Ctrl+Enter 块修订 / Ctrl+Shift+V 仅文本粘贴 / Alt+↓↑ 批注导航（挂编辑器）
  * - 全局：Ctrl+K 二义（选区=插链接[编辑器内]/无选区=命令面板）/ Ctrl+S 保存 / Ctrl+D 复制块
  *          / Ctrl+Shift+E 评估 / Ctrl+F 查找（m1.5 内联简化版）
+ * IME 合成态一律不路由（m1.4 尾项）——中文输入期间 Enter/组合键不误触。
  * 单测：editor/shortcuts.test.ts（纯函数判定）
  */
+import { isComposingKey } from './ime.js';
 
 export interface ShortcutContext {
   hasSelection: boolean;
@@ -26,9 +28,18 @@ export type ShortcutAction =
 
 /** 纯函数：键盘事件语义 → 动作（React 层只做 preventDefault 与执行） */
 export function resolveShortcut(
-  e: { ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean; key: string },
+  e: {
+    ctrlKey: boolean;
+    metaKey: boolean;
+    shiftKey: boolean;
+    altKey: boolean;
+    key: string;
+    isComposing?: boolean;
+    keyCode?: number;
+  },
   ctx: ShortcutContext,
 ): ShortcutAction {
+  if (isComposingKey(e)) return null;
   const ctrl = e.ctrlKey || e.metaKey;
   const k = e.key.toLowerCase();
 

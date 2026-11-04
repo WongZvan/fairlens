@@ -283,6 +283,7 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
               value={linkDraft}
               onChange={(e) => setLinkDraft(e.target.value)}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return; // IME 合成态：Enter 确认候选，不应用链接
                 if (e.key === 'Enter') applyLink();
                 if (e.key === 'Escape') {
                   setLinkEditing(false);

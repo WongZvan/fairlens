@@ -13,13 +13,25 @@ import Text from '@tiptap/extension-text';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { FloatingToolbar } from './FloatingToolbar.js';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DocStyle, ResumeDoc } from '@fairlens/shared';
 import { validateDocStyleAgainstManifest } from '@fairlens/shared';
 import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
 import { pickAppendTarget } from './blank-click.js';
 import { TextSelection } from '@tiptap/pm/state';
-import { usePasteNormalization, normalizePlainText } from './use-paste-normalization.js';
+import type { Node as PMNode } from '@tiptap/pm/model';
+import type { EditorView } from '@tiptap/pm/view';
+import {
+  buildPastePlan,
+  insertPastePlan,
+  makePasteHandler,
+  readClipboardPayload,
+  type PasteInsertion,
+  type PastePlan,
+} from './use-paste-normalization.js';
+import { PasteBubble, type PasteBubbleState } from './PasteBubble.js';
+import { toast } from '../../app/Toast.js';
 import { resolveStyleVars } from './style-vars.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 import { nanoid } from '../../lib/nanoid.js';
@@ -33,6 +45,8 @@ export interface EditorApi {
   cut: () => void;
   /** 粘贴系统剪贴板：text/html 走 schema 白名单解析；仅纯文本走文本插入 */
   paste: () => Promise<void>;
+  /** Ctrl+Shift+V：恒仅文本粘贴（读剪贴板后走同一归一化管线，不弹气泡） */
+  pastePlain: () => Promise<void>;
   selectAll: () => void;
   /** 光标所在条目（右键菜单/ Ctrl+D 复制条目定位用） */
   getActiveEntry: () => { sectionId: string; entryId: string } | null;
@@ -47,13 +61,14 @@ export interface CanvasEditorProps {
   onDocChange: (doc: ResumeDoc) => void;
   /** 编辑器就绪后暴露 undo/redo（工具栏按钮/快捷键消费） */
   onReady?: (api: EditorApi) => void;
-  /** 结构 gating（§5.2）：增删条目等命令经 manifest 校验；编辑自由 */
-  onStructureGate?: (manifestId: string) => void;
   /** 只读渲染（快照对比双栏用，m1.6） */
   readOnly?: boolean;
 }
 
 export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEditorProps) {
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
   const builtin = getBuiltinTemplate(doc.templateId);
   const manifest = builtin?.manifest;
 
@@ -64,7 +79,41 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     return {}; // 越界整体回落默认（toast 提示由调用方在切换时做）
   }, [manifest, doc.style]);
 
-  const pasteNormalization = usePasteNormalization();
+  const [pasteBubble, setPasteBubble] = useState<PasteBubbleState | null>(null);
+  const pasteSessionRef = useRef<{ from: number; to: number; plainText: string } | null>(null);
+  const bubbleOpenRef = useRef(false);
+
+  const closeBubble = useCallback(() => {
+    pasteSessionRef.current = null;
+    bubbleOpenRef.current = false;
+    setPasteBubble(null);
+  }, []);
+
+  /** 插入后的统一反馈：图片 toast / 大段提示 / 保留格式气泡（仅 html 模式） */
+  const showPasteResult = useCallback((view: EditorView, plan: PastePlan, insertion: PasteInsertion) => {
+    if (plan.ignoredImageCount > 0) {
+      toast(tRef.current('editor.paste.imagesIgnored', { count: plan.ignoredImageCount }));
+    }
+    if (plan.mode !== 'html') {
+      if (plan.wasLargePaste) toast(tRef.current('editor.paste.large'));
+      return;
+    }
+    if (insertion.to <= insertion.from) return;
+    const coords = view.coordsAtPos(insertion.from);
+    pasteSessionRef.current = { from: insertion.from, to: insertion.to, plainText: plan.plainText };
+    bubbleOpenRef.current = true;
+    setPasteBubble({
+      anchor: { left: coords.left, top: coords.top, bottom: coords.bottom },
+      large: plan.wasLargePaste,
+      plainAvailable: plan.plainText.length > 0,
+    });
+  }, []);
+
+  // useEditor 只在创建时消费 handlePaste：依赖保持稳定，闭包内动态值走 ref/useCallback
+  const handlePaste = useMemo(
+    () => makePasteHandler((plan, insertion, view) => showPasteResult(view, plan, insertion)),
+    [showPasteResult],
+  );
 
   const editor = useEditor({
     extensions: [
@@ -78,7 +127,7 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     editable: !readOnly,
     editorProps: {
       attributes: { class: 'fl-paper' },
-      handlePaste: pasteNormalization,
+      handlePaste,
       // 版式保护（#107）：禁止把选中文字拖走改版式——换序统一走左侧大纲拖拽
       handleDOMEvents: {
         dragstart: (_view, event) => {
@@ -128,15 +177,13 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       }
       return null;
     };
-    const insertPlainText = (raw: string) => {
-      // 复用粘贴归一化：换行 \r\n 归一 + 连续空行折叠（与 handlePaste 同规则）
-      const text = normalizePlainText(raw);
-      const nodes: Array<Record<string, unknown>> = [];
-      text.split('\n').forEach((line, i) => {
-        if (i > 0) nodes.push({ type: 'hardBreak' });
-        if (line.length > 0) nodes.push({ type: 'text', text: line });
-      });
-      if (nodes.length > 0) editor.chain().focus().insertContent(nodes).run();
+    const pastePlan = async (plainOnly: boolean) => {
+      editor.chain().focus().run();
+      const payload = await readClipboardPayload();
+      const plan = buildPastePlan(payload, { plainOnly });
+      if (!plan) return;
+      const insertion = insertPastePlan(editor.view, plan);
+      showPasteResult(editor.view, plan, insertion);
     };
     onReady({
       undo: () => editor.chain().focus().undo().run(),
@@ -149,20 +196,8 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
         editor.chain().focus().run();
         document.execCommand('cut');
       },
-      paste: async () => {
-        editor.chain().focus().run();
-        const items = await navigator.clipboard.read();
-        for (const item of items) {
-          if (item.types.includes('text/html')) {
-            const html = await (await item.getType('text/html')).text();
-            // insertContent(html) 经 schema 解析——白名单/节点归一化自动生效（与 handlePaste 同源规则）
-            editor.chain().focus().insertContent(html).run();
-            return;
-          }
-        }
-        const text = await navigator.clipboard.readText();
-        if (text) insertPlainText(text);
-      },
+      paste: () => pastePlan(false),
+      pastePlain: () => pastePlan(true),
       selectAll: () => editor.chain().focus().selectAll().run(),
       getActiveEntry: findEntry,
       duplicateActiveBullet: () => {
@@ -180,7 +215,42 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       },
       refresh: () => editor.view.dispatch(editor.state.tr),
     });
-  }, [editor, onReady]);
+  }, [editor, onReady, showPasteResult]);
+
+  /** 「仅文本」：把刚插入的区间原地替换为无 mark 的纯文本（保留格式气泡的第二个选项） */
+  const choosePlain = useCallback(() => {
+    const session = pasteSessionRef.current;
+    if (!editor || editor.isDestroyed || !session) {
+      closeBubble();
+      return;
+    }
+    try {
+      const { schema } = editor.state;
+      const nodes: PMNode[] = [];
+      session.plainText.split('\n').forEach((line, i) => {
+        if (i > 0) nodes.push(schema.nodes.hardBreak!.create());
+        if (line.length > 0) nodes.push(schema.text(line));
+      });
+      const tr = editor.state.tr.replaceWith(session.from, session.to, nodes);
+      tr.setStoredMarks([]); // 纯文本不得继承当前加粗/斜体/链接 mark
+      editor.view.dispatch(tr);
+      editor.commands.focus();
+    } finally {
+      closeBubble();
+    }
+  }, [editor, closeBubble]);
+
+  // 粘贴后用户继续编辑（docChanged）→ 关闭气泡并保留保留格式版本，位置不再可信
+  useEffect(() => {
+    if (!editor) return;
+    const onUpdate = () => {
+      if (bubbleOpenRef.current) closeBubble();
+    };
+    editor.on('update', onUpdate);
+    return () => {
+      editor.off('update', onUpdate);
+    };
+  }, [editor, closeBubble]);
 
   /**
    * #114 点纸面空白新增要点：条目下方空白 / 纸面底部空白 → 在该条目末尾追加一条要点。
@@ -259,6 +329,7 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
         <FloatingToolbar editor={editor} readOnly={readOnly} />
       </div>
       <PageGuides />
+      <PasteBubble state={pasteBubble} onKeep={closeBubble} onPlain={choosePlain} />
     </div>
   );
 }

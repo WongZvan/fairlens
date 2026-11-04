@@ -9,7 +9,6 @@ import { useEditorDoc } from '../../stores/editor-doc.js';
 import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
 import { SnapshotDialog } from './SnapshotDialog.js';
 import { toast } from '../../app/Toast.js';
-import { nanoid } from '../../lib/nanoid.js';
 import { resolveShortcut } from '../editor/shortcuts.js';
 import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
@@ -18,10 +17,13 @@ import { SidebarResizer } from './SidebarResizer.js';
 import { ContextMenuView, useContextMenu } from './ContextMenu.js';
 import { buildCanvasMenuItems } from './canvas-menu.js';
 import { moveEntry } from './entry-order.js';
+import { duplicateEntry as duplicateEntryDoc } from '../editor/entry-duplicate.js';
+import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 import { dims, findings } from './sample-data.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
 export function EditorMockup() {
+  const { t } = useTranslation();
   const leftOpen = useMockup((s) => s.leftOpen);
   const rightOpen = useMockup((s) => s.rightOpen);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -89,26 +91,17 @@ export function EditorMockup() {
   const rightWidth = useMockup((s) => s.rightWidth);
 
   // #93：画布右键菜单（两种光标态）。结构复制真实现（同 entry 内复制条目，nanoid 新块）
+  // 2026-11-04：按 manifest maxEntries 结构 gating（超限 toast，不复制）
   const duplicateEntry = (sectionId: string, entryId: string) => {
     const d = useEditorDoc.getState().doc;
     if (!d) return;
-    useEditorDoc.getState().applyDoc({
-      ...d,
-      sections: d.sections.map((sec) => {
-        if (sec.id !== sectionId) return sec;
-        const idx = sec.entries.findIndex((e) => e.id === entryId);
-        if (idx === -1) return sec;
-        const src = sec.entries[idx]!;
-        const copy = {
-          ...src,
-          id: nanoid(),
-          bullets: src.bullets.map((b) => ({ ...b, id: nanoid() })),
-        };
-        const entries = [...sec.entries];
-        entries.splice(idx + 1, 0, copy);
-        return { ...sec, entries };
-      }),
-    });
+    const manifest = getBuiltinTemplate(d.templateId)?.manifest;
+    const result = duplicateEntryDoc(d, manifest, sectionId, entryId);
+    if (!result.ok) {
+      toast(t('editor.structure.limitReached', { max: result.limit }));
+      return;
+    }
+    if (result.doc !== d) useEditorDoc.getState().applyDoc(result.doc);
   };
   const reorderEntry = (sectionId: string, from: number, to: number) => {
     const d = useEditorDoc.getState().doc;
@@ -149,7 +142,15 @@ export function EditorMockup() {
       const inEditor = !!document.activeElement?.closest('.ProseMirror');
       const hasSelection = inEditor && !window.getSelection()?.isCollapsed;
       const action = resolveShortcut(
-        { ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey, key: e.key },
+        {
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+          key: e.key,
+          isComposing: e.isComposing,
+          keyCode: e.keyCode,
+        },
         { hasSelection, inEditor },
       );
       switch (action) {
@@ -173,6 +174,13 @@ export function EditorMockup() {
           if (api?.duplicateActiveBullet()) break;
           const target = api?.getActiveEntry();
           if (target && target.sectionId && target.entryId) duplicateEntry(target.sectionId, target.entryId);
+          break;
+        }
+        case 'paste-plain': {
+          // Ctrl+Shift+V 恒仅文本（§5.6）；仅编辑器内生效，输入框内交浏览器默认
+          if (!inEditor) break;
+          e.preventDefault();
+          void editorApiRef.current?.pastePlain().catch(() => toast(t('editor.paste.failed')));
           break;
         }
         case 'evaluate':

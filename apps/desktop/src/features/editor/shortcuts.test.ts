@@ -33,6 +33,13 @@ describe('m1.5 快捷键路由（§5.10 全表）', () => {
     expect(resolveShortcut(ev({ key: 'k' }), { hasSelection: false, inEditor: true })).toBeNull();
     expect(resolveShortcut(ev({ ctrlKey: true, key: 'x' }), { hasSelection: false, inEditor: true })).toBeNull();
   });
+
+  it('IME 合成态：组合键一律不触发（中文输入不误触保存/复制/修订）', () => {
+    expect(resolveShortcut(ev({ ctrlKey: true, key: 's', isComposing: true }), { hasSelection: false, inEditor: true })).toBeNull();
+    expect(resolveShortcut(ev({ ctrlKey: true, key: 'd', isComposing: true }), { hasSelection: false, inEditor: true })).toBeNull();
+    expect(resolveShortcut(ev({ ctrlKey: true, key: 'enter', isComposing: true }), { hasSelection: false, inEditor: true })).toBeNull();
+    expect(resolveShortcut(ev({ keyCode: 229, key: 'Enter' }), { hasSelection: false, inEditor: true })).toBeNull();
+  });
 });
 
 describe('m1.5 CommandRegistry', () => {

@@ -147,5 +147,17 @@ export default {
     summaryAnd: '与',
     summaryB: '岗位关键词',
     summaryTail: '——先补数字，再对齐 JD。',
+    paste: {
+      title: '粘贴选项',
+      format: '保留格式',
+      plain: '仅文本',
+      plainHint: 'Ctrl+Shift+V',
+      large: '内容较长，建议走导入向导以保留层级',
+      imagesIgnored: '已忽略 {{count}} 张图片',
+      failed: '粘贴失败：剪贴板不可读或格式不支持',
+    },
+    structure: {
+      limitReached: '该分区最多 {{max}} 条',
+    },
   },
 } as const;
