@@ -8,7 +8,7 @@
 |---|---|
 | 里程碑 | M1 进行中（6/8）：**m1.1–m1.6 已收口**（m1.4 尾项 2026-11-04 补齐；m1.6=deb5d6a）；下一 m1.7 暂缓；M0 已收口（tag v0.1.0-m0） |
 | 当前模块 | m1.4 尾项已收口；下一 **m1.7 导入管线**（2026-11-04 用户指示暂缓；LLM 接入点留 m3.5）；m1.1 打样待用户最终过目 |
-| 当前分支 | dev=6047bd7（与 origin 同步）；feat/m1.4-tail 在途（合并后回填 squash hash）；main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。m1.6 squash 事实：内容在 09ecebf（squash）+ 8353bcd（归因更正）/ deb5d6a（反馈轮四项）两次修订，feat/m1.6 已删；其后 #107–#114 反馈修复均直推 dev |
+| 当前分支 | dev=67a4cb0（m1.4-tail squash，已推送 origin）；feat/m1.4-tail 已删；main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。m1.6 squash 事实：内容在 09ecebf（squash）+ 8353bcd（归因更正）/ deb5d6a（反馈轮四项）两次修订，feat/m1.6 已删；其后 #107–#114 反馈修复均直推 dev |
 | 已落地 | 编辑器核心全通：真 Tiptap 画布/3 套模板/Ctrl+K 面板/快捷键全集/悬浮工具条(悬停门控)/右键菜单/侧栏拖拽调宽/缩放三态/激活门/**m1.6 持久层**（packages/core 首落/SQLite 迁移/自动保存防抖+失焦保存/关闭保护双模式/快照四态 diff+双栏对比+回滚/settings 六键预留）+ **tauri 启动入口**（`pnpm tauri:dev`）与**窗口操作权限修复**（三键/任务栏关闭可用）+ **m1.4 尾项**（粘贴气泡/仅文本 Ctrl+Shift+V/大段提示/图片 toast/链接白名单/maxEntries gating/IME 守卫）——实录见 `modules/m1/` 八文件；**#106–#114 反馈修复见文末流程增补** |
 | 未落地 | m1.7–m1.8（m1.7 暂缓）；packages/core 后续（diff-apply 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5） |
 
