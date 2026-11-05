@@ -111,6 +111,17 @@ describe('ResumeDoc ↔ ProseMirror 往返（#117 预览纸面结构）', () => 
     expect((main.content ?? []).map((s) => s.attrs?.type)).toEqual(['experience']);
   });
 
+  it('无 profile 时仍生成空白页头占位，往返不写入 profile', () => {
+    const base = sampleDoc('tpl-classic');
+    const doc = ResumeDoc.parse({ ...base, profile: undefined });
+    const pm = resumeDocToPm(doc);
+    expect(pm.content?.[0]?.type).toBe('flPageHeader');
+    expect(pm.content?.[0]?.attrs?.name).toBe('');
+    const back = pmToResumeDoc(pm, { templateId: doc.templateId });
+    expect(back.profile).toBeUndefined();
+    expect(back).toEqual(doc);
+  });
+
   it('返回值通过契约 zod 校验', () => {
     expect(() => ResumeDoc.parse(pmToResumeDoc(resumeDocToPm(sampleDoc())))).not.toThrow();
   });

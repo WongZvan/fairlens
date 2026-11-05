@@ -865,18 +865,17 @@ export function resumeDocToPm(doc: ResumeDoc): PMNode {
     };
   };
 
-  const header: PMNode[] = doc.profile?.name
-    ? [
-        {
-          type: 'flPageHeader',
-          attrs: {
-            name: doc.profile.name,
-            headline: doc.profile.headline ?? null,
-            contactLine: doc.profile.contactLine ?? null,
-          },
-        },
-      ]
-    : [];
+  // 页头始终存在：旧文档无 profile 时给空白可编辑占位（不伪造数据；填了名字才写入 profile）
+  const header: PMNode[] = [
+    {
+      type: 'flPageHeader',
+      attrs: {
+        name: doc.profile?.name ?? '',
+        headline: doc.profile?.headline ?? null,
+        contactLine: doc.profile?.contactLine ?? null,
+      },
+    },
+  ];
 
   if (doc.templateId === 'tpl-duo') {
     const { side, main } = partitionSections(doc.sections);
