@@ -115,6 +115,12 @@ export function EditorMockup() {
       sections: d.sections.map((s) => (s.id === sectionId ? { ...s, entries } : s)),
     });
   };
+  /** 模板切换真实写回 doc.templateId（#117；duo 的列结构由 resumeDocToPm 生成） */
+  const setTemplate = (templateId: string) => {
+    const d = useEditorDoc.getState().doc;
+    if (!d || d.templateId === templateId) return;
+    useEditorDoc.getState().applyDoc({ ...d, templateId });
+  };
 
   // 命令事件：返回简历库
   useEffect(() => {
@@ -227,7 +233,7 @@ export function EditorMockup() {
         <Rail side="left" />
       )}
       <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={applyDoc} editorApiRef={editorApiRef}
-        onDuplicateEntry={duplicateEntry} />
+        onDuplicateEntry={duplicateEntry} onSetTemplate={setTemplate} />
       {rightOpen ? (
         <>
           <SidebarResizer side="right" />
@@ -246,15 +252,17 @@ export function EditorMockup() {
 
 /** 侧栏宽度容器（拖拽调宽；原 .m-left/.m-right 固定宽改由此注入） */
 function LeftPanel({ width, children }: { width: number; children: React.ReactNode }) {
+  const { t } = useTranslation();
   return (
-    <aside className="m-left" style={{ width }} aria-label="大纲">
+    <aside className="m-left" style={{ width }} aria-label={t('editor.outline')}>
       {children}
     </aside>
   );
 }
 function RightPanel({ width, children }: { width: number; children: React.ReactNode }) {
+  const { t } = useTranslation();
   return (
-    <aside className="m-right m-eval" style={{ width }} aria-label="评估报告">
+    <aside className="m-right m-eval" style={{ width }} aria-label={t('editor.evalPanel')}>
       {children}
     </aside>
   );
@@ -284,12 +292,18 @@ interface CenterPaneProps {
   onCanvasDocChange: (d: ResumeDoc) => void;
   editorApiRef: React.MutableRefObject<EditorApi | null>;
   onDuplicateEntry: (sectionId: string, entryId: string) => void;
+  onSetTemplate: (templateId: string) => void;
 }
-function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry }: CenterPaneProps) {
+function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry, onSetTemplate }: CenterPaneProps) {
   const { t } = useTranslation();
-  const { template, zoomMode, zoom, setTemplate } = useMockup();
+  const { zoomMode, zoom } = useMockup();
   const setCanvasDoc = onCanvasDocChange;
   const ctx = useContextMenu();
+  const templates = [
+    { id: 'tpl-classic', label: t('editor.tplClassic') },
+    { id: 'tpl-duo', label: t('editor.tplDuo') },
+    { id: 'tpl-sidebar', label: t('editor.tplSidebar') },
+  ] as const;
 
   // #93/#106 右键菜单：有选区=文字命令（剪切/复制/粘贴/全选）+ 条目副本；无选区=结构命令
   const openCanvasMenu = (e: React.MouseEvent) => {
@@ -372,8 +386,15 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
     <section className="m-center">
       <div className="m-toolbar">
         <div className="seg" role="group" aria-label={t('editor.template')}>
-          <button aria-pressed={template === 'classic'} onClick={() => setTemplate('classic')}>{t('editor.tplClassic')}</button>
-          <button aria-pressed={template === 'duo'} onClick={() => setTemplate('duo')}>{t('editor.tplDuo')}</button>
+          {templates.map((tp) => (
+            <button
+              key={tp.id}
+              aria-pressed={canvasDoc.templateId === tp.id}
+              onClick={() => onSetTemplate(tp.id)}
+            >
+              {tp.label}
+            </button>
+          ))}
         </div>
         <span style={{ flex: 1 }} />
         <button className="m-btn" title={t('editor.mockOnly')} onClick={() => editorApiRef.current?.undo()}><Undo2 size={14} /></button>
@@ -435,7 +456,7 @@ function EvalPanel() {
   const { t } = useTranslation();
   const toggleRight = useMockup((s) => s.toggleRight);
   return (
-    <aside className="m-right m-eval" aria-label={t('editor.evalPanel')}>
+    <div className="m-eval-body">
       <button className="m-btn" onClick={toggleRight} style={{ padding: '4px 10px', marginBottom: 8 }} aria-label={t('editor.hideEval')}>
         <PanelRightClose size={14} />{t('editor.collapse')}
       </button>
@@ -469,7 +490,7 @@ function EvalPanel() {
         ))}
       </div>
       <button className="cta">{t('editor.goFix')}<FileText size={14} /></button>
-    </aside>
+    </div>
   );
 }
 
@@ -484,7 +505,12 @@ function Radar() {
   const poly = '90,48.2 120.6,72.3 114.1,103.9 90,121.9 56.9,109.1 50.8,67.4';
   const accent = 'var(--ade-accent)';
   return (
-    <svg width="196" height="176" viewBox="0 0 180 176" role="img" aria-label="六维雷达" style={{ margin: '2px auto 4px' }}>
+    <svg
+      viewBox="-10 0 200 176"
+      role="img"
+      aria-label="六维雷达"
+      style={{ display: 'block', width: '100%', maxWidth: 196, height: 'auto', margin: '2px auto 4px' }}
+    >
       <polygon points={grid(29)} fill="none" stroke="var(--ade-line)" />
       <polygon points={grid(58)} fill="none" stroke="var(--ade-line)" />
       {[0, 60, 120, 180, 240, 300].map((a) => {
@@ -496,7 +522,7 @@ function Radar() {
         <circle key={`${x},${y}`} cx={x} cy={y} r="2.4" fill={accent} />
       ))}
       {labels.map((l) => (
-        <text key={l.t} x={l.x} y={l.y} textAnchor={l.x === 90 ? 'middle' : l.x > 90 ? 'start' : 'end'} fontSize="10.5" fill="var(--ade-muted)">{l.t}</text>
+        <text key={l.t} x={l.x} y={l.y} textAnchor={l.x === 90 ? 'middle' : 'start'} fontSize="10.5" fill="var(--ade-muted)">{l.t}</text>
       ))}
     </svg>
   );

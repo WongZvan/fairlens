@@ -17,7 +17,7 @@ export const classicManifest: TemplateManifest = {
   },
   styleTokens: {
     fontHeading: 'Noto Serif SC',
-    fontBody: 'Noto Serif SC',
+    fontBody: "IBM Plex Sans, IBM Plex Sans SC, Microsoft YaHei",
     accent: '#33518E',
     spacing: 'normal',
     radius: '2px',
@@ -40,7 +40,7 @@ export const duoManifest: TemplateManifest = {
   },
   styleTokens: {
     fontHeading: 'Noto Serif SC',
-    fontBody: 'Noto Serif SC',
+    fontBody: "IBM Plex Sans, IBM Plex Sans SC, Microsoft YaHei",
     accent: '#33518E',
     spacing: 'normal',
     radius: '0px',
@@ -63,7 +63,7 @@ export const sidebarManifest: TemplateManifest = {
   },
   styleTokens: {
     fontHeading: 'Noto Serif SC',
-    fontBody: 'Noto Serif SC',
+    fontBody: "IBM Plex Sans, IBM Plex Sans SC, Microsoft YaHei",
     accent: '#33518E',
     spacing: 'normal',
     radius: '0px',

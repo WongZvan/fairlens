@@ -5,7 +5,7 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
@@ -23,6 +23,8 @@ const SECTION_TYPE_KEY: Record<string, string> = {
 export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
   const { t } = useTranslation();
   const toggleLeft = useMockup((s) => s.toggleLeft);
+  const collapsedSections = useMockup((s) => s.collapsedSections);
+  const toggleSection = useMockup((s) => s.toggleSection);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   // 更严过滤（m1.6 反馈拍板）：entry 有 bullets 才进大纲（org 空壳不显示）；
@@ -42,7 +44,7 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
   };
 
   return (
-    <aside className="m-left" aria-label={t('editor.outline')}>
+    <div className="outline-body">
       <button className="m-btn" onClick={toggleLeft} style={{ margin: '0 4px 10px', padding: '4px 10px' }} aria-label={t('editor.hideOutline')}>
         <PanelLeftCloseInline />{t('editor.collapse')}
       </button>
@@ -50,40 +52,59 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
       {visibleSections.length === 0 ? (
         <p className="tpl-note" style={{ color: 'var(--ade-muted)' }}>{t('editor.outlineEmpty')}</p>
       ) : (
-        visibleSections.map(({ sec, entries }) => (
-          <div key={sec.id}>
-            <div className="tree-item" role="button" tabIndex={0} onClick={() => scrollTo(sec.id)} onKeyDown={(e) => e.key === 'Enter' && scrollTo(sec.id)}>
-              <ChevronDown size={14} />{t(SECTION_TYPE_KEY[sec.type] ?? 'paper.basic')}
+        visibleSections.map(({ sec, entries }) => {
+          const name = t(SECTION_TYPE_KEY[sec.type] ?? 'paper.basic');
+          const collapsed = collapsedSections.includes(sec.id);
+          return (
+            <div key={sec.id}>
+              <div className="tree-item section-row">
+                {entries.length > 0 ? (
+                  <button
+                    type="button"
+                    className="tree-toggle"
+                    aria-expanded={!collapsed}
+                    aria-label={t(collapsed ? 'editor.expandSection' : 'editor.collapseSection', { name })}
+                    onClick={() => toggleSection(sec.id)}
+                  >
+                    {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                ) : (
+                  <span className="tree-toggle-spacer" aria-hidden="true" />
+                )}
+                <button type="button" className="tree-label" onClick={() => scrollTo(sec.id)}>{name}</button>
+              </div>
+              {!collapsed && (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(e) => {
+                    const { active, over } = e;
+                    if (!over || active.id === over.id) return;
+                    // 过滤后的展示序 ≠ 原数组序：按 entry id 回定位原索引（防拖拽错位）
+                    const from = sec.entries.findIndex((en) => en.id === active.id);
+                    const to = sec.entries.findIndex((en) => en.id === over.id);
+                    if (from === -1 || to === -1) return;
+                    onReorderEntry(sec.id, from, to);
+                  }}
+                >
+                  <SortableContext items={entries.map((en) => en.id)} strategy={verticalListSortingStrategy}>
+                    {entries.map((entry) => (
+                      <SortableEntry
+                        key={entry.id}
+                        id={entry.id}
+                        label={`${entry.org || t('editor.untitledEntry')}${entry.role ? ' · ' + entry.role : ''}`}
+                        onClick={() => scrollTo(entry.id)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              )}
             </div>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(e) => {
-                const { active, over } = e;
-                if (!over || active.id === over.id) return;
-                // 过滤后的展示序 ≠ 原数组序：按 entry id 回定位原索引（防拖拽错位）
-                const from = sec.entries.findIndex((en) => en.id === active.id);
-                const to = sec.entries.findIndex((en) => en.id === over.id);
-                if (from === -1 || to === -1) return;
-                onReorderEntry(sec.id, from, to);
-              }}
-            >
-              <SortableContext items={entries.map((en) => en.id)} strategy={verticalListSortingStrategy}>
-                {entries.map((entry) => (
-                  <SortableEntry
-                    key={entry.id}
-                    id={entry.id}
-                    label={`${entry.org || t('editor.untitledEntry')}${entry.role ? ' · ' + entry.role : ''}`}
-                    onClick={() => scrollTo(entry.id)}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-          </div>
-        ))
+          );
+        })
       )}
       <p className="tpl-note">{t('editor.tplNote')}</p>
-    </aside>
+    </div>
   );
 }
 

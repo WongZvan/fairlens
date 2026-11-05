@@ -3,12 +3,34 @@ import { ResumeDoc } from '@fairlens/shared';
 /** m1.4 起打样画布改挂真编辑器：此为初始样例文档（blockId 稳定不随刷新变——快照/批注锚点要求） */
 export const sampleDoc: ResumeDoc = ResumeDoc.parse({
   templateId: 'tpl-classic',
+  profile: {
+    name: '李思远',
+    headline: '求职意向：产品经理（26 届）',
+    contactLine: '138****2321 · lisiyuan@mail.com · github.com/lisiyuan',
+  },
   sections: [
     {
       id: 'SecBas1c0001',
       type: 'basic',
       title: '基本信息',
+      basicFields: [
+        { id: 'FldLoc000001', label: '所在地', value: '武汉 · 可即时到岗' },
+        { id: 'FldDir000001', label: '求职方向', value: 'B 端 / 数据' },
+      ],
       entries: [],
+    },
+    {
+      id: 'SecSki000001',
+      type: 'skill',
+      title: '技能',
+      entries: [],
+      skills: [
+        {
+          id: 'SkGMain00001',
+          name: '技能',
+          items: ['Axure / Figma · SQL（基础）', 'Python（数据分析）· 英语 CET-6'],
+        },
+      ],
     },
     {
       id: 'SecEdu00001A',
@@ -51,6 +73,26 @@ export const sampleDoc: ResumeDoc = ResumeDoc.parse({
         },
       ],
     },
+    {
+      id: 'SecPro000001',
+      type: 'project',
+      title: '项目经历',
+      entries: [
+        {
+          id: 'EntProj0001A',
+          org: '校园二手书平台「书循环」',
+          role: '联合创始人',
+          start: '2023.03',
+          ongoing: true,
+          bullets: [
+            {
+              id: 'BulProj0001A',
+              runs: [{ text: '负责产品 0 到 1：需求分析、原型设计与 MVP 上线，6 个月积累用户 4000+，促成交易 1200+ 笔' }],
+            },
+          ],
+        },
+      ],
+    },
   ],
 });
 
@@ -66,4 +108,6 @@ export const dims = [
   { name: 'STAR 描述', score: 61 },
   { name: '量化与成果', score: 48 },
   { name: '岗位匹配', score: 55 },
+  { name: '关键词', score: 66 },
+  { name: '清晰度', score: 78 },
 ];

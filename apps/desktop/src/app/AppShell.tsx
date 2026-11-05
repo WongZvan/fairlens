@@ -37,8 +37,9 @@ export function AppShell() {
     if (activated) void repairAllResumes();
   }, [activated]);
 
-  // #110：激活门按 #88 的 420×450 小窗形态（单窗近似；真独立窗口=m2.3）
-  useActivationWindowShape(activated, isTauri);
+  // #110/#116：激活门按 420×380 小窗形态（单窗近似；真独立窗口=m2.3）；
+  // 等 hydrate 完成后再应用，避免「门态 420 → 主窗」两个异步分支竞争把窗口顶在最小尺寸
+  useActivationWindowShape(activated, hydrated, isTauri);
   // #112：最大化时取消圆角（贴合屏幕四角）
   useMaximizedClass(isTauri);
 
@@ -200,15 +201,15 @@ function useMaximizedClass(isTauri: boolean) {
   }, [isTauri]);
 }
 
-/** 激活门窗口形态（#110/#112）：未激活=420×450 小窗，激活后恢复 1280×800 并居中 */
-function useActivationWindowShape(activated: boolean, isTauri: boolean) {
+/** 激活门窗口形态（#110/#112/#116）：未激活=420×380 小窗，激活后恢复 1280×800 并居中 */
+function useActivationWindowShape(activated: boolean, hydrated: boolean, isTauri: boolean) {
   useEffect(() => {
-    if (!isTauri) return;
+    if (!isTauri || !hydrated) return;
     const win = getCurrentWindow();
     void (async () => {
       try {
         if (activated) {
-          await win.setMinSize(new LogicalSize(1152, 720));
+          await win.setMinSize(new LogicalSize(960, 640));
           await win.setSize(new LogicalSize(1280, 800));
         } else {
           // 必须先放宽最小尺寸，否则 setSize 会被配置里的 minWidth 夹住
@@ -220,7 +221,7 @@ function useActivationWindowShape(activated: boolean, isTauri: boolean) {
         console.error('[window] 激活门窗口形态设置失败', err);
       }
     })();
-  }, [activated, isTauri]);
+  }, [activated, hydrated, isTauri]);
 }
 
 /** 状态栏保存指示（#112）：圆点=模式（绿自动/红手动），文字=模式 + 即时状态 */

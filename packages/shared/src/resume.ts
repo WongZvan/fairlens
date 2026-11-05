@@ -76,10 +76,19 @@ export const DocStyle = z.object({
 });
 export type DocStyle = z.infer<typeof DocStyle>;
 
+/** 页头（2026-11-05，#117）：姓名/求职意向/联系方式；联系方式一行自动链接化 */
+export const Profile = z.object({
+  name: z.string().min(1),
+  headline: z.string().optional(),
+  contactLine: z.string().optional(),
+});
+export type Profile = z.infer<typeof Profile>;
+
 /** ResumeDoc：存储/快照/diff/导出的统一格式（三投影唯一数据源） */
 export const ResumeDoc = z.object({
   templateId: z.string().min(1),
   style: DocStyle.optional(),
+  profile: Profile.optional(),
   sections: z.array(Section).min(1),
 });
 export type ResumeDoc = z.infer<typeof ResumeDoc>;

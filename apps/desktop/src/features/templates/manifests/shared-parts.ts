@@ -9,7 +9,7 @@ export const baseSectionRules: TemplateManifest['sections'] = [
   { type: 'skill', order: 4, maxEntries: 1 },
 ];
 
-/** 共享字体主题（v1.5 三维之一；宋/黑两系 + 组合系） */
+/** 共享字体主题（v1.5 三维之一；宋/黑/组合 + 预览 Plex 正文，共 4 套=契约上限） */
 export const sharedFontThemes: TemplateManifest['styleOptions']['fontThemes'] = [
   {
     id: 'serif',
@@ -25,6 +25,11 @@ export const sharedFontThemes: TemplateManifest['styleOptions']['fontThemes'] = 
     id: 'mix',
     name: '组合系（衬线标题+黑体正文）',
     fonts: { heading: 'Noto Serif SC', body: 'Microsoft YaHei' },
+  },
+  {
+    id: 'plex',
+    name: '预览体（衬线标题+Plex 正文）',
+    fonts: { heading: 'Noto Serif SC', body: 'IBM Plex Sans SC' },
   },
 ];
 

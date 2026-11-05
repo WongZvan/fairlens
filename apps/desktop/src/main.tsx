@@ -9,6 +9,7 @@ import './app/shell.css';
 import './app/settings.css';
 import './app/gate.css';
 import './features/editor-mockup/mockup.css';
+import './styles/plex-sans-sc.css';
 import './i18n/index.js';
 
 // 四声部字体（fontsource 打包分发；楷体走系统回退链）

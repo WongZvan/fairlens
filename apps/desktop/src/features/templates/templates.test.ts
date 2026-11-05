@@ -28,6 +28,9 @@ describe('m1.2 模板数据层', () => {
       expect(m.styleOptions.fontThemes.length).toBeLessThanOrEqual(4);
       expect(m.styleOptions.densities).toContain('normal');
       expect(m.styleOptions.accents?.length).toBeLessThanOrEqual(4);
+      // #117：预览同款 Plex 正文主题
+      expect(m.styleOptions.fontThemes.some((t) => t.id === 'plex' && t.fonts.body === 'IBM Plex Sans SC')).toBe(true);
+      expect(m.styleTokens.fontBody).toContain('IBM Plex Sans SC');
     }
   });
 
@@ -49,10 +52,20 @@ describe('m1.2 模板数据层', () => {
     }
   });
 
-  it('布局变体特征：duo 含 grid 侧栏与照片槽；sidebar 含贯穿色条', () => {
-    expect(duoCss).toMatch(/grid-template-columns: 58mm 1fr/);
+  it('布局变体特征：duo 含 73.5mm 侧栏与照片槽；sidebar 含贯穿色条', () => {
+    expect(duoCss).toMatch(/grid-template-columns: 73\.5mm 1fr/);
     expect(duoCss).toContain('fl-photo-slot');
     expect(sidebarCss).toContain('width: 5mm');
+  });
+
+  it('预览纸面对齐（#117）：页头/三段条目行/墨色要点/13pt 正文', () => {
+    for (const css of [classicCss, duoCss, sidebarCss]) {
+      expect(css).toContain('font-size: 13pt');
+      expect(css).toContain('.fl-head .rule');
+      expect(css).toContain('.fl-entry-head .row');
+      expect(css).toContain('li[data-type="fl-bullet"]');
+      expect(css).toContain('border-top: 1px solid #d9d6cf');
+    }
   });
 
   it('builtin 注册表按 id 取模板（PackSource-builtin 位）', () => {

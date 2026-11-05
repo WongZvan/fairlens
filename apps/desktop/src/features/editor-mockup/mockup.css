@@ -25,6 +25,22 @@
 .tree-item:hover { background: var(--ade-hover); }
 .tree-item.sub { padding-left: 26px; font-size: 12.5px; color: var(--ade-muted); }
 .tree-item.active { background: var(--ade-accent-soft); box-shadow: inset 2px 0 0 var(--ade-accent); }
+/* 大纲分区折叠（2026-11-05）：箭头独立命中区，标题仍负责滚动定位 */
+.tree-item.section-row { gap: 2px; padding-left: 4px; }
+.tree-toggle {
+  width: 20px; height: 20px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: none; padding: 0;
+  border-radius: 4px; color: var(--ade-muted);
+}
+.tree-toggle:hover { background: var(--ade-hover); }
+.tree-toggle:focus-visible, .tree-label:focus-visible { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
+.tree-toggle-spacer { width: 20px; height: 20px; flex: none; }
+.tree-label {
+  flex: 1; min-width: 0; text-align: left;
+  border: 0; background: none; padding: 0;
+  font: inherit; color: inherit;
+}
 .tpl-note { margin-top: 14px; font-size: 11px; color: var(--ade-muted); padding: 0 4px; }
 
 /* 画布区 */
@@ -196,3 +212,31 @@
   position: relative; z-index: 5;
 }
 .sidebar-resizer:hover, .sidebar-resizer:active { background: var(--ade-accent-soft); }
+
+/* 元信息对话框（#117）：页头/条目头共用 */
+.meta-overlay {
+  position: fixed; inset: 0; z-index: 110;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.32);
+}
+.meta-win {
+  width: min(420px, calc(100vw - 32px));
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 10px;
+  padding: 16px; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  font-family: var(--ade-font-ui);
+}
+.meta-win h3 { margin: 0 0 12px; font-size: 13px; color: var(--ade-ink); }
+.meta-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 11px; color: var(--ade-muted); }
+.meta-field input {
+  height: 32px; border: 1px solid var(--ade-line); border-radius: 6px;
+  background: var(--ade-chrome); color: var(--ade-ink); padding: 0 10px; font-size: 13px; outline: none;
+}
+.meta-field input:focus { border-color: var(--ade-accent); }
+.meta-error { margin: 0 0 8px; color: var(--ade-pen-red); font-size: 11.5px; }
+.meta-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.meta-actions button {
+  height: 30px; padding: 0 14px; border: 1px solid var(--ade-line); border-radius: 6px;
+  background: var(--ade-panel); color: var(--ade-ink); font-size: 12px;
+}
+.meta-actions button:hover { border-color: var(--ade-accent); }
+.meta-actions button.primary { background: var(--ade-accent); border-color: var(--ade-accent); color: #fff; }

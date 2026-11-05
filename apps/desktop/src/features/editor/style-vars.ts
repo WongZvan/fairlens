@@ -5,15 +5,15 @@
 import type { DocStyle, TemplateManifest } from '@fairlens/shared';
 
 const DENSITY_MAP: Record<string, { line: string; entry: string; section: string }> = {
-  compact: { line: '1.40', entry: '0.35em', section: '0.7em' },
-  normal: { line: '1.55', entry: '0.6em', section: '1.1em' },
-  loose: { line: '1.75', entry: '1em', section: '1.6em' },
+  compact: { line: '1.38', entry: '0.35em', section: '0.7em' },
+  normal: { line: '1.50', entry: '0.55em', section: '0.9em' },
+  loose: { line: '1.70', entry: '1em', section: '1.5em' },
 };
 
 export function styleToCssVars(tokens: TemplateManifest['styleTokens'] | undefined, style: DocStyle): Record<string, string> {
   const vars: Record<string, string> = {
     '--fl-heading': tokens?.fontHeading ?? 'Noto Serif SC',
-    '--fl-body': tokens?.fontBody ?? 'Noto Serif SC',
+    '--fl-body': tokens?.fontBody ?? "'IBM Plex Sans', 'IBM Plex Sans SC', 'Microsoft YaHei', sans-serif",
     '--fl-accent': tokens?.accent ?? '#33518e',
   };
   // 密度：doc.style.density（auto→模板默认 normal）

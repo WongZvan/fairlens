@@ -5,4 +5,6 @@ packages:
   - functions/*
 
 allowBuilds:
+  # IBM Plex Sans SC 的 postinstall 仅上报 telemetry；font 文件已随包分发，禁用构建脚本
+  '@ibm/plex-sans-sc': false
   esbuild: true
