@@ -4,7 +4,7 @@
 
 FairLens 面向按批次组织的面试候选人（客户方授权激活），提供：真 A4 画布编辑器（版式由模板锁定、内容随你）、AI 块级修订（内联 diff）、全篇评估（六维雷达 + 红笔批注）、双轨导出（定稿 PDF/Word + 批注版 HTML/长图）、简历库与 .fairlens 归档迁移。数据全本地，AI 走用户自有 Key 直连。
 
-**当前状态**：✅ 设计基线 v0.1 已封版（四轮审计 36 项闭环）｜🚧 **M1 开发中（6/8 模块收口：m1.1–m1.6；2026-11-05 预览纸面结构/字体/雷达/大纲修复；下一 m1.7 导入管线暂缓）**｜dev 分支活跃
+**当前状态**：✅ 设计基线 v0.1 已封版（四轮审计 36 项闭环）｜🚧 **M1 开发中（6/8 模块收口：m1.1–m1.6，m1.1 待过目；2026-11-05 预览纸面结构/字体/雷达/大纲修复；下一 m1.7 导入管线暂缓）**｜dev 分支活跃
 
 > 开发进度唯一快照：`docs/dev/STATE.md`（每模块收尾同步）；决策总账与逐字段契约见 `docs/01-技术开发文档.md`。
 
@@ -35,7 +35,7 @@ pnpm dev:kill         # 清理残留进程 / 释放 1420
 fairlens/
 ├─ apps/desktop/        # Tauri 2 桌面应用（React+TS；src-tauri Rust 薄层 <300 行）
 ├─ packages/shared/     # ✅ M0：全契约（zod 逐字段，含全部预留类型）
-├─ packages/core/       # ✅ M1：diff / autosave / settings / persistence-port
+├─ packages/core/       # ✅ M1：snapshot-diff / autosave / settings / persistence-port
 ├─ packages/prompts/    # M1–M3 生成
 ├─ functions/lease/     # 契约已冻结（lease-api.v1.json）；端点实现=M2
 ├─ tools/keygen/        # ✅ M0：init（双环境密钥对）；issue 等=M2/M5
@@ -56,4 +56,4 @@ fairlens/
 
 ## License
 
-MIT（见 [LICENSE](LICENSE)，2026 JasperWang）。字体依循各自许可：IBM Plex / Noto Serif SC 为 OFL；楷体为系统字体引用不打包。
+MIT（见 [LICENSE](LICENSE)，2026 JasperWang）。字体依循各自许可：IBM Plex / IBM Plex Sans SC / Noto Serif SC 为 OFL；楷体为系统字体引用不打包。

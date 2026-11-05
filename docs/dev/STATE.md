@@ -6,11 +6,11 @@
 
 | 项 | 状态 |
 |---|---|
-| 里程碑 | M1 进行中（6/8）：**m1.1–m1.6 已收口**（m1.4 尾项 2026-11-04 补齐；m1.6=deb5d6a）；**2026-11-05 预览纸面结构/字体/雷达/大纲修复（#116/#117/#118）**；下一 m1.7 暂缓；M0 已收口（tag v0.1.0-m0） |
+| 里程碑 | M1 进行中（6/8，m1.1 待过目）：**m1.1–m1.6 已收口**（m1.4 尾项 2026-11-04 补齐；m1.6=deb5d6a）；**2026-11-05 预览纸面结构/字体/雷达/大纲修复（#116/#117/#118）**；下一 m1.7 暂缓；M0 已收口（tag v0.1.0-m0） |
 | 当前模块 | 预览纸面结构/反馈修复已落地；下一 **m1.7 导入管线**（用户指示暂缓；LLM 接入点留 m3.5）；m1.1 打样待用户最终过目 |
 | 当前分支 | dev=94629af（2026-11-05 预览纸面结构/反馈修复 + 旧文档空白页头 + 大纲完整树 #118；其后仅文档同步，最新以 `git log -1` 为准；已推送 origin）；feat/m1-preview-parity、fix/m1.5-empty-header、fix/m1.5-outline-tree 已删；main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。m1.6 squash 事实：内容在 09ecebf（squash）+ 8353bcd（归因更正）/ deb5d6a（反馈轮四项）两次修订，feat/m1.6 已删；其后 #107–#114 反馈修复均直推 dev |
 | 已落地 | 编辑器核心全通：真 Tiptap 画布/3 套模板（切换真实生效）/Ctrl+K 面板/快捷键全集/悬浮工具条(悬停门控)/右键菜单/侧栏拖拽调宽/缩放三态/激活门/**m1.6 持久层**（packages/core 首落/SQLite 迁移/自动保存防抖+失焦保存/关闭保护双模式/快照四态 diff+双栏对比+回滚/settings 六键预留）+ **tauri 启动入口**（`pnpm tauri:dev`）与**窗口操作权限修复**（三键/任务栏关闭可用）+ **m1.4 尾项**（粘贴气泡/仅文本 Ctrl+Shift+V/大段提示/图片 toast/链接白名单/maxEntries gating/IME 守卫）+ **预览纸面结构**（ResumeDoc.profile/页头/basicFields/skills/照片槽占位/条目三段行/duo 双栏/Plex Sans SC/A4 等比 printCSS）+ **大纲完整树**（标题跟随画布 section.title/全部分区/字段与技能组叶节点）——实录见 `modules/m1/` 八文件；**#106–#114 反馈修复见文末流程增补** |
-| 未落地 | m1.7–m1.8（m1.7 暂缓）；packages/core 后续（diff-apply 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5） |
+| 未落地 | m1.7–m1.8（m1.7 暂缓）；**Ctrl+F 内联查找**（m1.5 面板入口/吞键占位已就绪）；**m1.4 背景层 #86**（定案延后 m2.3）；packages/core 后续（diff-apply 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5） |
 
 ## 环境实录（跨会话必知，细节见 notes/）
 
@@ -52,8 +52,8 @@
 - ~~mockup store `dirty` 占位~~（m1.6 已接管：editor-doc store；mockup.dirty 字段已删）
 - `edit.entry-duplicate` 占位命令已消除（#107：命令面板同名命令=复制当前要点，真实现）；Ctrl+F 吞键仍占位（内联查找待后续模块，见下方更正）
 - ~~**Ctrl+Shift+V 仅文本粘贴仍未接通**~~ → 已接通（2026-11-04 m1.4 尾项：事件/右键/快捷键共用粘贴管线，气泡可转纯文本；测试+浏览器冒烟过）
-- **更正**：Ctrl+F 内联查找不在 m1.6 任务清单（导航表 m1.5 行「Ctrl+F 面板=M1.6」指面板入口沿用）——真内联查找仍待后续模块排期
-- m1.4 剩余：仅背景层 #86（settings 六键已预留，渲染+配置 UI 定案延后 m2.3）；结构 gating/粘贴气泡/IME 已清
+- **Ctrl+F**：仅面板入口/吞键占位；内联查找不在 m1.5/m1.6 已收口范围，待后续模块排期（见未落地项）
+- m1.4 剩余：实现层面仅背景层 #86（settings 六键已预留，渲染+配置 UI 定案延后 m2.3）；结构 gating/粘贴气泡/IME 已清；真窗尾项需人工验收（见待人工第 7 项）
 
 ## 流程增补（2026-10-24 采纳，docs/01 §3.6/§3.7）
 
@@ -72,3 +72,4 @@
 - 2026-11-04 m1.4 尾项补齐（总账 #115，ADR `decisions/2026-11-04-m1.4-tail.md`）：粘贴气泡（立即插入保留格式+4 秒内转纯文本）/Ctrl+Shift+V/大段提示/图片 toast/右键统一管线；maxEntries 结构 gating；IME 合成态守卫；链接 scheme 白名单绑定 Link isAllowedUri（修死代码）；测试引入 jsdom；全仓 145 测试绿。状态层漂移修复：m1.4 口径/m1.5 重复段/m1.6 键数/§14 锚点/STATE 指针与「六文件」
 - 2026-11-05 预览纸面结构 + 四项反馈修复（总账 #116/#117，ADR `decisions/2026-11-05-preview-paper-parity.md`）：主窗 min 960×640 + hydrated 串行；ResumeDoc.profile；新节点 pageHeader/basicField/photoSlot/skillGroup/column + entryHeader atom；duo 双栏；Plex Sans SC；printCSS A4 等比；三套模板切换真实生效；雷达去双层 aside + 响应式；大纲分区折叠。全仓 176 测试绿；浏览器冒烟通过；真窗窗口/字体/持久化待人工
 - 2026-11-05 大纲标题/完整树（总账 #118）：标题跟随画布 `section.title`（空标题回落类型名）；全部分区显示（含空基本信息）；basicFields/skillGroups 只读叶节点；仅条目可拖拽；关联修 CanvasEditor 点 h3 误判空白
+- 2026-11-05 文档全量同步（审计）：修复 m1.1 重复段、m1.2/m1.3 空重复标题与计数/主题/栏宽、m1.4 雷达尺寸、m1.5 排版、m1.6 旧大纲规则注记；docs/01 附录 E 条数/#81 修订注记/§12.2 字体分区/§5.3 前缀/Ctrl+F 口径；README/STATE/导航表/02 手册同步。无代码改动，176 测试保持绿
