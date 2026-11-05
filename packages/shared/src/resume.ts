@@ -54,6 +54,7 @@ export const PhotoSlot = z.object({
 export type PhotoSlot = z.infer<typeof PhotoSlot>;
 
 export const SkillGroup = z.object({ id: Nanoid12, name: z.string().min(1), items: z.array(z.string()) });
+export type SkillGroup = z.infer<typeof SkillGroup>;
 
 export const SECTION_TYPES = ['basic', 'education', 'experience', 'project', 'skill'] as const;
 export const Section = z.object({

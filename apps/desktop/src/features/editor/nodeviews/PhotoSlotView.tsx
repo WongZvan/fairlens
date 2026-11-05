@@ -9,7 +9,12 @@ export function PhotoSlotView({ node }: NodeViewProps) {
   const placeholder = node.attrs.placeholder === true || !src;
 
   return (
-    <NodeViewWrapper className="fl-photo-slot" data-type="fl-photo-slot" contentEditable={false}>
+    <NodeViewWrapper
+      className="fl-photo-slot"
+      data-type="fl-photo-slot"
+      data-block-id={typeof node.attrs.id === 'string' ? node.attrs.id : undefined}
+      contentEditable={false}
+    >
       {placeholder ? (
         <>
           <Camera size={14} />

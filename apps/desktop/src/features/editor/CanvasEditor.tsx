@@ -279,7 +279,7 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey) return;
     const target = e.target as HTMLElement;
     const onText = !!target.closest(
-      'li[data-type="fl-bullet"], header[data-type="fl-entry-header"], header[data-type="fl-section-header"], a',
+      'li[data-type="fl-bullet"], header[data-type="fl-entry-header"], h3[data-type="fl-section-header"], header[data-type="fl-section-header"], a',
     );
     const entryEl = target.closest('article[data-type="fl-entry"]') as HTMLElement | null;
     const sectionEl = target.closest('section[data-type="fl-section"]') as HTMLElement | null;

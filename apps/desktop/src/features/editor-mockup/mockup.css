@@ -40,7 +40,17 @@
   flex: 1; min-width: 0; text-align: left;
   border: 0; background: none; padding: 0;
   font: inherit; color: inherit;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* 只读叶节点（基本信息字段/技能组）：不可拖拽，仅导航 */
+.tree-item.leaf { padding-left: 26px; font-size: 12.5px; color: var(--ade-muted); }
+.tree-dot { width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--ade-line); }
+.tree-leaf-label {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer;
+}
+.tree-leaf-label:focus-visible { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
 .tpl-note { margin-top: 14px; font-size: 11px; color: var(--ade-muted); padding: 0 4px; }
 
 /* 画布区 */

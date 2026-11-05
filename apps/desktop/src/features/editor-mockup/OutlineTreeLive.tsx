@@ -1,14 +1,16 @@
 /**
- * 结构树（m1.5）：从真 ResumeDoc 派生大纲（点击滚动定位画布块），接 dnd-kit 拖拽排序。
- * 树=大纲视图（§5.2），数据真源=CanvasEditor 的 doc。
+ * 结构树（m1.5；#118 完整树）：从真 ResumeDoc 派生大纲（点击滚动定位画布块）。
+ * 标题=section.title（画布 h3 可编辑，实时同步；空标题回落类型 i18n）；
+ * 所有分区都显示；条目仅含有 bullet 的（可拖拽排序）；basicFields/skillGroups 为只读导航叶节点。
  */
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, PanelLeftClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
+import { buildOutlineTree, outlineFieldLabel, outlineSkillLabel } from './outline-model.js';
 
 interface TreeProps {
   doc: ResumeDoc;
@@ -27,14 +29,7 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
   const toggleSection = useMockup((s) => s.toggleSection);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  // 更严过滤（m1.6 反馈拍板）：entry 有 bullets 才进大纲（org 空壳不显示）；
-  // section 在过滤后 entries/basicFields/skills 全空时不渲染；全空显示空态。
-  const visibleSections = doc.sections
-    .map((sec) => ({ sec, entries: sec.entries.filter((e) => e.bullets.length > 0) }))
-    .filter(
-      ({ sec, entries }) =>
-        entries.length > 0 || (sec.basicFields?.length ?? 0) > 0 || (sec.skills?.length ?? 0) > 0,
-    );
+  const sections = buildOutlineTree(doc);
 
   const scrollTo = (blockId: string) => {
     const el = document.querySelector(`[data-block-id="${blockId}"]`);
@@ -46,64 +41,105 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
   return (
     <div className="outline-body">
       <button className="m-btn" onClick={toggleLeft} style={{ margin: '0 4px 10px', padding: '4px 10px' }} aria-label={t('editor.hideOutline')}>
-        <PanelLeftCloseInline />{t('editor.collapse')}
+        <PanelLeftClose size={14} />{t('editor.collapse')}
       </button>
       <h2 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: 'var(--ade-muted)', margin: '2px 4px 8px' }}>{t('editor.outline')}</h2>
-      {visibleSections.length === 0 ? (
+      {sections.length === 0 ? (
         <p className="tpl-note" style={{ color: 'var(--ade-muted)' }}>{t('editor.outlineEmpty')}</p>
       ) : (
-        visibleSections.map(({ sec, entries }) => {
-          const name = t(SECTION_TYPE_KEY[sec.type] ?? 'paper.basic');
-          const collapsed = collapsedSections.includes(sec.id);
+        sections.map((item) => {
+          const { section, entries, fields, skills, hasChildren } = item;
+          const name = item.title ?? t(SECTION_TYPE_KEY[section.type] ?? 'paper.basic');
+          const collapsed = collapsedSections.includes(section.id);
           return (
-            <div key={sec.id}>
+            <div key={section.id}>
               <div className="tree-item section-row">
-                {entries.length > 0 ? (
+                {hasChildren ? (
                   <button
                     type="button"
                     className="tree-toggle"
                     aria-expanded={!collapsed}
                     aria-label={t(collapsed ? 'editor.expandSection' : 'editor.collapseSection', { name })}
-                    onClick={() => toggleSection(sec.id)}
+                    onClick={() => toggleSection(section.id)}
                   >
                     {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                   </button>
                 ) : (
                   <span className="tree-toggle-spacer" aria-hidden="true" />
                 )}
-                <button type="button" className="tree-label" onClick={() => scrollTo(sec.id)}>{name}</button>
+                <button type="button" className="tree-label" onClick={() => scrollTo(section.id)}>{name}</button>
               </div>
               {!collapsed && (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={(e) => {
-                    const { active, over } = e;
-                    if (!over || active.id === over.id) return;
-                    // 过滤后的展示序 ≠ 原数组序：按 entry id 回定位原索引（防拖拽错位）
-                    const from = sec.entries.findIndex((en) => en.id === active.id);
-                    const to = sec.entries.findIndex((en) => en.id === over.id);
-                    if (from === -1 || to === -1) return;
-                    onReorderEntry(sec.id, from, to);
-                  }}
-                >
-                  <SortableContext items={entries.map((en) => en.id)} strategy={verticalListSortingStrategy}>
-                    {entries.map((entry) => (
-                      <SortableEntry
-                        key={entry.id}
-                        id={entry.id}
-                        label={`${entry.org || t('editor.untitledEntry')}${entry.role ? ' · ' + entry.role : ''}`}
-                        onClick={() => scrollTo(entry.id)}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
+                <>
+                  {fields.map((field) => (
+                    <OutlineLeaf
+                      key={field.id}
+                      label={outlineFieldLabel(field)}
+                      onClick={() => scrollTo(field.id)}
+                    />
+                  ))}
+                  {skills.map((group) => (
+                    <OutlineLeaf
+                      key={group.id}
+                      label={outlineSkillLabel(group)}
+                      onClick={() => scrollTo(group.id)}
+                    />
+                  ))}
+                  {entries.length > 0 && (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(e) => {
+                        const { active, over } = e;
+                        if (!over || active.id === over.id) return;
+                        // 过滤后的展示序 ≠ 原数组序：按 entry id 回定位原索引（防拖拽错位）
+                        const from = section.entries.findIndex((en) => en.id === active.id);
+                        const to = section.entries.findIndex((en) => en.id === over.id);
+                        if (from === -1 || to === -1) return;
+                        onReorderEntry(section.id, from, to);
+                      }}
+                    >
+                      <SortableContext items={entries.map((en) => en.id)} strategy={verticalListSortingStrategy}>
+                        {entries.map((entry) => (
+                          <SortableEntry
+                            key={entry.id}
+                            id={entry.id}
+                            label={`${entry.org || t('editor.untitledEntry')}${entry.role ? ' · ' + entry.role : ''}`}
+                            onClick={() => scrollTo(entry.id)}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                </>
               )}
             </div>
           );
         })
       )}
       <p className="tpl-note">{t('editor.tplNote')}</p>
+    </div>
+  );
+}
+
+/** 只读导航叶节点（基本信息字段/技能组）：不可拖拽，点击纸面定位 */
+function OutlineLeaf({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <div className="tree-item sub leaf" onClick={onClick}>
+      <span className="tree-dot" aria-hidden="true" />
+      <span
+        className="tree-leaf-label"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+      >
+        {label}
+      </span>
     </div>
   );
 }
@@ -126,10 +162,4 @@ function SortableEntry({ id, label, onClick }: { id: string; label: string; onCl
       <span role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onClick()}>{label}</span>
     </div>
   );
-}
-
-/** PanelLeftClose 内联（避免与 EditorMockup 的 import 重复声明冲突而集中导入） */
-import { PanelLeftClose } from 'lucide-react';
-function PanelLeftCloseInline() {
-  return <PanelLeftClose size={14} />;
 }

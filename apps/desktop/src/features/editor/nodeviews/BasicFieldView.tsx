@@ -8,7 +8,11 @@ export function BasicFieldView({ node }: NodeViewProps) {
   const value = <NodeViewContent className="fl-field-value" />;
 
   return (
-    <NodeViewWrapper className="fl-basic-field" data-type="fl-basic-field">
+    <NodeViewWrapper
+      className="fl-basic-field"
+      data-type="fl-basic-field"
+      data-block-id={typeof node.attrs.id === 'string' ? node.attrs.id : undefined}
+    >
       {label && <span className="fl-field-label">{label}</span>}
       {href ? <a href={href} onClick={(e) => e.preventDefault()}>{value}</a> : value}
     </NodeViewWrapper>

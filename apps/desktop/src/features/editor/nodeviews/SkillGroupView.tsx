@@ -4,7 +4,11 @@ import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/re
 export function SkillGroupView({ node }: NodeViewProps) {
   const name = String(node.attrs.name ?? '');
   return (
-    <NodeViewWrapper className="fl-skill-group" data-type="fl-skill-group">
+    <NodeViewWrapper
+      className="fl-skill-group"
+      data-type="fl-skill-group"
+      data-block-id={typeof node.attrs.id === 'string' ? node.attrs.id : undefined}
+    >
       {name && <b className="fl-skill-name">{name}</b>}
       <NodeViewContent className="fl-skill-items" />
     </NodeViewWrapper>
