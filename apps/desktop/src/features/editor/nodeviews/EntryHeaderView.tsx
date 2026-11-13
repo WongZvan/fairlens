@@ -53,11 +53,11 @@ export function EntryHeaderView({ node, updateAttributes }: NodeViewProps) {
           fields={[
             { key: 'org', label: t('editor.org'), value: org, required: true },
             { key: 'role', label: t('editor.role'), value: role },
-            { key: 'date', label: t('editor.dateRange'), value: date, placeholder: '2022.09 – 2026.06' },
+            { key: 'date', label: t('editor.dateRange'), value: date, placeholder: t('editor.dateRangePlaceholder') },
           ]}
           onSave={(values) => {
-            const parsed = parseDateRange(values.date ?? '');
-            if (!parsed) return t('editor.dateInvalid');
+            // #122：日期为自由文本，解析器不再返回 null（空串=不显示日期）
+            const parsed = parseDateRange(values.date ?? '') ?? { ongoing: false };
             updateAttributes({
               org: (values.org ?? '').trim(),
               role: (values.role ?? '').trim() || null,

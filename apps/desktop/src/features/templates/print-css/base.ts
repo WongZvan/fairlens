@@ -106,6 +106,16 @@ article[data-type="fl-entry"] > li[data-type="fl-bullet"]::before {
   background: #1c1d1b;
 }
 
+/* 要点层级缩进（#123）：属内容排版，导出必须保留；每级 4mm，与页边距 mm 体系一致 */
+article[data-type="fl-entry"] > li[data-type="fl-bullet"][data-depth="1"] { margin-left: 4mm; }
+article[data-type="fl-entry"] > li[data-type="fl-bullet"][data-depth="2"] { margin-left: 8mm; }
+/* 子要点 marker 缩小，避免与父级视觉同权 */
+article[data-type="fl-entry"] > li[data-type="fl-bullet"][data-depth="1"]::before,
+article[data-type="fl-entry"] > li[data-type="fl-bullet"][data-depth="2"]::before {
+  width: 1.1mm;
+  height: 1.1mm;
+}
+
 /* 基本信息字段 / 技能组（#117）：值原生编辑；label/组名保留数据但预览不显示 */
 .fl-basic-field { margin: 1mm 0; color: #33322f; font-size: 12pt; }
 .fl-field-label { display: none; }

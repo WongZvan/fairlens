@@ -8,6 +8,7 @@ import { useMockup } from '../../stores/mockup.js';
 import { useEditorDoc } from '../../stores/editor-doc.js';
 import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
 import { SnapshotDialog } from './SnapshotDialog.js';
+import { SectionDialog } from '../editor/nodeviews/SectionDialog.js';
 import { toast } from '../../app/Toast.js';
 import { resolveShortcut } from '../editor/shortcuts.js';
 import { commandRegistry } from '../editor/command-registry.js';
@@ -61,6 +62,24 @@ export function EditorMockup() {
         id: 'file.snapshot-restore', title: '回滚到快照…', keywords: ['快照', '回滚', '版本'],
         run: () => setSnapOpen(true),
       }),
+      commandRegistry.register({
+        id: 'structure.add-section', title: '新增分区…', keywords: ['分区', '标题', '经历', '自我评价', '证书'],
+        run: () => setSectionDialogOpen(true),
+      }),
+      commandRegistry.register({
+        id: 'structure.delete-section', title: '删除当前分区', keywords: ['分区', '删除'],
+        run: () => {
+          const editor = editorApiRef.current?.getEditor();
+          if (!editor) return;
+          if (!editor.can().deleteSection()) {
+            toast(t('editor.sectionDeleteLast'));
+            return;
+          }
+          const name = currentSectionName();
+          if (name && !window.confirm(t('editor.sectionDeleteConfirm', { name }))) return;
+          editor.chain().focus().deleteSection().run();
+        },
+      }),
 
 
 
@@ -84,6 +103,21 @@ export function EditorMockup() {
   }, []);
   const editorApiRef = useRef<EditorApi | null>(null);
   const [snapOpen, setSnapOpen] = useState(false);
+  // #121：新增分区对话框
+  const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
+  /** 光标所在分区的显示名（删除确认用；无光标分区时回退空） */
+  const currentSectionName = (): string => {
+    const editor = editorApiRef.current?.getEditor();
+    if (!editor) return '';
+    const { $from } = editor.state.selection;
+    for (let d = $from.depth; d > 0; d -= 1) {
+      const node = $from.node(d);
+      if (node.type.name !== 'flSection') continue;
+      const header = node.firstChild;
+      return header?.textContent?.trim() || String(node.attrs.title ?? '');
+    }
+    return '';
+  };
   const canvasDoc = useEditorDoc((s) => s.doc);
   const applyDoc = useEditorDoc((s) => s.applyDoc);
   const loadError = useEditorDoc((s) => s.lastError);
@@ -246,6 +280,14 @@ export function EditorMockup() {
       )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <SnapshotDialog open={snapOpen} onClose={() => setSnapOpen(false)} />
+      {sectionDialogOpen && (
+        <SectionDialog
+          onSave={(draft) => {
+            editorApiRef.current?.getEditor()?.chain().focus().insertSection(draft).run();
+          }}
+          onClose={() => setSectionDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

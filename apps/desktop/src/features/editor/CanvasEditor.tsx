@@ -12,6 +12,7 @@ import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
+import type { Editor } from '@tiptap/core';
 import { FloatingToolbar } from './FloatingToolbar.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,6 +55,8 @@ export interface EditorApi {
   duplicateActiveBullet: () => boolean;
   /** 派发空事务：让依赖事务的 UI（悬浮工具条 shouldShow/定位）重新求值 */
   refresh: () => void;
+  /** 底层 editor 实例（命令面板里的结构命令需要 can()/chain()；勿用它做绕过 schema 的写入） */
+  getEditor: () => Editor | null;
 }
 
 export interface CanvasEditorProps {
@@ -94,10 +97,10 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     if (plan.ignoredImageCount > 0) {
       toast(tRef.current('editor.paste.imagesIgnored', { count: plan.ignoredImageCount }));
     }
-    if (plan.mode !== 'html') {
-      if (plan.wasLargePaste) toast(tRef.current('editor.paste.large'));
-      return;
-    }
+    // 长文提示与插入区间无关：块级粘贴区间算不出时也必须提示（2026-11-13 反馈修复：
+    // 原实现把它放在区间判空之后，html 粘贴被一起吞掉）
+    if (plan.wasLargePaste) toast(tRef.current('editor.paste.large'));
+    if (plan.mode !== 'html') return;
     if (insertion.to <= insertion.from) return;
     const coords = view.coordsAtPos(insertion.from);
     pasteSessionRef.current = { from: insertion.from, to: insertion.to, plainText: plan.plainText };
@@ -214,6 +217,7 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
         return false;
       },
       refresh: () => editor.view.dispatch(editor.state.tr),
+      getEditor: () => editor,
     });
   }, [editor, onReady, showPasteResult]);
 
@@ -226,12 +230,20 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     }
     try {
       const { schema } = editor.state;
-      const nodes: PMNode[] = [];
+      const inline: PMNode[] = [];
       session.plainText.split('\n').forEach((line, i) => {
-        if (i > 0) nodes.push(schema.nodes.hardBreak!.create());
-        if (line.length > 0) nodes.push(schema.text(line));
+        if (i > 0) inline.push(schema.nodes.hardBreak!.create());
+        if (line.length > 0) inline.push(schema.text(line));
       });
-      const tr = editor.state.tr.replaceWith(session.from, session.to, nodes);
+      // 粘贴可能是多块（已转成多条 bullet）：此时区间跨块，必须用整条 bullet 承载纯文本，
+      // 否则把 inline 节点塞进 doc 层会 fitting 失败。同一要点内则保持内联替换。
+      const $from = editor.state.doc.resolve(session.from);
+      const $to = editor.state.doc.resolve(session.to);
+      const sameTextblock = $from.parent === $to.parent && $from.parent.isTextblock;
+      const replacement: PMNode | PMNode[] = sameTextblock
+        ? inline
+        : schema.nodes.flBullet!.create({ id: nanoid() }, inline);
+      const tr = editor.state.tr.replaceWith(session.from, session.to, replacement);
       tr.setStoredMarks([]); // 纯文本不得继承当前加粗/斜体/链接 mark
       editor.view.dispatch(tr);
       editor.commands.focus();
@@ -278,8 +290,21 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
     if (readOnly || !editor || editor.isDestroyed) return;
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey) return;
     const target = e.target as HTMLElement;
+    // 「点文字」白名单：所有承载可编辑内容/可点击元素的容器都算文字。
+    // 2026-11-13 修复：原清单只列 bullet/条目头/分区标题，漏了页头、基本信息字段、技能组
+    // 以及任何裸段落（粘贴产生）——点它们会被当成空白，于是在别处插新要点。
     const onText = !!target.closest(
-      'li[data-type="fl-bullet"], header[data-type="fl-entry-header"], h3[data-type="fl-section-header"], header[data-type="fl-section-header"], a',
+      [
+        'li[data-type="fl-bullet"]',
+        '[data-type="fl-entry-header"]',
+        '[data-type="fl-section-header"]',
+        '[data-type="fl-page-header"]',
+        '[data-type="fl-basic-field"]',
+        '[data-type="fl-skill-group"]',
+        '[data-type="fl-photo-slot"]',
+        'p',
+        'a',
+      ].join(', '),
     );
     const entryEl = target.closest('article[data-type="fl-entry"]') as HTMLElement | null;
     const sectionEl = target.closest('section[data-type="fl-section"]') as HTMLElement | null;

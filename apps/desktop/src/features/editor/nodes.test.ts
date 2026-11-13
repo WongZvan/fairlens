@@ -126,6 +126,71 @@ describe('ResumeDoc ↔ ProseMirror 往返（#117 预览纸面结构）', () => 
     expect(() => ResumeDoc.parse(pmToResumeDoc(resumeDocToPm(sampleDoc())))).not.toThrow();
   });
 
+  // #122：页头附加字段往返
+  it('#122 profile.fields 往返无损（含 href）', () => {
+    const base = sampleDoc('tpl-classic');
+    const doc = ResumeDoc.parse({
+      ...base,
+      profile: {
+        ...base.profile,
+        fields: [
+          { id: nid(), label: '籍贯', value: '湖北武汉' },
+          { id: nid(), label: '个人网站', value: 'lisiyuan.dev', href: 'https://lisiyuan.dev' },
+        ],
+      },
+    });
+    const back = pmToResumeDoc(resumeDocToPm(doc), { templateId: doc.templateId });
+    expect(back.profile?.fields).toEqual(doc.profile!.fields);
+  });
+
+  it('#122 空 label 的页头字段被丢弃（契约 label min(1)）', () => {
+    const base = sampleDoc('tpl-classic');
+    const pm = resumeDocToPm(base);
+    pm.content![0]!.attrs = { ...pm.content![0]!.attrs, fields: [{ id: nid(), label: '  ', value: 'x' }] };
+    const back = pmToResumeDoc(pm, { templateId: base.templateId });
+    expect(back.profile?.fields).toBeUndefined();
+  });
+
+  // #121：自定义分区往返
+  it('#121 自定义 type 分区往返（含标题与条目）', () => {
+    const doc = ResumeDoc.parse({
+      templateId: 'tpl-classic',
+      sections: [
+        { id: nid(), type: 'basic', title: '基本信息', entries: [] },
+        {
+          id: nid(),
+          type: 'self-eval',
+          title: '自我评价',
+          entries: [{ id: nid(), org: '自我', bullets: [{ id: nid(), runs: [{ text: '认真' }] }] }],
+        },
+      ],
+    });
+    const back = pmToResumeDoc(resumeDocToPm(doc), { templateId: doc.templateId });
+    expect(back.sections.map((s) => s.type)).toEqual(['basic', 'self-eval']);
+    expect(back.sections[1]!.title).toBe('自我评价');
+    expect(back.sections[1]!.entries[0]!.bullets[0]!.runs[0]!.text).toBe('认真');
+  });
+
+  // #122：自由文本日期往返
+  it('#122 自由文本日期往返（"大三" / "2022年9月"）', () => {
+    const doc = ResumeDoc.parse({
+      templateId: 'tpl-classic',
+      sections: [
+        { id: nid(), type: 'basic', title: '基本信息', entries: [] },
+        {
+          id: nid(),
+          type: 'education',
+          title: '教育经历',
+          entries: [{ id: nid(), org: '华科', start: '大三', end: '大四', bullets: [{ id: nid(), runs: [{ text: 'x' }] }] }],
+        },
+      ],
+    });
+    const back = pmToResumeDoc(resumeDocToPm(doc), { templateId: doc.templateId });
+    const e = back.sections[1]!.entries[0]!;
+    expect(e.start).toBe('大三');
+    expect(e.end).toBe('大四');
+  });
+
   it('section 标题编辑持久化（header 文本优先于 attrs.title）', () => {
     const doc = sampleDoc('tpl-classic');
     const pm = resumeDocToPm(doc);
@@ -168,6 +233,55 @@ describe('ResumeDoc ↔ ProseMirror 往返（#117 预览纸面结构）', () => 
     expect(expEntry.bullets).toHaveLength(0);
     expect(expEntry.org).toBe('字节跳动');
     expect(() => ResumeDoc.parse(back)).not.toThrow();
+  });
+
+  // #123：要点层级缩进往返
+  it('#123 bullet.depth 往返保真（1/2 落库，0 缺省不写）', () => {
+    const base = sampleDoc('tpl-classic');
+    const bulletId = base.sections.find((s) => s.type === 'experience')!.entries[0]!.bullets[0]!.id;
+    const doc = ResumeDoc.parse({
+      ...base,
+      sections: base.sections.map((s) =>
+        s.type === 'experience'
+          ? {
+              ...s,
+              entries: s.entries.map((e) => ({
+                ...e,
+                bullets: e.bullets.map((b) => (b.id === bulletId ? { ...b, depth: 2 } : b)),
+              })),
+            }
+          : s,
+      ),
+    });
+    const pm = resumeDocToPm(doc);
+    const bullet = (findEntry(pm as PMLike, 'experience').content ?? []).find((n) => n.type === 'flBullet')!;
+    expect(bullet.attrs?.depth).toBe(2);
+
+    const back = pmToResumeDoc(pm, { templateId: doc.templateId });
+    const out = back.sections.find((s) => s.type === 'experience')!.entries[0]!.bullets.find((b) => b.id === bulletId)!;
+    expect(out.depth).toBe(2);
+  });
+
+  it('#123 depth=0 不写进 ResumeDoc（旧文档字节等价）', () => {
+    const base = sampleDoc('tpl-classic');
+    const bulletId = base.sections.find((s) => s.type === 'experience')!.entries[0]!.bullets[0]!.id;
+    const doc = ResumeDoc.parse({
+      ...base,
+      sections: base.sections.map((s) =>
+        s.type === 'experience'
+          ? {
+              ...s,
+              entries: s.entries.map((e) => ({
+                ...e,
+                bullets: e.bullets.map((b) => (b.id === bulletId ? { ...b, depth: 0 } : b)),
+              })),
+            }
+          : s,
+      ),
+    });
+    const back = pmToResumeDoc(resumeDocToPm(doc), { templateId: doc.templateId });
+    const out = back.sections.find((s) => s.type === 'experience')!.entries[0]!.bullets.find((b) => b.id === bulletId)!;
+    expect('depth' in out).toBe(false);
   });
 
   it('三种 mark 保真：bold/italic/link(href) 位置与值不漂移', () => {

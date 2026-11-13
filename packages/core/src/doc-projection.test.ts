@@ -249,6 +249,29 @@ describe('渲染文本', () => {
     expect(estimateProjection(tree)).toBe(estimateTokens(renderProjection(tree)));
     expect(estimateProjection(tree)).toBeGreaterThan(0);
   });
+
+  // #123：层级缩进进投影
+  it('#123 要点 depth 进投影树，渲染每级加两个空格', () => {
+    const d = doc();
+    d.sections[1]!.entries[0]!.bullets[0]!.depth = 1;
+    d.sections[1]!.entries[0]!.bullets[1]!.depth = 2;
+    const tree = projectDoc(d);
+    const lines = tree.sections[1]!.entries[0]!.lines;
+    expect(lines[0]!.depth).toBe(1);
+    expect(lines[1]!.depth).toBe(2);
+
+    const text = renderProjection(tree);
+    expect(text).toContain('    - **将接口 P99 从 340ms 降至 90ms**（命中率 +18%）  [Bul001000001]');
+    expect(text).toContain('      - 主导[缓存重构](https://github.com/x/y)，覆盖 12 个服务  [Bul002000001]');
+  });
+
+  it('#123 depth=0 不写进投影（保持旧输出字节等价）', () => {
+    const d = doc();
+    d.sections[1]!.entries[0]!.bullets[0]!.depth = 0;
+    const line = projectDoc(d).sections[1]!.entries[0]!.lines[0]!;
+    expect('depth' in line).toBe(false);
+    expect(renderProjection(projectDoc(d))).toContain('  - **将接口 P99');
+  });
 });
 
 describe('作用域切片（按模块读的唯一入口）', () => {

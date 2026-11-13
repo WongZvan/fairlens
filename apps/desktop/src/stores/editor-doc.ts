@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createAutosave, parseSettingValue, type AutosaveController, type SaveStatus } from '@fairlens/core';
+import { createAutosave, parseSettingValue, sameDoc, type AutosaveController, type SaveStatus } from '@fairlens/core';
 import type { ResumeDoc, ResumeRow, SnapshotRow } from '@fairlens/shared';
 import { persistence } from '../lib/persistence/index.js';
 import { nanoid } from '../lib/nanoid.js';
@@ -9,6 +9,10 @@ import { sampleDoc } from '../features/editor-mockup/sample-data.js';
  * 编辑器文档状态（m1.6）：当前简历 + 自动保存防抖状态机 + 快照。
  * §5.7 双模式：autosave=true → applyDoc 防抖落盘；false → 仅标 dirty，Ctrl+S（saveNow）落盘。
  * 当前简历选择=m1.6 简化（最近编辑优先，空库建示例）；m1.8 简历库首页接管。
+ *
+ * 2026-11-13 修复（用户报障）：手动模式的 dirty 原为「发生过编辑」的闩锁——新建要点再删掉、
+ * 文档回到打开时原样，关窗仍弹三键框。现改为与 `savedDoc`（最近一次成功落盘的文档）
+ * 做内容比较：内容相同即 dirty=false。`savedDoc` 在打开/成功落盘/回滚三处更新。
  */
 const AUTOSAVE_DELAY_MS = 800;
 
@@ -19,6 +23,8 @@ interface EditorDocState {
   ready: boolean;
   resumeId: string | null;
   doc: ResumeDoc | null;
+  /** 最近一次成功落盘的文档（dirty 判定的基线；不参与渲染） */
+  savedDoc: ResumeDoc | null;
   autosave: boolean;
   saveStatus: SaveStatus;
   dirty: boolean;
@@ -31,7 +37,7 @@ interface EditorDocState {
   saveNow(): Promise<void>;
   /** 关闭/返回库前的 flush（自动模式落盘挂起变更；手动模式无挂起则 no-op） */
   flushPending(): Promise<void>;
-  /** 关闭弹窗「不保存」：丢弃挂起变更 */
+  /** 关闭弹窗「不保存」：丢弃挂起变更并把文档复位到最后保存版本 */
   discardPendingChanges(): void;
   createSnapshot(label?: string): Promise<void>;
   listSnapshots(): Promise<SnapshotRow[]>;
@@ -47,12 +53,15 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     const updated: ResumeRow = { ...currentRow, doc, updatedAt: new Date().toISOString() };
     currentRow = updated;
     await persistence().upsertResume(updated);
+    // 基线只在**成功**落盘后推进：写库失败时 savedDoc 保持旧值，dirty 仍为真（不谎报已保存）
+    set({ savedDoc: doc });
   };
 
   return {
     ready: false,
     resumeId: null,
     doc: null,
+    savedDoc: null,
     autosave: true,
     saveStatus: 'idle',
     dirty: false,
@@ -88,7 +97,16 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
         onStatus: (s) => set({ saveStatus: s, dirty: s === 'pending' || s === 'saving' || s === 'error' }),
         onError: (err) => set({ lastError: String(err) }),
       });
-      set({ ready: true, resumeId: row.id, doc: row.doc, autosave, saveStatus: 'saved', dirty: false, lastError: loadError });
+      set({
+        ready: true,
+        resumeId: row.id,
+        doc: row.doc,
+        savedDoc: row.doc,
+        autosave,
+        saveStatus: 'saved',
+        dirty: false,
+        lastError: loadError,
+      });
     },
 
     applyDoc(doc) {
@@ -97,7 +115,8 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       if (get().autosave) {
         controller?.schedule(doc);
       } else {
-        set({ dirty: true }); // 手动模式：仅标 dirty（§5.7 Word 式）
+        // 手动模式：与基线比较，而不是"编辑过就脏"（修复：新建要点再删掉仍弹三键框）
+        set({ dirty: !sameDoc(get().savedDoc, doc) });
       }
     },
 
@@ -106,7 +125,8 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       if (!doc || !currentRow) return;
       controller?.schedule(doc); // 两模式统一走控制器（自动模式顺带取消挂起防抖合并写入）
       await controller?.flush();
-      set({ dirty: controller?.dirty() ?? false });
+      // 手动模式用基线比较兜底：保存失败时 controller.dirty() 已为真，不会误清
+      set({ dirty: get().autosave ? (controller?.dirty() ?? false) : !sameDoc(get().savedDoc, get().doc) });
     },
 
     async flushPending() {
@@ -118,7 +138,9 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
 
     discardPendingChanges() {
       controller?.discardPending();
-      set({ dirty: false });
+      // 丢弃 = 回到最后保存版本（原实现只清标记，视图里仍留着未保存内容——用户会以为已丢弃）
+      const saved = get().savedDoc;
+      set(saved ? { doc: saved, dirty: false } : { dirty: false });
     },
 
     async createSnapshot(label) {

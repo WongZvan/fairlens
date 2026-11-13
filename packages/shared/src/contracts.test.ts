@@ -99,8 +99,51 @@ describe('ResumeDoc 契约', () => {
     expect(Entry.safeParse({ id, org: 'A', start: '2025.06', ongoing: true, bullets: [] }).success).toBe(true);
   });
 
-  it('非法：日期格式非 YYYY.MM 被拒', () => {
-    expect(Entry.safeParse({ id, org: 'A', start: '2025-06', bullets: [] }).success).toBe(false);
+  it('#122 日期自由文本：年/年月日/中文/口语都接受', () => {
+    for (const start of ['2025', '2025.06', '2025.06.15', '2025年6月', '大三', '2025-06']) {
+      expect(Entry.safeParse({ id, org: 'A', start, bullets: [] }).success).toBe(true);
+    }
+  });
+
+  it('#122 只有两端都可比较（YYYY.MM）时才校验先后', () => {
+    // 两端 YYYY.MM：倒序拒
+    expect(Entry.safeParse({ id, org: 'A', start: '2025.09', end: '2025.06', bullets: [] }).success).toBe(false);
+    // 自由文本：不做序关系断言
+    expect(Entry.safeParse({ id, org: 'A', start: '大三', end: '大四', bullets: [] }).success).toBe(true);
+    expect(Entry.safeParse({ id, org: 'A', start: '2025年6月', end: '2024年6月', bullets: [] }).success).toBe(true);
+  });
+
+  it('#121 分区类型自由字符串；未知 type 通过', () => {
+    const withCustom = {
+      ...doc(),
+      sections: [
+        ...doc().sections,
+        { id, type: 'self-eval', title: '自我评价', entries: [] },
+      ],
+    };
+    expect(ResumeDoc.safeParse(withCustom).success).toBe(true);
+    expect(ResumeDoc.safeParse({ ...doc(), sections: [{ id, type: '', title: 'x', entries: [] }] }).success).toBe(false);
+  });
+
+  it('#122 页头附加字段（复用 BasicField）往返', () => {
+    const p = {
+      name: '李思远',
+      fields: [{ id, label: '籍贯', value: '湖北武汉' }, { id, label: '个人网站', value: 'lisiyuan.dev', href: 'https://lisiyuan.dev' }],
+    };
+    expect(ResumeDoc.safeParse({ ...doc(), profile: p }).success).toBe(true);
+  });
+
+  it('#123 要点 depth 仅接受 0/1/2；缺省通过', () => {
+    const withDepth = (depth: unknown) => ({
+      ...doc(),
+      sections: [
+        { id, type: 'experience', title: 'x', entries: [{ id, org: 'A', bullets: [{ id, runs: [{ text: 't' }], depth }] }] },
+      ],
+    });
+    expect(ResumeDoc.safeParse(withDepth(undefined)).success).toBe(true);
+    expect(ResumeDoc.safeParse(withDepth(0)).success).toBe(true);
+    expect(ResumeDoc.safeParse(withDepth(2)).success).toBe(true);
+    expect(ResumeDoc.safeParse(withDepth(3)).success).toBe(false);
   });
 
   it('ResumeRecord 默认 verticalId=general / status=active', () => {

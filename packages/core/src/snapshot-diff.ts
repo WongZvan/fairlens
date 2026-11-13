@@ -82,7 +82,8 @@ function collect(doc: ResumeDoc): Map<string, Node> {
           kind: 'bullet',
           sectionId: sec.id,
           label: runsText(b),
-          payload: b.runs,
+          // depth 纳入 payload（#123）：只改缩进也必须算 changed，否则快照漏报
+          payload: { runs: b.runs, depth: b.depth ?? 0 },
         });
       }
     }

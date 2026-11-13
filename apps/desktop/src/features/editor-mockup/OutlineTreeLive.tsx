@@ -10,7 +10,7 @@ import { ChevronDown, ChevronRight, GripVertical, PanelLeftClose } from 'lucide-
 import { useTranslation } from 'react-i18next';
 import type { ResumeDoc } from '@fairlens/shared';
 import { useMockup } from '../../stores/mockup.js';
-import { buildOutlineTree, outlineFieldLabel, outlineSkillLabel } from './outline-model.js';
+import { buildOutlineTree, outlineFieldLabel, outlineSectionLabel, outlineSkillLabel } from './outline-model.js';
 
 interface TreeProps {
   doc: ResumeDoc;
@@ -49,7 +49,7 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
       ) : (
         sections.map((item) => {
           const { section, entries, fields, skills, hasChildren } = item;
-          const name = item.title ?? t(SECTION_TYPE_KEY[section.type] ?? 'paper.basic');
+          const name = outlineSectionLabel(section, t, SECTION_TYPE_KEY);
           const collapsed = collapsedSections.includes(section.id);
           return (
             <div key={section.id}>

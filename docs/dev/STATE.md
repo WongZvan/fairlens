@@ -6,11 +6,11 @@
 
 | 项 | 状态 |
 |---|---|
-| 里程碑 | M1 进行中（6/8，m1.1 待过目）：**m1.1–m1.6 已收口**（m1.4 尾项 2026-11-04 补齐；m1.6=deb5d6a）；**2026-11-05 预览纸面结构/字体/雷达/大纲修复（#116/#117/#118）**；**2026-11-13 人工验收手册 + AI 读取契约（#119）**；下一 m1.7 暂缓；M0 已收口（tag v0.1.0-m0） |
+| 里程碑 | M1 进行中（6/8，m1.1 待过目）：**m1.1–m1.6 已收口**（m1.4 尾项 2026-11-04 补齐；m1.6=deb5d6a）；**2026-11-05 预览纸面结构/字体/雷达/大纲修复（#116/#117/#118）**；**2026-11-13 人工验收手册 + AI 读取契约（#119）+ 反馈六项（#120–#123：三 bug 修复 / 分区类型自由化 / 页头字段与日期放宽 / 要点层级缩进）**；下一 m1.7 暂缓；M0 已收口（tag v0.1.0-m0） |
 | 当前模块 | 预览纸面结构/反馈修复已落地；验收手册见 `acceptance/M1.md`；下一 **m1.7 导入管线**（用户指示暂缓；LLM 接入点留 m3.5）；m1.1 打样待用户最终过目 |
-| 当前分支 | dev=eea7566（2026-11-05 文档全量同步 + 预览纸面/大纲完整树基线；已推送 origin）；feat/m1-preview-parity、fix/m1.5-empty-header、fix/m1.5-outline-tree、docs/2026-11-05-sync、fix/docs-integrity 已删；main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。m1.6 squash 事实：内容在 09ecebf（squash）+ 8353bcd（归因更正）/ deb5d6a（反馈轮四项）两次修订，feat/m1.6 已删；其后 #107–#114 反馈修复均直推 dev |
-| 已落地 | 编辑器核心全通：真 Tiptap 画布/3 套模板（切换真实生效）/Ctrl+K 面板/快捷键全集/悬浮工具条(悬停门控)/右键菜单/侧栏拖拽调宽/缩放三态/激活门/**m1.6 持久层**（packages/core 首落/SQLite 迁移/自动保存防抖+失焦保存/关闭保护双模式/快照四态 diff+双栏对比+回滚/settings 六键预留）+ **tauri 启动入口**（`pnpm tauri:dev`）与**窗口操作权限修复**（三键/任务栏关闭可用）+ **m1.4 尾项**（粘贴气泡/仅文本 Ctrl+Shift+V/大段提示/图片 toast/链接白名单/maxEntries gating/IME 守卫）+ **预览纸面结构**（ResumeDoc.profile/页头/basicFields/skills/照片槽占位/条目三段行/duo 双栏/Plex Sans SC/A4 等比 printCSS）+ **大纲完整树**（标题跟随画布 section.title/全部分区/字段与技能组叶节点）——实录见 `modules/m1/` 八文件；**#106–#114 反馈修复见文末流程增补** |
-| 未落地 | m1.7–m1.8（m1.7 暂缓）；**Ctrl+F 内联查找**（m1.5 面板入口/吞键占位已就绪）；**m1.4 背景层 #86**（定案延后 m2.3）；packages/core 后续（**diff-apply** 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5）。**AI 读取层已就位**（#119：`packages/core/doc-projection.ts` 投影/编解码/token 估算/作用域切片）——M3/M4 直接消费，勿重造 |
+| 当前分支 | dev=eea7566（2026-11-05 文档全量同步 + 预览纸面/大纲完整树基线；已推送 origin）；feat/m1-preview-parity、fix/m1.5-empty-header、fix/m1.5-outline-tree、docs/2026-11-05-sync、fix/docs-integrity、fix/m1-feedback-0613 已删；main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。m1.6 squash 事实：内容在 09ecebf（squash）+ 8353bcd（归因更正）/ deb5d6a（反馈轮四项）两次修订，feat/m1.6 已删；其后 #107–#114 反馈修复均直推 dev |
+| 已落地 | 编辑器核心全通：真 Tiptap 画布/3 套模板（切换真实生效）/Ctrl+K 面板/快捷键全集/悬浮工具条(悬停门控)/右键菜单/侧栏拖拽调宽/缩放三态/激活门/**m1.6 持久层**（packages/core 首落/SQLite 迁移/自动保存防抖+失焦保存/关闭保护双模式/快照四态 diff+双栏对比+回滚/settings 六键预留）+ **tauri 启动入口**（`pnpm tauri:dev`）与**窗口操作权限修复**（三键/任务栏关闭可用）+ **m1.4 尾项**（粘贴气泡/仅文本 Ctrl+Shift+V/大段提示/图片 toast/链接白名单/maxEntries gating/IME 守卫）+ **预览纸面结构**（ResumeDoc.profile/页头/basicFields/skills/照片槽占位/条目三段行/duo 双栏/Plex Sans SC/A4 等比 printCSS）+ **大纲完整树**（标题跟随画布 section.title/全部分区/字段与技能组叶节点）+ **2026-11-13 反馈六项**（dirty 基线比较/粘贴块转要点/长文提示/分区自由化+增删命令/页头附加字段/日期自由文本/要点 Tab 缩进 0–2）——实录见 `modules/m1/` 八文件；**#106–#114 反馈修复见文末流程增补** |
+| 未落地 | m1.7–m1.8（m1.7 暂缓）；**Ctrl+F 内联查找**（m1.5 面板入口/吞键占位已就绪）；**m1.4 背景层 #86**（定案延后 m2.3）；packages/core 后续（**diff-apply** 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5）。**AI 读取层已就位**（#119：`packages/core/doc-projection.ts` 投影/编解码/token 估算/作用域切片）——M3/M4 直接消费，勿重造。**分区拖拽排序**未做（顺序=文档顺序，新增追加末尾）；**Word 生成器必须读 bullet.depth**（m5.1） |
 
 ## 环境实录（跨会话必知，细节见 notes/）
 
@@ -77,3 +77,11 @@
 - 2026-11-05 文档全量同步（审计）：修复 m1.1 重复段、m1.2/m1.3 空重复标题与计数/主题/栏宽、m1.4 雷达尺寸、m1.5 排版、m1.6 旧大纲规则注记；docs/01 附录 E 条数/#81 修订注记/§12.2 字体分区/§5.3 前缀/Ctrl+F 口径；README/STATE/导航表/02 手册同步。无代码改动，176 测试保持绿
 - 2026-11-13 核对状态层（命令 0，git 零漂移）；**发现并修复文档缺陷 4 类**（fix/docs-integrity）：①docs/01 §4.7 标题行误吞 ```ts 围栏 → 导致 §4.8 被吞进代码块（唯一事实源 P1）；②§1 编号重复（§1.6 出现两次）→ 非功能需求改 §1.8；③附录 E 条目错位与拼接（#90/#91 腰斩拼接、#94 错位在 #112–#113 之间、#97/#98 与 #100/#101 倒序）→ 仅调行序与拼接，文字编号未改；④m1.5 MD 引用不存在的 §5.10/§5.5 → 改 §5.6（反编造铁律的失效锚点）。同时 STATE dev 指针 3503f5a→eea7566、待人工验收 11 条按影响面重排为 10 条并清掉与「已自动确认」的重叠项、导航表 m1.1/m1.3/m1.5 补注实现提交 hash。**复核补充**：源码注释里同一批失效锚点（shortcuts/command-registry/EditorMockup/evaluation.ts）一并修掉——上次只修 MD 漏了 TS 注释
 - 2026-11-13 人工验收手册 + AI 读取契约（总账 #119，ADR `decisions/2026-11-13-ai-read-contract.md`）：①新增 `acceptance/M1.md`——11 条验收逐步写成「前提/步骤/判定/取证」四段，文案全部取自 zh-CN.ts（脚本校验 44 处 UI 串命中）；②`packages/core/doc-projection.ts` 新模块（投影/无损 Markdown 编解码/token 混合估算×1.2/作用域切片），39 新单测；③`formatDateRange` 上移 core（消除两份实现）；④不引模型侧工具调用、回写=blockId 作用域 patch、diff-apply 留 M3——理由全在 ADR；⑤传播：m3.3/m3.4/m4.3 模块 MD + 总账 + STATE + README 条数 + §14-M1 补测条目。全仓 215 测试绿
+- 2026-11-13 用户真机反馈六项（总账 #120–#123，ADR `decisions/2026-11-13-schema-relax.md`）：
+  - **#120 三个 bug**：①dirty 从「编辑过就脏」的闩锁改为与 `savedDoc` 基线比较（`packages/core/doc-equality.ts` 的 `sameDoc`，键序无关）——修「新建要点再删掉仍弹三键框」；`discardPendingChanges` 同时把文档复位；②粘贴的多块富文本逐块转 `flBullet` 并各生成 blockId——修「粘贴段落点不进去 + 重开丢失」（根因：`flEntry` 只收 bullet，外部 `<p>` 落 doc 根被 `pmToResumeDoc` 静默丢弃），同时修掉「粘贴节点无 blockId → 每次序列化重新生成」；③长文 toast 提前到区间判空之前——修「Ctrl+V 长文不弹提示」（区间推导改为粘贴前后 selection，兼容 ReplaceAroundStep）
+  - **#121 分区自由化**：`Section.type` 放开为自由字符串；`flSection` 增 `insertSection`/`deleteSection`/`addBasicField`；命令面板「新增分区…」+`SectionDialog`、「删除当前分区」（至少留一个）；大纲显示名 `outlineSectionLabel`（自定义 type 回落原文，不再错显「基本信息」）；自定义分区不限条数
+  - **#122 页头字段与日期**：`Profile.fields?: BasicField[]`（三项固定保留，模板/printCSS 依赖）+ `ProfileFieldsDialog`（动态增删改）；`BasicFieldView` 加编辑/新增/删除；`Entry.start/end` 改自由文本（'2022'/'大三'/'2022年9月' 均合法，仅两端都是 YYYY.MM 才校验先后），移除 `dateInvalid`
+  - **#123 层级缩进**：`Bullet.depth?: 0|1|2`（0 不落库）；Tab/Shift+Tab 夹取（抽 `bullet-depth.ts` 纯函数 + 6 单测，始终 preventDefault）；print-css 加 data-depth 缩进（内容排版，导出保留）；snapshot-diff 的 bullet payload 纳入 depth；投影每级两空格
+  - **样式落点教训（用户拒绝一次编辑后自查）**：`print-css/*` 是纸面内容+导出样式源，**屏幕专用 chrome（字段按钮组/页头附加字段）一律不进**；屏内控件样式落 `mockup.css`，页头附加字段复用既有 `.fl-head .contact` 规则、零新 CSS
+  - 验证：263 测试绿（+48）；lint/typecheck 绿；print-css 仅 data-depth 内容排版规则
+

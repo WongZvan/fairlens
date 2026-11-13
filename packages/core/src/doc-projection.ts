@@ -225,6 +225,8 @@ export interface ProjectedLine {
   blockId: string;
   /** 单行 Markdown（可经 markdownToRuns 反解） */
   markdown: string;
+  /** 层级缩进（#123）：0 省略；渲染时每级加两个空格 */
+  depth?: 1 | 2;
 }
 
 export interface ProjectedField {
@@ -283,7 +285,11 @@ function projectEntry(entry: Entry): ProjectedEntry {
     ...(entry.pageBreakBefore ? { pageBreakBefore: true } : {}),
     lines: entry.bullets
       .filter((b) => b.runs.length > 0)
-      .map((b) => ({ blockId: b.id, markdown: runsToMarkdown(b.runs) }))
+      .map((b) => ({
+        blockId: b.id,
+        markdown: runsToMarkdown(b.runs),
+        ...(b.depth === 1 || b.depth === 2 ? { depth: b.depth } : {}),
+      }))
       .filter((l) => l.markdown.length > 0),
   };
 }
@@ -359,7 +365,11 @@ export function renderProjection(tree: DocProjection): string {
     for (const entry of section.entries) {
       const header = [entry.org, entry.role, entry.date].filter(Boolean).join(' · ');
       out.push(`- ${header}  [${entry.blockId}]`);
-      for (const line of entry.lines) out.push(`  - ${line.markdown}  [${line.blockId}]`);
+      for (const line of entry.lines) {
+        // 层级缩进（#123）：每级两个空格，让模型看得出从属关系
+        const indent = '  '.repeat(line.depth ?? 0);
+        out.push(`  ${indent}- ${line.markdown}  [${line.blockId}]`);
+      }
     }
     out.push('');
   }

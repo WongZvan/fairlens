@@ -1,10 +1,17 @@
-/** 页头 NodeView（#117）：预览同款姓名/意向/联系方式；点击铅笔编辑 profile */
+/** 页头 NodeView（#117；#122 增附加字段）：预览同款姓名/意向/联系方式；点击铅笔编辑 profile */
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tokenizeContactLine } from '../contact-line.js';
-import { MetaDialog } from './MetaDialog.js';
+import { ProfileFieldsDialog } from './ProfileFieldsDialog.js';
+
+interface ExtraField {
+  id: string;
+  label: string;
+  value: string;
+  href?: string;
+}
 
 export function PageHeaderView({ node, updateAttributes }: NodeViewProps) {
   const { t } = useTranslation();
@@ -12,6 +19,7 @@ export function PageHeaderView({ node, updateAttributes }: NodeViewProps) {
   const name = String(node.attrs.name ?? '');
   const headline = String(node.attrs.headline ?? '');
   const contactLine = String(node.attrs.contactLine ?? '');
+  const fields: ExtraField[] = Array.isArray(node.attrs.fields) ? (node.attrs.fields as ExtraField[]) : [];
   const tokens = tokenizeContactLine(contactLine);
 
   return (
@@ -40,22 +48,31 @@ export function PageHeaderView({ node, updateAttributes }: NodeViewProps) {
           )}
         </p>
       )}
+      {fields.length > 0 && (
+        // 附加字段并入联系方式行：复用既有 .fl-head .contact 规则，不新增 print CSS
+        <p className="contact">
+          {fields
+            .filter((f) => f.label.trim())
+            .map((f, index) => (
+              <span key={f.id}>
+                {index > 0 ? ' · ' : ''}
+                {f.label}
+                {f.value ? ` ${f.value}` : ''}
+              </span>
+            ))}
+        </p>
+      )}
       <div className="rule" />
       {open && (
-        <MetaDialog
-          title={t('editor.profileTitle')}
-          fields={[
-            { key: 'name', label: t('editor.name'), value: name, required: true },
-            { key: 'headline', label: t('editor.headline'), value: headline },
-            { key: 'contactLine', label: t('editor.contact'), value: contactLine },
-          ]}
-          onSave={(values) => {
+        <ProfileFieldsDialog
+          initial={{ name, headline, contactLine, fields }}
+          onSave={(draft) => {
             updateAttributes({
-              name: (values.name ?? '').trim(),
-              headline: (values.headline ?? '').trim() || null,
-              contactLine: (values.contactLine ?? '').trim() || null,
+              name: draft.name,
+              headline: draft.headline || null,
+              contactLine: draft.contactLine || null,
+              fields: draft.fields,
             });
-            return null;
           }}
           onClose={() => setOpen(false)}
         />

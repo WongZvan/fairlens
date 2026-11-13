@@ -1,9 +1,12 @@
 import { z } from 'zod';
-import { SECTION_TYPES } from './resume.js';
 
-/** 分区规则：类型/顺序/条目上限（编辑器 gating 的依据） */
+/**
+ * 分区规则：类型/顺序/条目上限（编辑器 gating 的依据）。
+ * 2026-11-13 #121：`type` 随 Section.type 一并放开为自由字符串——
+ * 规则只对命中的 type 生效，未命中的自定义分区不限条数。
+ */
 export const SectionRule = z.object({
-  type: z.enum(SECTION_TYPES),
+  type: z.string().min(1),
   order: z.number().int().nonnegative(),
   maxEntries: z.number().int().positive(),
 });

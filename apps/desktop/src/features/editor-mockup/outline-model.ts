@@ -45,3 +45,19 @@ export function outlineFieldLabel(field: BasicField): string {
 export function outlineSkillLabel(group: SkillGroup): string {
   return group.items.map((item) => item.trim()).filter(Boolean).join(' · ') || group.name;
 }
+
+/**
+ * 分区在树里的显示名（#121 后 type 可为任意字符串）：
+ * 有标题用标题；无标题时内置类型走 i18n，自定义类型回落 type 原文
+ * （不能一律回落 `paper.basic`——那会把「自我评价」显示成「基本信息」）。
+ */
+export function outlineSectionLabel(
+  section: Section,
+  t: (key: string) => string,
+  builtinKeys: Record<string, string>,
+): string {
+  const title = section.title.trim();
+  if (title) return title;
+  const key = builtinKeys[section.type];
+  return key ? t(key) : section.type;
+}

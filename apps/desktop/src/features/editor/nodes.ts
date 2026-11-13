@@ -15,6 +15,7 @@ import { nanoid as nanoidGen } from '../../lib/nanoid.js';
 import { hrefFromLinkMouseDown } from '../../lib/link-click.js';
 import { isSafeHref } from './link-policy.js';
 import { partitionSections, sortSectionsByOrder } from './paper-model.js';
+import { nextBulletDepth } from './bullet-depth.js';
 import { PageHeaderView } from './nodeviews/PageHeaderView.js';
 import { EntryHeaderView } from './nodeviews/EntryHeaderView.js';
 import { BasicFieldView } from './nodeviews/BasicFieldView.js';
@@ -33,7 +34,22 @@ function blockIdAttr() {
   };
 }
 
-/** 分区：五类之一；标题可编辑；子节点按 type 过滤（entry/field/photo/skillGroup） */
+/** HTML 属性里的 JSON 数组（畸形/缺失一律回落空数组；页头附加字段用） */
+function parseJsonAttr(raw: string | null): Array<{ id: string; label: string; value: string; href?: string }> {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (f): f is { id: string; label: string; value: string; href?: string } =>
+        !!f && typeof f === 'object' && typeof (f as { label?: unknown }).label === 'string',
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** 分区：type 自 2026-11-13 #121 起为自由字符串（内置五类 + 自定义）；标题可编辑 */
 export const SectionNode = Node.create({
   name: 'flSection',
   group: 'block',
@@ -46,6 +62,86 @@ export const SectionNode = Node.create({
       title: { default: '' },
       /** 内部排序键（不写入 ResumeDoc；duo 分组后还原原始分区顺序） */
       order: { default: null as number | null },
+    };
+  },
+  addCommands() {
+    return {
+      /**
+       * 新增分区（#121）：插到当前分区之后（无当前分区则插到文档末尾）。
+       * 标题为空时给「新分区」占位——契约要求 title min(1)，空标题会存不进库。
+       */
+      insertSection:
+        (attrs: { type: string; title: string }) =>
+        ({ state, tr, dispatch }) => {
+          const { schema } = state;
+          const sectionType = schema.nodes.flSection;
+          const headerType = schema.nodes.flSectionHeader;
+          const bulletType = schema.nodes.flBullet;
+          if (!sectionType || !headerType || !bulletType) return false;
+
+          const title = attrs.title.trim() || '新分区';
+          const sectionId = nanoid12();
+          const node = sectionType.create(
+            { id: sectionId, type: attrs.type || 'custom', title, order: null },
+            [
+              headerType.create({ id: sectionId }, schema.text(title)),
+              bulletType.create({ id: nanoid12() }),
+            ],
+          );
+
+          if (dispatch) {
+            // 定位当前分区；找不到就追加到末尾
+            let insertAt = state.doc.content.size;
+            const { $from } = state.selection;
+            for (let d = $from.depth; d > 0; d -= 1) {
+              if ($from.node(d).type.name === 'flSection') {
+                insertAt = $from.after(d);
+                break;
+              }
+            }
+            tr.insert(insertAt, node);
+            tr.setSelection(TextSelection.near(tr.doc.resolve(insertAt + 2)));
+          }
+          return true;
+        },
+
+      /** 删除当前分区（#121）：至少保留一个分区（契约 sections.min(1)） */
+      deleteSection:
+        () =>
+        ({ state, tr, dispatch }) => {
+          const { $from } = state.selection;
+          for (let d = $from.depth; d > 0; d -= 1) {
+            if ($from.node(d).type.name !== 'flSection') continue;
+            if (state.doc.childCount <= 1 || countSections(state.doc) <= 1) return false;
+            if (dispatch) {
+              tr.delete($from.before(d), $from.after(d));
+              tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, $from.before(d)))));
+            }
+            return true;
+          }
+          return false;
+        },
+
+      /** 追加基本信息字段（#121/#122）到当前分区末尾（光标不在分区内则无操作） */
+      addBasicField:
+        () =>
+        ({ state, tr, dispatch }) => {
+          const { $from } = state.selection;
+          for (let d = $from.depth; d > 0; d -= 1) {
+            if ($from.node(d).type.name !== 'flSection') continue;
+            const fieldType = state.schema.nodes.flBasicField;
+            if (!fieldType) return false;
+            if (dispatch) {
+              const at = $from.after(d);
+              tr.insert(
+                Math.min(at, state.doc.content.size),
+                fieldType.create({ id: nanoid12(), label: '新字段', href: null }, state.schema.text(' ')),
+              );
+            }
+            return true;
+          }
+          return false;
+        },
     };
   },
   parseHTML() {
@@ -94,7 +190,17 @@ export const SectionHeaderNode = Node.create({
   },
 });
 
-/** 页头（#117）：profile ↔ attrs；NodeView 展示 + 元信息编辑 */
+/** 文档内可见分区数（duo 下分区在 flColumn 里，顶层 childCount 不够用） */
+function countSections(doc: PMDocNode): number {
+  let n = 0;
+  doc.descendants((node) => {
+    if (node.type.name === 'flSection') n += 1;
+    return true;
+  });
+  return n;
+}
+
+/** 页头（#117；2026-11-13 #122 增 fields）：profile ↔ attrs；NodeView 展示 + 元信息编辑 */
 export const PageHeaderNode = Node.create({
   name: 'flPageHeader',
   group: 'block',
@@ -106,6 +212,8 @@ export const PageHeaderNode = Node.create({
       name: { default: '' },
       headline: { default: null as string | null },
       contactLine: { default: null as string | null },
+      /** 附加字段（BasicField[]）：JSON 承载，由页头对话框维护 */
+      fields: { default: [] as Array<{ id: string; label: string; value: string; href?: string }> },
     };
   },
   parseHTML() {
@@ -116,12 +224,14 @@ export const PageHeaderNode = Node.create({
           name: el.getAttribute('data-name') ?? '',
           headline: el.getAttribute('data-headline'),
           contactLine: el.getAttribute('data-contact'),
+          fields: parseJsonAttr(el.getAttribute('data-fields')),
         }),
       },
     ];
   },
   renderHTML({ node }) {
-    const { name, headline, contactLine } = node.attrs;
+    const { name, headline, contactLine, fields } = node.attrs;
+    const extra = Array.isArray(fields) ? fields : [];
     return [
       'header',
       {
@@ -129,6 +239,7 @@ export const PageHeaderNode = Node.create({
         'data-name': String(name ?? ''),
         ...(headline ? { 'data-headline': String(headline) } : {}),
         ...(contactLine ? { 'data-contact': String(contactLine) } : {}),
+        ...(extra.length ? { 'data-fields': JSON.stringify(extra) } : {}),
       },
     ];
   },
@@ -401,14 +512,26 @@ export const ColumnNode = Node.create({
   },
 });
 
-/** 要点：AI 修订的主目标块 */
+/** 要点：AI 修订的主目标块；depth=层级缩进（#123，0 缺省不写 data-depth） */
 export const BulletNode = Node.create({
   name: 'flBullet',
   group: 'block',
   content: 'inline*',
   defining: true,
   addAttributes() {
-    return { id: blockIdAttr() };
+    return {
+      id: blockIdAttr(),
+      depth: {
+        default: null as number | null,
+        parseHTML: (el: HTMLElement) => {
+          const raw = el.getAttribute('data-depth');
+          const n = raw === null ? null : Number(raw);
+          return n === 1 || n === 2 ? n : null;
+        },
+        renderHTML: (attrs: Record<string, unknown>) =>
+          typeof attrs.depth === 'number' && attrs.depth > 0 ? { 'data-depth': String(attrs.depth) } : {},
+      },
+    };
   },
   addKeyboardShortcuts() {
     // Enter：当前 bullet 内新起一条 bullet（同 entry 语义）；Shift+Enter：同 bullet 软换行
@@ -446,6 +569,22 @@ export const BulletNode = Node.create({
       'Shift-Enter': () => {
         if (this.editor.view.composing) return false;
         return this.editor.commands.insertContent({ type: 'hardBreak' });
+      },
+      // 层级缩进（#123）：Tab 加深 / Shift+Tab 减淡，夹在 0–2。
+      // 必须始终返回 true（preventDefault）——否则焦点会移出编辑器。
+      Tab: () => {
+        if (this.editor.view.composing) return false;
+        if (!this.editor.isActive('flBullet')) return false;
+        const depth = nextBulletDepth(this.editor.getAttributes('flBullet').depth, 1);
+        this.editor.chain().updateAttributes('flBullet', { depth }).run();
+        return true;
+      },
+      'Shift-Tab': () => {
+        if (this.editor.view.composing) return false;
+        if (!this.editor.isActive('flBullet')) return false;
+        const depth = nextBulletDepth(this.editor.getAttributes('flBullet').depth, -1);
+        this.editor.chain().updateAttributes('flBullet', { depth }).run();
+        return true;
       },
     };
   },
@@ -646,7 +785,23 @@ function profileOf(header: PMNode | undefined): ResumeDoc['profile'] | undefined
   if (!name) return undefined;
   const headline = String(header.attrs?.headline ?? '').trim();
   const contactLine = String(header.attrs?.contactLine ?? '').trim();
-  return { name, ...(headline ? { headline } : {}), ...(contactLine ? { contactLine } : {}) };
+  const rawFields = Array.isArray(header.attrs?.fields) ? (header.attrs.fields as unknown[]) : [];
+  const fields = rawFields
+    .map((f) => {
+      const rec = f as Record<string, unknown>;
+      const label = String(rec.label ?? '').trim();
+      const value = String(rec.value ?? '').trim();
+      const href = typeof rec.href === 'string' && isSafeHref(rec.href) ? rec.href : undefined;
+      const id = String(rec.id ?? '').length === 12 ? String(rec.id) : nanoid12();
+      return label ? { id, label, value, ...(href ? { href } : {}) } : null;
+    })
+    .filter((f): f is { id: string; label: string; value: string; href?: string } => f !== null);
+  return {
+    name,
+    ...(headline ? { headline } : {}),
+    ...(contactLine ? { contactLine } : {}),
+    ...(fields.length ? { fields } : {}),
+  };
 }
 
 function fieldOf(field: PMNode): NonNullable<Section['basicFields']>[number] {
@@ -690,7 +845,15 @@ function entryOf(entry: PMNode): Section['entries'][number] {
     // 契约 Bullet.runs min(1)：删空文本的 bullet（PM 空段）不序列化——曾流入大纲/快照造成"空壳条目"（m1.6 反馈）
     bullets: (entry.content ?? [])
       .filter((n): n is PMNode & { type: 'flBullet' } => n.type === 'flBullet')
-      .map((b) => ({ id: String(b.attrs?.id ?? '') || nanoid12(), runs: runsOf(b) }))
+      .map((b) => {
+        const depth = typeof b.attrs?.depth === 'number' && b.attrs.depth > 0 ? b.attrs.depth : null;
+        // depth=0 不落库（缺省），保持旧文档字节等价
+        return {
+          id: String(b.attrs?.id ?? '') || nanoid12(),
+          runs: runsOf(b),
+          ...(depth ? { depth } : {}),
+        };
+      })
       .filter((b) => b.runs.length > 0),
   };
   for (const k of ['role', 'start', 'end', 'ongoing', 'pageBreakBefore'] as const) {
@@ -797,7 +960,7 @@ export function resumeDocToPm(doc: ResumeDoc): PMNode {
     for (const entry of section.entries) {
       const bullets: PMNode[] = entry.bullets.map((b) => ({
         type: 'flBullet',
-        attrs: { id: b.id },
+        attrs: { id: b.id, ...(b.depth ? { depth: b.depth } : {}) },
         content: b.runs.flatMap((r) =>
           r.text.split('\n').flatMap((seg, i) => {
             const parts: PMNode[] = [];
@@ -873,6 +1036,7 @@ export function resumeDocToPm(doc: ResumeDoc): PMNode {
         name: doc.profile?.name ?? '',
         headline: doc.profile?.headline ?? null,
         contactLine: doc.profile?.contactLine ?? null,
+        fields: doc.profile?.fields ?? [],
       },
     },
   ];
@@ -886,4 +1050,15 @@ export function resumeDocToPm(doc: ResumeDoc): PMNode {
   }
 
   return { type: 'doc', content: [...header, ...doc.sections.map(sectionPm)] };
+}
+
+/** 分区结构命令的类型声明（Tiptap 通过模块增强收集 addCommands） */
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    flSection: {
+      insertSection: (attrs: { type: string; title: string }) => ReturnType;
+      deleteSection: () => ReturnType;
+      addBasicField: () => ReturnType;
+    };
+  }
 }

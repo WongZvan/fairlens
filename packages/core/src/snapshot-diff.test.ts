@@ -104,4 +104,19 @@ describe('alignBlockDiff（§5.6 快照对比）', () => {
     expect(afterRollback.hasChanges).toBe(false);
     void before;
   });
+
+  // #123：只改缩进也必须算 changed（否则快照漏报）
+  it('#123 要点 depth 变化 → bullet changed', () => {
+    const base = doc();
+    const withDepth = doc();
+    withDepth.sections[1]!.entries[0]!.bullets[0]!.depth = 1;
+    expect(alignBlockDiff(base, withDepth).items.find((i) => i.id === ids.bullet1)!.status).toBe('changed');
+  });
+
+  it('#123 depth 缺省与显式 0 等价 → unchanged', () => {
+    const base = doc();
+    const explicitZero = doc();
+    explicitZero.sections[1]!.entries[0]!.bullets[0]!.depth = 0;
+    expect(alignBlockDiff(base, explicitZero).items.find((i) => i.id === ids.bullet1)!.status).toBe('unchanged');
+  });
 });

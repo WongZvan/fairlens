@@ -110,6 +110,42 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
     expect(useEditorDoc.getState().doc?.sections[1]!.entries[0]!.org).toBe('网易');
   });
 
+  it('手动模式：内容改回基线后 dirty=false（修复"删掉新要点仍弹三键框"）', async () => {
+    await useEditorDoc.getState().openCurrent();
+    const { persistence } = await import('../lib/persistence/index.js');
+    await persistence().setSettingRaw('autosave', false);
+    await useEditorDoc.getState().openCurrent();
+    const base = useEditorDoc.getState().doc!;
+
+    // 模拟"新建要点"：深拷贝后追加一条
+    const added = structuredClone(base);
+    added.sections[1]!.entries[0]!.bullets.push({ id: 'Bul000000001', runs: [{ text: '临时' }] });
+    useEditorDoc.getState().applyDoc(added);
+    expect(useEditorDoc.getState().dirty).toBe(true);
+
+    // 模拟"再删掉"：回到与基线完全相同的内容（键序可能不同，必须仍判等）
+    const reverted = structuredClone(base);
+    useEditorDoc.getState().applyDoc(reverted);
+    expect(useEditorDoc.getState().dirty).toBe(false);
+  });
+
+  it('手动模式：discardPendingChanges 把文档复位到最后保存版本', async () => {
+    await useEditorDoc.getState().openCurrent();
+    const { persistence } = await import('../lib/persistence/index.js');
+    await persistence().setSettingRaw('autosave', false);
+    await useEditorDoc.getState().openCurrent();
+    const base = useEditorDoc.getState().doc!;
+
+    const changed = structuredClone(base);
+    changed.sections[1]!.entries[0]!.org = '不该留下';
+    useEditorDoc.getState().applyDoc(changed);
+    expect(useEditorDoc.getState().dirty).toBe(true);
+
+    useEditorDoc.getState().discardPendingChanges();
+    expect(useEditorDoc.getState().dirty).toBe(false);
+    expect(useEditorDoc.getState().doc).toEqual(base);
+  });
+
   it('快照：createSnapshot→listSnapshots→restoreSnapshot 立即落盘回滚内容', async () => {
     await useEditorDoc.getState().openCurrent();
     const base = useEditorDoc.getState().doc!;
