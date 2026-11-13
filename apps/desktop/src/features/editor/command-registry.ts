@@ -1,6 +1,6 @@
 /**
- * CommandRegistry（m1.5，docs/01 §5.5）：插件式命令注册表。
- * Ctrl+K 打开；无选区=命令面板；有选区=编辑动作（键位冲突裁决见 §5.10）。
+ * CommandRegistry（m1.5，docs/01 §5.6）：插件式命令注册表。
+ * Ctrl+K 打开；无选区=命令面板；有选区=编辑动作（键位冲突裁决见 §5.6）。
  * v2 垂类可注册新命令（CapabilityRegistry 消费方）。
  */
 export interface CommandDef {

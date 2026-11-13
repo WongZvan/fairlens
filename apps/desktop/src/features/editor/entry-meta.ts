@@ -1,7 +1,12 @@
 /**
  * 条目头日期区间（2026-11-05，#117）：`YYYY.MM – YYYY.MM` / `YYYY.MM – 至今` / `YYYY.MM`。
  * 纯函数供 NodeView 与单测共用；非法输入返回 null，由调用方回退原值。
+ * 展示串格式化自 2026-11-13 起由 packages/core/entry-date 单一实现（文档投影同源），此处转出。
  */
+import { formatDateRange } from '@fairlens/core';
+
+export { formatDateRange };
+
 export interface DateRange {
   start?: string;
   end?: string;
@@ -9,13 +14,6 @@ export interface DateRange {
 }
 
 const MONTH_RE = /^(\d{4})\.(0[1-9]|1[0-2])$/;
-
-export function formatDateRange(start?: string | null, end?: string | null, ongoing?: boolean | null): string {
-  if (!start) return '';
-  if (ongoing) return `${start} – 至今`;
-  if (end) return `${start} – ${end}`;
-  return start;
-}
 
 export function parseDateRange(input: string): DateRange | null {
   const text = input.trim().replace(/\s*[-–—~～]\s*/g, ' – ').replace(/\s+/g, ' ');

@@ -142,7 +142,7 @@ export function EditorMockup() {
     return () => document.removeEventListener('mousedown', onDown, true);
   }, []);
 
-  // 全局快捷键（§5.10；编辑器内键位由 Tiptap 自理，此处管全局态）
+  // 全局快捷键（§5.6；编辑器内键位由 Tiptap 自理，此处管全局态）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const inEditor = !!document.activeElement?.closest('.ProseMirror');

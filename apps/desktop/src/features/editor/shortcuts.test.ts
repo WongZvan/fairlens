@@ -7,7 +7,7 @@ const ev = (over: Partial<Parameters<typeof resolveShortcut>[0]> = {}) => ({
   ...over,
 });
 
-describe('m1.5 快捷键路由（§5.10 全表）', () => {
+describe('m1.5 快捷键路由（§5.6 全表）', () => {
   it('Ctrl+K 二义：编辑器内选区=插链接，否则命令面板', () => {
     expect(resolveShortcut(ev({ ctrlKey: true, key: 'k' }), { hasSelection: true, inEditor: true })).toBe('insert-link');
     expect(resolveShortcut(ev({ ctrlKey: true, key: 'k' }), { hasSelection: false, inEditor: true })).toBe('command-palette');

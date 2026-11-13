@@ -41,7 +41,7 @@ export const EvaluationReport = z.object({
 });
 export type EvaluationReport = z.infer<typeof EvaluationReport>;
 
-/** 评估与走查统一：review session（§5.5/§9.1） */
+/** 评估与走查统一：review session（§5.5/§7） */
 export const ReviewSession = z.object({
   id: Nanoid12,
   resumeId: Nanoid12,
