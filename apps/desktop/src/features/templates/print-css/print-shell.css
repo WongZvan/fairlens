@@ -1,0 +1,61 @@
+/**
+ * 打印输出专用样式（2026-11-13，#125）：只在 @media print 生效。
+ *
+ * 为什么不放进 print-css/base.ts：base.ts 是「纸面内容的样式」（模板决定版式，画布=导出同源）；
+ * 这里隐藏的是「应用 chrome」（命令栏/状态栏/侧栏/缩放控件/编辑按钮）。两者改动理由不同，
+ * 混在一起会让人误以为 chrome 归模板管（2026-11-13 曾把屏幕控件样式写进 base.ts 被用户拒绝）。
+ *
+ * 导出链路：export_pdf（Rust）→ WebView2 PrintToPdf → 应用打印媒体样式。
+ * 因此这里的规则决定了 PDF 里看到什么：只留 .fl-paper。
+ */
+@media print {
+  /* 1) 隐藏一切非纸面元素 */
+  .cmdbar,
+  .statusbar,
+  .m-left,
+  .m-right,
+  .rail,
+  .sidebar-resizer,
+  .pagebreak,
+  .zoom-ctl,
+  .search-bar,
+  .paste-bubble,
+  .float-bar,
+  .meta-overlay,
+  .guard-overlay,
+  .toast-host,
+  .settings-overlay,
+  .cmd-drop { display: none !important; }
+
+  /* 2) 撤销画布缩放：PrintToPdf 按 CSS 像素排版，transform 会把内容缩成一小块 */
+  .paper-scale { transform: none !important; }
+  .paper-host { width: auto !important; }
+
+  /* 3) 滚动容器在打印媒体里必须完全展开，否则只输出可视区 */
+  html, body, #root, .shell, .editor-mock, .m-center, .m-canvas, .canvas-wrap {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* 4) 纸面自身：去掉屏幕阴影/圆角，按 A4 排版 */
+  .fl-paper {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+  }
+
+  /* 5) 编辑态残留：搜索高亮/焦点描边/占位提示一律不打印 */
+  .fl-search-hit { background: transparent !important; }
+  .ProseMirror-focused { outline: none !important; }
+  .is-editor-empty:first-child::before { content: '' !important; }
+}

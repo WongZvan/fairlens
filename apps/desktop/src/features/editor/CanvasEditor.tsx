@@ -21,6 +21,28 @@ import { validateDocStyleAgainstManifest } from '@fairlens/shared';
 import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
 import { pickAppendTarget } from './blank-click.js';
 import { TextSelection } from '@tiptap/pm/state';
+import { searchPluginKey, computeSearchState, SearchHighlight } from './search-plugin.js';
+import { nextIndex, prevIndex } from './search.js';
+
+/** #126：选中一个匹配（只改 selection，不动文档；不产生撤销步） */
+function selectMatch(view: EditorView, match: { from: number; to: number }) {
+  const { state } = view;
+  const tr = state.tr.setSelection(TextSelection.create(state.doc, match.from, match.to)).scrollIntoView();
+  view.dispatch(tr);
+}
+
+/** #126：在匹配间循环跳转；返回 1-based 序号（0=无匹配） */
+function stepMatch(editor: Editor, delta: 1 | -1): number {
+  const pluginState = searchPluginKey.getState(editor.state);
+  if (!pluginState || pluginState.matches.length === 0) return 0;
+  const current =
+    delta > 0 ? nextIndex(pluginState.current, pluginState.matches.length) : prevIndex(pluginState.current, pluginState.matches.length);
+  const next = { ...pluginState, current };
+  const match = pluginState.matches[current]!;
+  const tr = editor.state.tr.setMeta(searchPluginKey, next).setSelection(TextSelection.create(editor.state.doc, match.from, match.to)).scrollIntoView();
+  editor.view.dispatch(tr);
+  return current + 1;
+}
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { EditorView } from '@tiptap/pm/view';
 import {
@@ -57,6 +79,15 @@ export interface EditorApi {
   refresh: () => void;
   /** 底层 editor 实例（命令面板里的结构命令需要 can()/chain()；勿用它做绕过 schema 的写入） */
   getEditor: () => Editor | null;
+  /** #126：设置搜索词（空串=清除高亮）；返回匹配数 */
+  find: (query: string) => number;
+  /** #126：跳到下一条/上一条匹配（循环）；返回当前序号（1-based，无匹配=0） */
+  findNext: () => number;
+  findPrev: () => number;
+  /** #126：清除高亮（关闭搜索条时调） */
+  clearFind: () => void;
+  /** #126：当前搜索状态（计数/当前序号） */
+  getSearchState: () => { current: number; total: number };
 }
 
 export interface CanvasEditorProps {
@@ -124,6 +155,8 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       // listItem 导致 schema 崩溃，且 v3 内置 link 与显式 Link 重复注册
       Document, Text, Paragraph, Bold, Italic, History,
       ...flExtensions,
+      SearchHighlight, // #126：内联搜索高亮（装饰层，不入历史）
+
       Placeholder.configure({ placeholder: '写下这条经历…' }),
     ],
     content: resumeDocToPm(doc),
@@ -218,6 +251,22 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
       },
       refresh: () => editor.view.dispatch(editor.state.tr),
       getEditor: () => editor,
+      // #126 内联搜索：装饰与选中都走 PM 事务；搜索本身 addToHistory:false，不污染撤销栈
+      find: (query) => {
+        const state = computeSearchState(editor.state.doc, query, 0);
+        editor.view.dispatch(editor.state.tr.setMeta(searchPluginKey, state));
+        if (state.matches.length > 0) selectMatch(editor.view, state.matches[0]!);
+        return state.matches.length;
+      },
+      findNext: () => stepMatch(editor, 1),
+      findPrev: () => stepMatch(editor, -1),
+      clearFind: () => {
+        editor.view.dispatch(editor.state.tr.setMeta(searchPluginKey, { query: '', matches: [], current: -1 }));
+      },
+      getSearchState: () => {
+        const s = searchPluginKey.getState(editor.state);
+        return { current: s?.current ?? -1, total: s?.matches.length ?? 0 };
+      },
     });
   }, [editor, onReady, showPasteResult]);
 

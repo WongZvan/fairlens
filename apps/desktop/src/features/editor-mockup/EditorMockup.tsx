@@ -1,5 +1,5 @@
 import {
-  ChevronLeft, ChevronRight, FileText, Minus, PanelRightClose, Plus, Redo2, ScanSearch, Sparkles, Undo2,
+  ChevronLeft, ChevronRight, FileText, Minus, PanelRightClose, Plus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
@@ -9,8 +9,10 @@ import { useEditorDoc } from '../../stores/editor-doc.js';
 import { CanvasEditor, type EditorApi } from '../editor/CanvasEditor.js';
 import { SnapshotDialog } from './SnapshotDialog.js';
 import { SectionDialog } from '../editor/nodeviews/SectionDialog.js';
+import { SearchBar } from '../editor/SearchBar.js';
 import { toast } from '../../app/Toast.js';
 import { resolveShortcut } from '../editor/shortcuts.js';
+import { registerEditorActions } from '../editor/editor-action-bus.js';
 import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
 import { CommandPalette } from './CommandPalette.js';
@@ -68,20 +70,8 @@ export function EditorMockup() {
       }),
       commandRegistry.register({
         id: 'structure.delete-section', title: '删除当前分区', keywords: ['分区', '删除'],
-        run: () => {
-          const editor = editorApiRef.current?.getEditor();
-          if (!editor) return;
-          if (!editor.can().deleteSection()) {
-            toast(t('editor.sectionDeleteLast'));
-            return;
-          }
-          const name = currentSectionName();
-          if (name && !window.confirm(t('editor.sectionDeleteConfirm', { name }))) return;
-          editor.chain().focus().deleteSection().run();
-        },
+        run: () => runDeleteSection(),
       }),
-
-
 
       commandRegistry.register({
         id: 'edit.entry-duplicate', title: '复制当前要点', hint: 'Ctrl+D', keywords: ['复制', '要点', '块'],
@@ -95,6 +85,10 @@ export function EditorMockup() {
         },
       }),
       commandRegistry.register({
+        id: 'edit.find', title: '在简历中查找', hint: 'Ctrl+F', keywords: ['查找', '搜索'],
+        run: () => setSearchOpen(true),
+      }),
+      commandRegistry.register({
         id: 'dev.reload-packs', title: '[开发] 重载提示词包', devOnly: true,
         run: () => console.log('[m1.5] reload packs（M2 接管）'),
       }),
@@ -105,6 +99,89 @@ export function EditorMockup() {
   const [snapOpen, setSnapOpen] = useState(false);
   // #121：新增分区对话框
   const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
+  // #126：内联搜索（本次接入；Ctrl+F 不再吞键）
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchState, setSearchState] = useState({ current: -1, total: 0 });
+
+  /** 搜索状态同步：CanvasEditor 只回序号/总数，UI 自己维护显示 */
+  const syncSearchState = () => {
+    const api = editorApiRef.current;
+    if (!api) return;
+    const s = api.getSearchState();
+    setSearchState({ current: s.current, total: s.total });
+  };
+  const handleSearchQuery = (query: string) => {
+    editorApiRef.current?.find(query);
+    syncSearchState();
+  };
+  const handleSearchNext = () => {
+    editorApiRef.current?.findNext();
+    syncSearchState();
+  };
+  const handleSearchPrev = () => {
+    editorApiRef.current?.findPrev();
+    syncSearchState();
+  };
+  const handleSearchClose = () => {
+    editorApiRef.current?.clearFind();
+    setSearchState({ current: -1, total: 0 });
+    setSearchOpen(false);
+  };
+
+  // #124：命令栏（壳层）→ 编辑器动作总线。未注册时命令栏会 toast「编辑器未就绪」
+  useEffect(() => {
+    return registerEditorActions((id) => {
+      const api = editorApiRef.current;
+      switch (id) {
+        case 'edit.undo':
+          api?.undo();
+          return !!api;
+        case 'edit.redo':
+          api?.redo();
+          return !!api;
+        case 'edit.cut':
+          api?.cut();
+          return !!api;
+        case 'edit.copy':
+          api?.copy();
+          return !!api;
+        case 'edit.paste':
+          void api?.paste();
+          return !!api;
+        case 'edit.paste-plain':
+          void api?.pastePlain();
+          return !!api;
+        case 'edit.select-all':
+          api?.selectAll();
+          return !!api;
+        case 'edit.find':
+          setSearchOpen(true);
+          return true;
+        case 'edit.duplicate-bullet': {
+          if (api?.duplicateActiveBullet()) return true;
+          const target = api?.getActiveEntry();
+          if (target?.sectionId && target.entryId) duplicateEntry(target.sectionId, target.entryId);
+          return !!api;
+        }
+        case 'edit.add-section':
+          setSectionDialogOpen(true);
+          return true;
+        case 'edit.delete-section':
+          runDeleteSection();
+          return true;
+        case 'file.snapshot-create':
+          void useEditorDoc.getState().createSnapshot().then(() => toast(t('snapshot.savedToast')));
+          return true;
+        case 'file.snapshot-restore':
+          setSnapOpen(true);
+          return true;
+        default:
+          return false;
+      }
+    });
+    // 依赖为空：handler 只读 ref，重挂无意义
+  }, []);
+
   /** 光标所在分区的显示名（删除确认用；无光标分区时回退空） */
   const currentSectionName = (): string => {
     const editor = editorApiRef.current?.getEditor();
@@ -118,6 +195,19 @@ export function EditorMockup() {
     }
     return '';
   };
+
+  /** 删除当前分区（命令面板/编辑菜单/命令栏共用；至少保留一个分区） */
+  function runDeleteSection() {
+    const editor = editorApiRef.current?.getEditor();
+    if (!editor) return;
+    if (!editor.can().deleteSection()) {
+      toast(t('editor.sectionDeleteLast'));
+      return;
+    }
+    const name = currentSectionName();
+    if (name && !window.confirm(t('editor.sectionDeleteConfirm', { name }))) return;
+    editor.chain().focus().deleteSection().run();
+  }
   const canvasDoc = useEditorDoc((s) => s.doc);
   const applyDoc = useEditorDoc((s) => s.applyDoc);
   const loadError = useEditorDoc((s) => s.lastError);
@@ -148,12 +238,6 @@ export function EditorMockup() {
       ...d,
       sections: d.sections.map((s) => (s.id === sectionId ? { ...s, entries } : s)),
     });
-  };
-  /** 模板切换真实写回 doc.templateId（#117；duo 的列结构由 resumeDocToPm 生成） */
-  const setTemplate = (templateId: string) => {
-    const d = useEditorDoc.getState().doc;
-    if (!d || d.templateId === templateId) return;
-    useEditorDoc.getState().applyDoc({ ...d, templateId });
   };
 
   // 命令事件：返回简历库
@@ -223,10 +307,14 @@ export function EditorMockup() {
           void editorApiRef.current?.pastePlain().catch(() => toast(t('editor.paste.failed')));
           break;
         }
+        case 'find':
+          // #126：Ctrl+F 打开内联搜索（此前只是吞键占位）
+          e.preventDefault();
+          setSearchOpen(true);
+          break;
         case 'evaluate':
         case 'revise-block':
-        case 'find':
-          e.preventDefault(); // M3/M4 真实现接管；先吞键防浏览器默认（Ctrl+F 搜索栏）
+          e.preventDefault(); // M3/M4 真实现接管；先吞键防浏览器默认
           break;
         default:
           break;
@@ -267,7 +355,7 @@ export function EditorMockup() {
         <Rail side="left" />
       )}
       <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={applyDoc} editorApiRef={editorApiRef}
-        onDuplicateEntry={duplicateEntry} onSetTemplate={setTemplate} />
+        onDuplicateEntry={duplicateEntry} />
       {rightOpen ? (
         <>
           <SidebarResizer side="right" />
@@ -278,6 +366,15 @@ export function EditorMockup() {
       ) : (
         <Rail side="right" />
       )}
+      <SearchBar
+        open={searchOpen}
+        current={searchState.current}
+        total={searchState.total}
+        onQuery={handleSearchQuery}
+        onNext={handleSearchNext}
+        onPrev={handleSearchPrev}
+        onClose={handleSearchClose}
+      />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <SnapshotDialog open={snapOpen} onClose={() => setSnapOpen(false)} />
       {sectionDialogOpen && (
@@ -334,18 +431,12 @@ interface CenterPaneProps {
   onCanvasDocChange: (d: ResumeDoc) => void;
   editorApiRef: React.MutableRefObject<EditorApi | null>;
   onDuplicateEntry: (sectionId: string, entryId: string) => void;
-  onSetTemplate: (templateId: string) => void;
 }
-function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry, onSetTemplate }: CenterPaneProps) {
+function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry }: CenterPaneProps) {
   const { t } = useTranslation();
   const { zoomMode, zoom } = useMockup();
   const setCanvasDoc = onCanvasDocChange;
   const ctx = useContextMenu();
-  const templates = [
-    { id: 'tpl-classic', label: t('editor.tplClassic') },
-    { id: 'tpl-duo', label: t('editor.tplDuo') },
-    { id: 'tpl-sidebar', label: t('editor.tplSidebar') },
-  ] as const;
 
   // #93/#106 右键菜单：有选区=文字命令（剪切/复制/粘贴/全选）+ 条目副本；无选区=结构命令
   const openCanvasMenu = (e: React.MouseEvent) => {
@@ -426,24 +517,6 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
   }, []);
   return (
     <section className="m-center">
-      <div className="m-toolbar">
-        <div className="seg" role="group" aria-label={t('editor.template')}>
-          {templates.map((tp) => (
-            <button
-              key={tp.id}
-              aria-pressed={canvasDoc.templateId === tp.id}
-              onClick={() => onSetTemplate(tp.id)}
-            >
-              {tp.label}
-            </button>
-          ))}
-        </div>
-        <span style={{ flex: 1 }} />
-        <button className="m-btn" title={t('editor.mockOnly')} onClick={() => editorApiRef.current?.undo()}><Undo2 size={14} /></button>
-        <button className="m-btn" title={t('editor.mockOnly')} onClick={() => editorApiRef.current?.redo()}><Redo2 size={14} /></button>
-        <button className="m-btn" title={t('editor.mockOnly')}><ScanSearch size={14} />{t('editor.walkthrough')}</button>
-        <button className="m-btn primary" title={t('editor.mockOnly')}><Sparkles size={14} />{t('editor.evaluate')}</button>
-      </div>
       <div
         className="m-canvas"
         ref={canvasRef}

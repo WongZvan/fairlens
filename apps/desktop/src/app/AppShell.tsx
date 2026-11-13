@@ -1,20 +1,28 @@
-import { ArrowLeft, Copy, FileText, Minus, Square, X } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { useTranslation } from 'react-i18next';
+import { docStats, formatCount } from '@fairlens/core';
 import { ActivationGate } from './ActivationGate.js';
-import { SettingsGear, SettingsWindow } from './SettingsWindow.js';
+import { CommandBar } from './CommandBar.js';
+import { SettingsWindow } from './SettingsWindow.js';
 import { CloseGuardDialog, collectPendingIssues, resolveGuardMode, type CloseGuardMode, type CloseIntent } from './CloseGuard.js';
 import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
 import { useEditorDoc } from '../stores/editor-doc.js';
-import { repairAllResumes } from '../lib/persistence/index.js';
+import { persistence, repairAllResumes } from '../lib/persistence/index.js';
 import { saveStatusView } from './save-status.js';
 import { useLicense } from '../stores/license.js';
+import { useMockup } from '../stores/mockup.js';
+import { useTheme } from '../stores/theme.js';
+import { dispatchEditorAction, type EditorActionId } from '../features/editor/editor-action-bus.js';
+import { buildArchiveRecord, exportArchive, exportPdf, revealInFolder } from '../lib/export-service.js';
+import type { MenuActionId } from './menu-model.js';
 
 /** 应用壳：标题栏 + 主区（路由骨架 library|editor；dev 面路由 m4/m5 懒加载挂载） */
 export function AppShell() {
+  const { t } = useTranslation();
   const [view, setView] = useState<'library' | 'editor'>('library');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [guard, setGuard] = useState<{ mode: CloseGuardMode; intent: CloseIntent } | null>(null);
@@ -42,6 +50,105 @@ export function AppShell() {
   useActivationWindowShape(activated, hydrated, isTauri);
   // #112：最大化时取消圆角（贴合屏幕四角）
   useMaximizedClass(isTauri);
+
+  /** #125：导出中（禁用导出项，防连点） */
+  const [exporting, setExporting] = useState(false);
+  /** #125：最近一次导出的文件路径（状态栏「打开所在文件夹」10 秒后自动消失） */
+  const [lastExportPath, setLastExportPath] = useState<string | null>(null);
+  useEffect(() => {
+    if (!lastExportPath) return;
+    const timer = setTimeout(() => setLastExportPath(null), 10_000);
+    return () => clearTimeout(timer);
+  }, [lastExportPath]);
+
+  /** 命令栏动作总线：全局项在此处理，编辑器项转发给 editor-action-bus */
+  const handleAction = (id: MenuActionId) => {
+    // —— 文件 / 窗口 ——
+    if (id === 'file.save') {
+      void useEditorDoc.getState().saveNow().then(() => toast(t('titlebar.saved')));
+      return;
+    }
+    if (id === 'file.back-library') {
+      void requestClose('back-library');
+      return;
+    }
+    if (id === 'file.close') {
+      void requestClose('window-close');
+      return;
+    }
+    if (id === 'file.new' || id === 'file.open') return; // 按钮已 disabled（m1.8）
+
+    // —— 导出（#125）——
+    if (id === 'file.export-pdf' || id === 'file.export-archive') {
+      if (exporting) return;
+      setExporting(true);
+      void (async () => {
+        try {
+          const st = useEditorDoc.getState();
+          const name = st.doc?.profile?.name;
+          if (!isTauri) {
+            toast(t('menu.archiveNotInTauri'));
+            return;
+          }
+          if (id === 'file.export-pdf') {
+            // 先落盘再打印：PrintToPdf 读的是当前页，未保存不影响，但保证数据一致
+            await st.flushPending();
+            const result = await exportPdf(name);
+            if (!result) return; // 用户取消
+            if (result.ok && result.path) {
+              toast(t('menu.exportPdfDone'));
+              setLastExportPath(result.path);
+            } else {
+              toast(t('menu.exportFailed', { reason: result.error ?? '' }));
+            }
+            return;
+          }
+          // 归档：需要 resume 记录 + 快照
+          const resumeId = st.resumeId;
+          const doc = st.doc;
+          if (!resumeId || !doc) return;
+          const [row, snaps] = await Promise.all([
+            persistence().getResume(resumeId),
+            persistence().listSnapshots(resumeId),
+          ]);
+          if (!row) {
+            toast(t('menu.exportFailed', { reason: '简历记录不存在' }));
+            return;
+          }
+          const payload = buildArchiveRecord({
+            resume: { id: row.id, title: row.title, verticalId: row.verticalId, doc: row.doc, status: row.status },
+            snapshots: snaps,
+          });
+          const result = await exportArchive(payload, name);
+          if (!result) return;
+          if (result.ok && result.path) {
+            toast(t('menu.exportArchiveDone'));
+            setLastExportPath(result.path);
+          } else {
+            toast(t('menu.exportFailed', { reason: result.error ?? '' }));
+          }
+        } finally {
+          setExporting(false);
+        }
+      })();
+      return;
+    }
+
+    // —— 视图 / 主题 ——
+    if (id === 'view.toggle-left') return void useMockup.getState().toggleLeft();
+    if (id === 'view.toggle-right') return void useMockup.getState().toggleRight();
+    if (id === 'view.zoom-fit-width') return void useMockup.getState().setZoomMode('fit-width');
+    if (id === 'view.zoom-fit-page') return void useMockup.getState().setZoomMode('fit-page');
+    if (id === 'view.zoom-100') return void useMockup.getState().setZoomMode(1);
+    if (id === 'view.theme-light') return void useTheme.getState().setMode('light');
+    if (id === 'view.theme-dark') return void useTheme.getState().setMode('dark');
+    if (id === 'view.theme-system') return void useTheme.getState().setMode('system');
+
+    // —— 编辑器项（undo/redo/粘贴/查找/快照/分区）——
+    if (!dispatchEditorAction(id as EditorActionId)) {
+      toast(t('status.editorNotReady'));
+    }
+  };
 
   const proceedClose = async (intent: CloseIntent) => {
     setGuard(null);
@@ -128,12 +235,15 @@ export function AppShell() {
   }
   return (
     <div className="shell">
-      <TitleBarConnector
+      <CommandBar
+        view={view}
         onBack={view === 'editor' ? () => void requestClose('back-library') : undefined}
         onSettings={() => setSettingsOpen(true)}
+        onAction={handleAction}
+        exporting={exporting}
       />
       {view === 'library' ? <LibraryPlaceholder onOpenMockup={() => setView('editor')} /> : <EditorMockup />}
-      <StatusBar />
+      <StatusBar lastExportPath={lastExportPath} onReveal={() => lastExportPath && void revealInFolder(lastExportPath)} />
       <SettingsWindow open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ToastHost />
       <CloseGuardDialog
@@ -146,36 +256,6 @@ export function AppShell() {
         onCancel={() => setGuard(null)}
       />
     </div>
-  );
-}
-
-/** 顶栏激活状态（#111）：保留绿点+「已激活」；保存状态移到状态栏 */
-function ActivationChip() {
-  const { t } = useTranslation();
-  const activated = useLicense((s) => s.activated);
-  return (
-    <span className="chip">
-      <i className={activated ? 'dot ok' : 'dot warn'} />
-      {activated ? t('status.activated') : t('status.unactivated')}
-    </span>
-  );
-}
-
-function TitleBarConnector({ onBack, onSettings }: { onBack?: () => void; onSettings: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <header className="titlebar" data-tauri-drag-region>
-      {onBack ? (
-        <button className="back-btn" onClick={onBack} aria-label={t('nav.backLibrary')}>
-          <ArrowLeft size={15} />
-        </button>
-      ) : (
-        <span className="app mono" data-tauri-drag-region>FAIRLENS</span>
-      )}
-      <span className="muted file" data-tauri-drag-region>{t('status.m1')}</span>
-      <ActivationChip />
-      <TitleButtons onSettings={onSettings} />
-    </header>
   );
 }
 
@@ -239,66 +319,6 @@ function SaveStatusText() {
   );
 }
 
-/** 窗口三键与主题循环（从 M0 TitleBar 迁入；isTauri 守卫 web 调试）。
- * 窗口 API 走 npm 包（@tauri-apps/api）——withGlobalTauri 未启用，window.__TAURI__ 恒 undefined（m1.6 直报即修） */
-function TitleButtons({ onSettings }: { onSettings: () => void }) {
-  const { t } = useTranslation();
-  const mode = useThemeMode();
-  const cycle = useThemeCycle();
-  const isTauri = '__TAURI_INTERNALS__' in globalThis;
-  const win = isTauri ? getCurrentWindow() : undefined;
-  // 最大化/还原图标随窗口状态切换（#107）：初始化读 isMaximized，resize 事件同步
-  const [maximized, setMaximized] = useState(false);
-  useEffect(() => {
-    if (!win) return;
-    let unlisten: (() => void) | undefined;
-    void win.isMaximized().then(setMaximized).catch(() => {});
-    void win
-      .onResized(() => {
-        void win.isMaximized().then(setMaximized).catch(() => {});
-      })
-      .then((fn) => {
-        unlisten = fn;
-      });
-    return () => unlisten?.();
-  }, [win]);
-  const glyph = { light: '☀', dark: '☾', system: '🖥' }[mode];
-  // 窗口命令失败必须可见（m1.6 缺陷教训：权限被拒曾静默失败=三键看似无效）
-  const winCmd = (label: string, fn: () => Promise<void>) => () => {
-    fn().catch((err) => {
-      console.error(`[window] ${label} failed`, err);
-      toast(`窗口操作失败（${label}）：请截图上报`);
-    });
-  };
-  return (
-    <div className="wbtns">
-      <button aria-label={t('titlebar.theme', { theme: t(`theme.${mode}`) })} onClick={cycle} title={t(`theme.${mode}`)}>{glyph}</button>
-      <SettingsGear onClick={onSettings} />
-      {win && (
-        <>
-          <button aria-label={t('titlebar.windowMin')} onClick={winCmd('最小化', () => win.minimize())}><Minus size={14} strokeWidth={2} /></button>
-          <button
-            aria-label={maximized ? t('titlebar.windowRestore') : t('titlebar.windowMax')}
-            onClick={winCmd(maximized ? '还原' : '最大化', () => win.toggleMaximize())}
-          >
-            {maximized ? <Copy size={13} strokeWidth={2} /> : <Square size={12} strokeWidth={2} />}
-          </button>
-          <button aria-label={t('titlebar.windowClose')} className="close" onClick={winCmd('关闭', () => win.close())}><X size={15} strokeWidth={2} /></button>
-        </>
-      )}
-    </div>
-  );
-}
-
-// 主题 hooks 薄封装（M0 的 useTheme 拆出只读选择器，避免标题栏重渲染整树）
-import { useTheme } from '../stores/theme.js';
-function useThemeMode() {
-  return useTheme((s) => s.mode);
-}
-function useThemeCycle() {
-  return useTheme((s) => s.cycle);
-}
-
 /** 简历库占位（m1.8 真实化；当前为打样入口） */
 function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
   const { t } = useTranslation();
@@ -316,13 +336,23 @@ function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
   );
 }
 
-/** 状态栏（M0 组件迁入文件以集中壳层；#111 保存状态显示在此） */
-function StatusBar() {
+/** 状态栏（M0 组件迁入文件以集中壳层；#111 保存状态显示在此；#124 加字数统计；#125 加导出回执） */
+function StatusBar({ lastExportPath, onReveal }: { lastExportPath: string | null; onReveal: () => void }) {
   const { t } = useTranslation();
+  const doc = useEditorDoc((s) => s.doc);
+  const stats = docStats(doc);
   return (
     <footer className="statusbar mono" data-tauri-drag-region>
       <SaveStatusText />
-      <span className="muted">{t('status.commandHint')}</span>
+      <span className="muted stats" title={t('menu.docStats', { chars: stats.chars, bullets: stats.bullets })}>
+        {t('menu.docStats', { chars: formatCount(stats.chars), bullets: formatCount(stats.bullets) })}
+      </span>
+      {lastExportPath && (
+        <button type="button" className="statusbar-action" onClick={onReveal}>
+          {t('menu.openFolder')}
+        </button>
+      )}
+      <span className="muted" style={{ marginLeft: 'auto' }}>{t('status.commandHint')}</span>
     </footer>
   );
 }

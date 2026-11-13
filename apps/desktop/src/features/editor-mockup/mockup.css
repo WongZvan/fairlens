@@ -8,12 +8,7 @@
 
 .m-center { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 
-/* 工具栏 */
-.m-toolbar { height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
-.m-toolbar .seg { display: flex; border: 1px solid var(--ade-line); border-radius: 6px; background: var(--ade-panel); overflow: hidden; }
-.m-toolbar .seg button { font-size: 12px; padding: 5px 12px; color: var(--ade-muted); display: flex; align-items: center; gap: 5px; }
-.m-toolbar .seg button[aria-pressed='true'] { background: var(--ade-accent); color: #fff; }
-.m-toolbar .zoom { font-size: 11px; color: var(--ade-muted); }
+/* 工具栏已并入单行命令栏（#124，壳层 .cmdbar）；此处不再有 .m-toolbar */
 .m-btn { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ade-line); background: var(--ade-panel); color: var(--ade-ink); border-radius: 6px; padding: 6px 12px; }
 .m-btn:hover { border-color: var(--ade-accent); }
 .m-btn.primary { background: var(--ade-accent); border-color: var(--ade-accent); color: #fff; }
@@ -289,3 +284,27 @@
 }
 .fl-basic-field:hover .fl-field-actions,
 .fl-field-actions:focus-within { opacity: 1; }
+
+/* 内联搜索条（#126）：浮在画布顶部，不占布局 */
+.search-bar {
+  position: absolute; top: 10px; right: 18px; z-index: 40;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 6px 5px 10px;
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.search-bar input {
+  width: 168px; height: 26px; border: 1px solid var(--ade-line); border-radius: 5px;
+  background: var(--ade-chrome); color: var(--ade-ink); font-size: 12px; padding: 0 8px; outline: none;
+}
+.search-bar input:focus { border-color: var(--ade-accent); }
+.search-count { font-size: 11px; color: var(--ade-muted); min-width: 40px; text-align: center; }
+.search-btn {
+  width: 24px; height: 24px; border-radius: 4px; color: var(--ade-muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.search-btn:hover { background: var(--ade-hover); color: var(--ade-ink); }
+
+/* 搜索命中高亮（#126）：当前项用强调色底，其余更淡；打印时全部透明（print-shell.css） */
+.fl-search-hit { background: color-mix(in srgb, var(--ade-accent) 16%, transparent); border-radius: 2px; }
+.fl-search-hit.fl-search-current { background: color-mix(in srgb, var(--ade-accent) 42%, transparent); }

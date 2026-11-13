@@ -29,7 +29,7 @@
 | m4.2 | 红笔批注系统 | 基础 | ⬜ | [m4/m4.2-redpen.md](m4/m4.2-redpen.md) | 待切 |
 | m4.3 | AI 走查 | 基础 | ⬜ | [m4/m4.3-walkthrough.md](m4/m4.3-walkthrough.md) | 待切 |
 | m4.4 | 评测台+20 份校准 | dev | ⬜ | [m4/m4.4-bench-dev.md](m4/m4.4-bench-dev.md) | 待切 |
-| m5.1 | 导出双轨+归档+文件关联 | 基础 | ⬜ | [m5/m5.1-export.md](m5/m5.1-export.md) | 待切 |
+| m5.1 | 导出双轨+归档+文件关联 | 基础 | 🔄 部分（#125：PDF 直出+归档已落地；Word/批注版/长图/HTML 待做） | [m5/m5.1-export.md](m5/m5.1-export.md) | 待切 |
 | m5.2 | 资源中心+模板工作室+诊断中心+dev 命令 | dev | ⬜ | [m5/m5.2-dev-toolbox.md](m5/m5.2-dev-toolbox.md) | 待切 |
 | m5.3 | Prompt Studio 全功能 | dev | ⬜ | [m5/m5.3-prompt-studio.md](m5/m5.3-prompt-studio.md) | 待切 |
 | m5.4 | NSIS/更新器/流水线/灾备演练/验收 | 共享 | ⬜ | [m5/m5.4-release.md](m5/m5.4-release.md) | 待切 |

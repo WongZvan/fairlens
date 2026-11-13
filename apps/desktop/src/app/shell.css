@@ -7,24 +7,113 @@
 }
 html[data-maximized='true'] .shell { border-radius: 0; }
 
-.titlebar {
+/* 单行命令栏（#124）：原 titlebar(42) + toolbar(44) 合并为一行 44px，净省 42px 给画布 */
+.cmdbar {
   flex: none;
-  height: 42px;
+  height: 44px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 8px 0 14px;
+  gap: 6px;
+  padding: 0 6px 0 10px;
   background: var(--ade-chrome);
   border-bottom: 1px solid var(--ade-line);
+  font-size: 12px;
+  /* 窄窗不换行：菜单与窗口三键优先级高于中间信息 */
+  white-space: nowrap;
+  overflow: hidden;
 }
-.titlebar .app { font-size: 12.5px; font-weight: 500; letter-spacing: 0.08em; } /* 仪表体字标 */
-.titlebar .file { font-size: 12px; }
-.titlebar .chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; color: var(--ade-muted);
-  border: 1px solid var(--ade-line); background: var(--ade-panel);
-  border-radius: 99px; padding: 2px 9px;
+.cmdbar .app { font-size: 12.5px; font-weight: 500; letter-spacing: 0.08em; padding: 0 4px; } /* 仪表体字标 */
+.cmdbar .cmd-drag { flex: 1 1 8px; min-width: 8px; align-self: stretch; }
+.cmdbar .back-btn { width: 30px; height: 28px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
+.cmdbar .back-btn:hover { background: var(--ade-hover); }
+
+/* 顶级菜单（文件/编辑/视图/AI） */
+.cmd-menus { display: flex; align-items: center; gap: 1px; flex: none; }
+.cmd-menu { position: relative; }
+.cmd-menu-btn {
+  height: 28px; padding: 0 9px; border-radius: 4px;
+  color: var(--ade-ink); font-size: 12px;
 }
+.cmd-menu-btn:hover, .cmd-menu-btn[aria-expanded='true'] { background: var(--ade-hover); }
+.cmd-drop {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 90;
+  min-width: 208px; padding: 5px;
+  background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  max-height: min(70vh, 520px); overflow: auto;
+}
+.cmd-drop-right { left: auto; right: 0; }
+.cmd-drop-left { left: 0; right: auto; }
+.cmd-item {
+  width: 100%; height: 28px; padding: 0 8px; border-radius: 5px;
+  display: flex; align-items: center; gap: 10px;
+  color: var(--ade-ink); font-size: 12px; text-align: left;
+}
+.cmd-item:hover:not(:disabled) { background: var(--ade-hover); }
+.cmd-item:disabled { color: var(--ade-muted); opacity: 0.6; cursor: default; }
+.cmd-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.cmd-item-hint { color: var(--ade-muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+.cmd-item-badge {
+  font-size: 9.5px; letter-spacing: 0.04em; color: var(--ade-muted);
+  border: 1px solid var(--ade-line); border-radius: 3px; padding: 0 3px; line-height: 14px;
+}
+.cmd-sep { height: 1px; margin: 4px 6px; background: var(--ade-line); }
+.cmd-group-label { padding: 6px 8px 3px; font-size: 10.5px; letter-spacing: 0.06em; color: var(--ade-muted); }
+
+/* 撤销/重做与模板下拉 */
+.cmd-icons { display: flex; gap: 1px; flex: none; }
+.cmd-icon { width: 28px; height: 28px; border-radius: 4px; color: var(--ade-muted); display: flex; align-items: center; justify-content: center; }
+.cmd-icon:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.cmd-template { position: relative; flex: none; }
+.cmd-template-btn {
+  height: 28px; padding: 0 8px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px;
+  color: var(--ade-ink); font-size: 12px; border: 1px solid var(--ade-line); background: var(--ade-panel);
+  max-width: 190px;
+}
+.cmd-template-btn:hover { border-color: var(--ade-accent); }
+.cmd-template-btn .muted { font-size: 11px; }
+
+/* 保存按钮（仅手动模式显形，见 #124） */
+.cmd-save {
+  height: 28px; padding: 0 10px; border-radius: 5px; display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ade-ink); font-size: 12px; border: 1px solid var(--ade-line); background: var(--ade-panel); flex: none;
+}
+.cmd-save:hover { border-color: var(--ade-accent); }
+
+/* 自动保存开关（Office 365 式） */
+.cmd-switch {
+  height: 28px; padding: 0 9px; border-radius: 5px; display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ade-muted); font-size: 11.5px; flex: none;
+}
+.cmd-switch:hover { background: var(--ade-hover); }
+.cmd-switch.on { color: var(--ade-ink); }
+.cmd-switch-track {
+  width: 26px; height: 15px; border-radius: 99px; background: var(--ade-line);
+  display: inline-flex; align-items: center; padding: 1.5px; transition: background 140ms;
+}
+.cmd-switch.on .cmd-switch-track { background: var(--ade-accent); }
+.cmd-switch-knob {
+  width: 11px; height: 11px; border-radius: 50%; background: var(--ade-panel);
+  transform: translateX(0); transition: transform 140ms;
+}
+.cmd-switch.on .cmd-switch-knob { transform: translateX(11px); background: #fff; }
+.cmd-switch-label { white-space: nowrap; }
+
+/* 导出下拉（主按钮） */
+.cmd-export { position: relative; flex: none; }
+.cmd-export-btn {
+  height: 28px; padding: 0 10px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px;
+  background: var(--ade-accent); border: 1px solid var(--ade-accent); color: #fff; font-size: 12px;
+}
+.cmd-export-btn:hover:not(:disabled) { filter: brightness(1.06); }
+.cmd-export-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* 激活状态收成一个点（省 ~40px；#111 的「绿点+已激活」语义保留在 tooltip/aria） */
+.cmd-activation {
+  width: 8px; height: 8px; border-radius: 50%; flex: none; margin: 0 4px;
+  background: var(--ade-muted); opacity: 0.5;
+}
+.cmd-activation.on { background: var(--ade-pen-green); opacity: 1; box-shadow: 0 0 0 3px rgba(46, 110, 78, 0.14); }
 .wbtns { margin-left: auto; display: flex; gap: 2px; }
 .wbtns button {
   width: 34px; height: 30px; border-radius: 4px;
@@ -54,8 +143,6 @@ html[data-maximized='true'] .shell { border-radius: 0; }
 .dot.ok { background: var(--ade-ok); }
 
 /* m1.1：标题栏返回按钮 */
-.titlebar .back-btn { width: 30px; height: 28px; border-radius: 4px; color: var(--ade-ink); display: flex; align-items: center; justify-content: center; }
-.titlebar .back-btn:hover { background: var(--ade-hover); }
 
 /* ---- m1.6：关闭保护/快照弹层与 toast ---- */
 .guard-overlay {
@@ -112,10 +199,18 @@ html[data-maximized='true'] .shell { border-radius: 0; }
 .snap-pane h4 { margin: 0 0 6px; font-size: 11.5px; color: var(--ade-muted); font-weight: 500; }
 .snap-pane .fl-paper { transform: scale(0.62); transform-origin: top left; pointer-events: none; }
 
-/* 状态栏可拖动（#107）：子元素不拦截 data-tauri-drag-region 的命中 */
+/* 状态栏可拖动（#107）：子元素不拦截 data-tauri-drag-region 的命中；
+   例外=需要点击的动作（#125 的「打开所在文件夹」）显式放开 */
 .statusbar > * { pointer-events: none; }
+.statusbar .statusbar-action { pointer-events: auto; }
 
 /* 状态栏保存指示（#112）：绿点=自动 / 红点=手动；状态文字异常时红色 */
 .statusbar .save { display: inline-flex; align-items: center; gap: 5px; color: var(--ade-ink); }
 .statusbar .save.warn { color: var(--ade-pen-red); }
+.statusbar .stats { color: var(--ade-muted); }
+.statusbar .statusbar-action {
+  height: 20px; padding: 0 8px; border-radius: 4px; font-size: 11px;
+  color: var(--ade-accent); border: 1px solid var(--ade-line); background: var(--ade-panel);
+}
+.statusbar .statusbar-action:hover { border-color: var(--ade-accent); }
 .dot.warn { background: var(--ade-pen-red); }

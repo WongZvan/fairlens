@@ -9,6 +9,7 @@ import './app/shell.css';
 import './app/settings.css';
 import './app/gate.css';
 import './features/editor-mockup/mockup.css';
+import './features/templates/print-css/print-shell.css'; // #125：打印/导出时隐藏应用 chrome
 import './styles/plex-sans-sc.css';
 import './i18n/index.js';
 

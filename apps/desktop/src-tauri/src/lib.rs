@@ -3,6 +3,7 @@
 //! invoke 命令清单见 docs/01 附录 A（snake_case）。
 
 mod db;
+mod export;
 
 use tauri::Manager;
 use tauri_plugin_log::log;
@@ -26,11 +27,13 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(log_plugin)
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init()) // #125：导出/归档的「另存为」路径选择
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(db_url, db::migrations())
                 .build(),
         )
+        .invoke_handler(tauri::generate_handler![export::export_pdf, export::save_archive])
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             // 二次启动：聚焦既有窗口（文件参数转发=M5 文件关联时接入）
             log::warn!("second instance launched; focusing existing window");

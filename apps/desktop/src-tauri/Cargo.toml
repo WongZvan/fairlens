@@ -20,8 +20,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # 里程碑增量（按需解锁，勿提前引入）：
-# M1: tauri-plugin-dialog / tauri-plugin-updater
 # M2: machine-uid（tauri-plugin-sql 已于 m1.6 解锁：本地持久层）
 # M3: tauri-plugin-http
-# M5: CDP printToPDF（tauri devtools）
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+# 2026-11-13 #125：导出走「选路径（dialog）+ WebView2 PrintToPdf 直出文件」，不用系统打印对话框。
+# dialog 的「另存为」与归档导出共用；PrintToPdf 需 webview2-com（wry 传递依赖，版本须与 tauri 2.12 对齐 0.39）。
+tauri-plugin-dialog = "2"
+webview2-com = "0.39"
+windows-core = "0.62"
