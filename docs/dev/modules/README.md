@@ -8,11 +8,11 @@
 | m0.2 | shared 全契约+单测 | 共享 | ✅ 872b440 | [m0/m0.2-shared-contracts.md](m0/m0.2-shared-contracts.md) | feat/m0-scaffold |
 | m0.3 | desktop 应用壳 | 共享 | ✅ 872b440（2026-11-05 主窗 min 960×640） | [m0/m0.3-desktop-shell.md](m0/m0.3-desktop-shell.md) | feat/m0-scaffold |
 | m0.4 | keygen init+契约冻结 | 共享 | ✅ 872b440 | [m0/m0.4-keygen-contract.md](m0/m0.4-keygen-contract.md) | feat/m0-scaffold |
-| m1.1 | UI 可点击打样（含激活门/设置壳，九轮反馈） | 基础 | ✅ 4f3b4b7（待最终过目） | [m1/m1.1-ui-mockup.md](m1/m1.1-ui-mockup.md) | feat/m1-ui-mockup |
+| m1.1 | UI 可点击打样（含激活门/设置壳，九轮反馈） | 基础 | ✅ 4f3b4b7（收口回填；实现提交=764e7ef；待最终过目） | [m1/m1.1-ui-mockup.md](m1/m1.1-ui-mockup.md) | feat/m1-ui-mockup |
 | m1.2 | 模板数据层（3 套+printCSS） | 基础 | ✅ 64478c6（2026-11-05 预览纸面/字体扩展 #117） | [m1/m1.2-template-data.md](m1/m1.2-template-data.md) | feat/m1.2-template-data |
-| m1.3 | Tiptap 节点+blockId | 基础 | ✅ 9066395（2026-11-05 预览节点扩展 #117） | [m1/m1.3-tiptap-nodes.md](m1/m1.3-tiptap-nodes.md) | feat/m1.3-tiptap-nodes |
+| m1.3 | Tiptap 节点+blockId | 基础 | ✅ 9066395（收口回填；实现提交=005bd16；2026-11-05 预览节点扩展 #117） | [m1/m1.3-tiptap-nodes.md](m1/m1.3-tiptap-nodes.md) | feat/m1.3-tiptap-nodes |
 | m1.4 | 画布渲染（权限矩阵/粘贴归一化） | 基础 | ✅ 67a4cb0（2026-11-05 预览 NodeView 扩展 #117；背景层 #86 延后 m2.3） | [m1/m1.4-canvas.md](m1/m1.4-canvas.md) | feat/m1.4-tail（已并入） |
-| m1.5 | 树/快捷键/命令面板/Ctrl+F | 基础 | ✅ 92b4cad（2026-11-05 大纲折叠/雷达/模板工具栏 + 大纲标题/完整树 #118；Ctrl+F 内联查找待后续） | [m1/m1.5-tree-shortcuts.md](m1/m1.5-tree-shortcuts.md) | feat/m1.5-tree-shortcuts |
+| m1.5 | 树/快捷键/命令面板/Ctrl+F | 基础 | ✅ 92b4cad（收口回填；实现提交=5db0e3a；2026-11-05 大纲折叠/雷达/模板工具栏 + 大纲标题/完整树 #118；Ctrl+F 内联查找待后续） | [m1/m1.5-tree-shortcuts.md](m1/m1.5-tree-shortcuts.md) | feat/m1.5-tree-shortcuts |
 | m1.6 | 持久层+快照+关闭保护 | 基础 | ✅ deb5d6a（真机冒烟自动部分已过；人工验收项见 STATE 悬挂⑤） | [m1/m1.6-persist-snapshot.md](m1/m1.6-persist-snapshot.md) | feat/m1.6（已并入） |
 | m1.7 | 导入管线（LLM 接入点留 m3.5） | 基础 | ⬜ | [m1/m1.7-import.md](m1/m1.7-import.md) | 待切 |
 | m1.8 | 简历库首页 | 基础 | ⬜ | [m1/m1.8-library-home.md](m1/m1.8-library-home.md) | 待切 |
