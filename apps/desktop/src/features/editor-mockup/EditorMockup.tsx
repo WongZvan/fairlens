@@ -430,9 +430,16 @@ export function EditorMockup() {
         onDuplicateEntry={duplicateEntry}
         banner={
           isSample ? (
-            <div className="sample-banner">
-              <span>{t('editor.sampleBanner')}</span>
-              <button type="button" className="m-btn" onClick={() => setClearConfirm(true)}>{t('editor.clearSample')}</button>
+            <div className="sample-pill">
+              <span className="sample-pill-label">{t('editor.sampleBadge')}</span>
+              <button
+                type="button"
+                className="sample-pill-clear"
+                title={t('editor.sampleClearTitle')}
+                onClick={() => setClearConfirm(true)}
+              >
+                {t('editor.sampleClear')}
+              </button>
             </div>
           ) : null
         }
@@ -686,7 +693,6 @@ function EvalPanel() {
       {/* #127 去假象：不再展示硬编码分数/模型/批注（会误导成真实评估结果） */}
       <div className="eval-empty">
         <p className="muted">{t('editor.evalUnavailable')}</p>
-        <p className="muted small">{t('editor.evalUnavailableHint')}</p>
       </div>
     </div>
   );

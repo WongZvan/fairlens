@@ -41,9 +41,16 @@ describe('命令栏菜单模型（#124）', () => {
     for (const id of ['file.save', 'edit.undo', 'edit.find', 'view.toggle-left', 'file.export-pdf'] as const) {
       expect(findItem(menus, id)!.disabled, id).toBe(true);
     }
-    // 返回简历库/关闭窗口不受视图影响
+    // 返回简历库不受视图影响
     expect(findItem(menus, 'file.back-library')!.disabled).toBeFalsy();
-    expect(findItem(menus, 'file.close')!.disabled).toBeFalsy();
+  });
+
+  it('文件菜单不含退出项（#127 二次打磨：退出只走窗口三键/Alt+F4）', () => {
+    const menus = buildMenus(t, baseCtx);
+    const file = menus.find((m) => m.id === 'file')!;
+    const ids = flattenItems(file.items).map((i) => i.id as string);
+    expect(ids).not.toContain('file.close');
+    expect(ids.some((id) => id.includes('close'))).toBe(false);
   });
 
   it('主题三项按当前模式打勾', () => {

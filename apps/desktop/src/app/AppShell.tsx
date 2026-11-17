@@ -2,7 +2,7 @@ import { FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { docStats, formatCount } from '@fairlens/core';
 import { ActivationGate } from './ActivationGate.js';
 import { CommandBar } from './CommandBar.js';
@@ -78,10 +78,7 @@ export function AppShell() {
       void requestClose('back-library');
       return;
     }
-    if (id === 'file.close') {
-      void requestClose('window-close');
-      return;
-    }
+    // #127 二次打磨：文件菜单不再提供退出项（避免被误读为“关下拉”）；退出=标题栏 ✕ / Alt+F4
     if (id === 'file.new' || id === 'file.open') return; // 按钮已 disabled（m1.8）
 
     // —— 导出（#125）——
@@ -345,7 +342,9 @@ function SaveStatusText() {
   return (
     <span className={view.warn ? 'save warn' : 'save'}>
       <i className={`dot ${view.dot}`} />
-      {t(`saveStatus.${view.modeKey}`)} · {t(`saveStatus.${view.stateKey}`)}
+      <span className="save-mode">{t(`saveStatus.${view.modeKey}`)}</span>
+      <span className="save-sep">·</span>
+      <span className="save-state">{t(`saveStatus.${view.stateKey}`)}</span>
       {status === 'error' && (
         <button
           type="button"
@@ -384,10 +383,14 @@ function StatusBar({ view, lastExportPath, onReveal }: { view: 'library' | 'edit
   const doc = useEditorDoc((s) => s.doc);
   const stats = docStats(doc);
   return (
-    <footer className="statusbar mono" data-tauri-drag-region>
+    <footer className="statusbar" data-tauri-drag-region>
       <SaveStatusText />
       <span className="muted stats" title={t('menu.docStats', { chars: stats.chars, bullets: stats.bullets })}>
-        {t('menu.docStats', { chars: formatCount(stats.chars), bullets: formatCount(stats.bullets) })}
+        <Trans
+          i18nKey="menu.docStatsRich"
+          values={{ chars: formatCount(stats.chars), bullets: formatCount(stats.bullets) }}
+          components={{ n: <span className="num" /> }}
+        />
       </span>
       {lastExportPath && (
         <button type="button" className="statusbar-action" onClick={onReveal}>
@@ -395,7 +398,7 @@ function StatusBar({ view, lastExportPath, onReveal }: { view: 'library' | 'edit
         </button>
       )}
       {/* #127：简历库没有 Ctrl+K 处理器，不再显示骗人的快捷键提示 */}
-      {view === 'editor' && <span className="muted" style={{ marginLeft: 'auto' }}>{t('status.commandHint')}</span>}
+      {view === 'editor' && <span className="statusbar-hint" style={{ marginLeft: 'auto' }}>{t('status.commandHint')}</span>}
     </footer>
   );
 }

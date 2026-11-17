@@ -67,3 +67,15 @@
 - [x] 模块 MD：m1.1（浮层契约）、m1.3（节点与命令）、m1.4（空白点击/气泡时长）、m1.5（快捷键/面板/搜索）、m1.6（保存失败）
 - [x] 验收手册 §13 + 勾选表
 - [x] STATE
+
+## 8. 二次打磨（2026-11-17，用户第二轮直报）
+
+| # | 问题 | 事实/根因 | 决定与实现 |
+|---|---|---|---|
+| 1 | 「文件 → 关闭窗口」易被读成"关下拉"，实际退出应用 | 菜单最后一项、紧贴「返回简历库」、无分隔线/快捷键；点击走 `requestClose('window-close')` | **用户拍板：从文件菜单移除退出项**。退出只保留标题栏 ✕ 与 Alt+F4；✕ 的 label/tooltip 改「退出 FairLens（Alt+F4）」；速查表补 Alt+F4 |
+| 2 | 示例横幅说明过多，且搜索条压住清空按钮 | 30px 流内横幅 + 30 字；搜索条 `top:10px` 与横幅重叠 | 改为画布左上**悬浮胶囊**「示例简历 · 清空」（absolute、24px、不占布局、不与右上搜索条重叠）；说明句删除，只在按钮 tooltip 保留一句 |
+| 3 | 底栏字体丑 | footer 挂 `mono` 类 → 中文落到系统泛型 monospace 回退 | 去 `mono`；中文走 `--ade-font-ui` 11.5px，**只有数字与快捷键提示走 mono tabular**；模式词 muted、状态词 ink/warn |
+| 3b | 顶栏「模板：」难看 | 11px muted + 全角冒号 | 换 `LayoutTemplate` 图标 + 模板名（字重 500）；aria/tooltip「切换模板：经典单栏」 |
+| 4 | 废话文案 | `tplNote` 等常驻解释句 | 删除左栏 tplNote；空态缩为「暂无内容」；简历库/评估/设置/清空回执/导出 hint 缩短；清死键（pagebreak/m1/unactivated/mockOnly） |
+
+**验证**：326 测试绿 / lint / typecheck / contract / build；浏览器 960×640 实测：文件菜单无退出项、✕ label 正确、胶囊 (233,54) 与搜索条共存不重叠、底栏 computed font-family=Plex Sans、数字=Plex Mono、模板按钮仅"经典单栏"。

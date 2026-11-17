@@ -22,6 +22,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: 'Ctrl+D', labelKey: 'shortcuts.duplicate' },
       { keys: 'Ctrl+Shift+K', labelKey: 'shortcuts.link' },
       { keys: 'Ctrl+Shift+V', labelKey: 'shortcuts.pastePlain' },
+      { keys: 'Alt+F4', labelKey: 'shortcuts.exit' },
       { keys: '?', labelKey: 'shortcuts.help' },
     ],
   },

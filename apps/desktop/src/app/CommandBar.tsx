@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Check, ChevronDown, Copy, Minus, Redo2, Square, Undo2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Copy, LayoutTemplate, Minus, Redo2, Square, Undo2, X } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { useMockup } from '../stores/mockup.js';
@@ -134,10 +134,11 @@ function TemplatePicker() {
         className="cmd-template-btn"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={t('editor.template')}
+        aria-label={t('editor.templateSwitch', { name: t(current.key) })}
+        title={t('editor.templateSwitch', { name: t(current.key) })}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="muted">{t('editor.template')}：</span>
+        <LayoutTemplate size={13} strokeWidth={2} className="cmd-template-icon" aria-hidden="true" />
         <span className="cmd-template-value">{t(current.key)}</span>
         <ChevronDown size={12} strokeWidth={2} />
       </button>
@@ -314,7 +315,14 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
             >
               {maximized ? <Copy size={13} strokeWidth={2} /> : <Square size={12} strokeWidth={2} />}
             </button>
-            <button aria-label={t('titlebar.windowClose')} className="close" onClick={winCmd('关闭', () => win.close())}><X size={15} strokeWidth={2} /></button>
+            <button
+              aria-label={t('titlebar.windowExit')}
+              title={t('titlebar.windowExit')}
+              className="close"
+              onClick={winCmd('退出', () => win.close())}
+            >
+              <X size={15} strokeWidth={2} />
+            </button>
           </>
         )}
       </div>

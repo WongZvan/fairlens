@@ -45,7 +45,7 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
       </button>
       <h2 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.12em', color: 'var(--ade-muted)', margin: '2px 4px 8px' }}>{t('editor.outline')}</h2>
       {sections.length === 0 ? (
-        <p className="tpl-note" style={{ color: 'var(--ade-muted)' }}>{t('editor.outlineEmpty')}</p>
+        <p className="outline-empty">{t('editor.outlineEmpty')}</p>
       ) : (
         sections.map((item) => {
           const { section, entries, fields, skills, hasChildren } = item;
@@ -117,7 +117,6 @@ export function OutlineTreeLive({ doc, onReorderEntry }: TreeProps) {
           );
         })
       )}
-      <p className="tpl-note">{t('editor.tplNote')}</p>
     </div>
   );
 }

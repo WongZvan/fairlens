@@ -28,7 +28,6 @@ export type MenuActionId =
   | 'file.export-png'
   | 'file.export-html'
   | 'file.back-library'
-  | 'file.close'
   // 编辑
   | 'edit.undo'
   | 'edit.redo'
@@ -112,7 +111,7 @@ export function buildMenus(t: (key: string, vars?: Record<string, unknown>) => s
           label: t('menu.fileExport'),
           separatorBefore: true,
           submenu: [
-            { id: 'file.export-pdf', label: t('menu.exportPdf'), hint: t('menu.exportPdfHint'), ...need(editorOnly) },
+            { id: 'file.export-pdf', label: t('menu.exportPdf'), ...need(editorOnly) },
             { id: 'file.export-archive', label: t('menu.fileArchive'), ...need(editorOnly) },
             { id: 'file.export-word', label: t('menu.exportWord'), ...closed('menu.noteExportFormats') },
             { id: 'file.export-pdf-annotated', label: t('menu.exportPdfAnnotated'), separatorBefore: true, ...closed('menu.noteExportFormats') },
@@ -121,7 +120,8 @@ export function buildMenus(t: (key: string, vars?: Record<string, unknown>) => s
           ],
         },
         { id: 'file.back-library', label: t('menu.fileBackLibrary'), separatorBefore: true },
-        { id: 'file.close', label: t('menu.fileClose') },
+        // #127 二次打磨：文件菜单不放「关闭窗口/退出」——文案易被误读为“关下拉”，
+        // 且误点直接退出应用。退出只保留标题栏 ✕ 与 Alt+F4（Windows 系统键，Tauri 拦为 CloseRequested）。
       ],
     },
     {
