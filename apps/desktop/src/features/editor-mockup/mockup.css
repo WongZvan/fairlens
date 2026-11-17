@@ -1,5 +1,5 @@
 /* ── m1.1 打样：三栏布局 ─────────────────────────────── */
-.editor-mock { flex: 1; display: flex; min-height: 0; }
+.editor-mock { flex: 1; display: flex; min-height: 0; position: relative; } /* 定位上下文：内联搜索条 top:10px 相对编辑器而非视口（否则浮到命令栏上挡住导出） */
 
 .m-left, .m-right { flex: none; background: var(--ade-panel); overflow: hidden; transition: width 240ms; }
 .m-left { border-right: 1px solid var(--ade-line); padding: 12px 10px; overflow: hidden; }

@@ -16,6 +16,7 @@ import { useTheme } from '../stores/theme.js';
 import { useLicense } from '../stores/license.js';
 import { toast } from './Toast.js';
 import { SettingsGear } from './SettingsWindow.js';
+import { Dropdown } from './dropdown.js';
 import { buildMenus, type MenuActionId, type MenuDef, type MenuItem } from './menu-model.js';
 
 export interface CommandBarProps {
@@ -28,29 +29,14 @@ export interface CommandBarProps {
   exporting?: boolean;
 }
 
-/** 菜单开合：点开、移入切换、Esc 与点外关闭 */
+/**
+ * 菜单开合：点开、移入切换。
+ * 点外关闭与 Esc 由 Dropdown 统一接管（下拉 portal 到 body 后，旧的「ref 是否包含 target」
+ * 判定会把「点下拉项」当成「点外面」→ 先卸载再丢 click，菜单项点不动）。
+ */
 function useMenus() {
   const [openId, setOpenId] = useState<string | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!openId) return;
-    const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpenId(null);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpenId(null);
-    };
-    document.addEventListener('mousedown', onDown, true);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown, true);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [openId]);
-
   return {
-    rootRef,
     openId,
     toggle: (id: string) => setOpenId((cur) => (cur === id ? null : id)),
     hover: (id: string) => setOpenId((cur) => (cur ? id : cur)),
@@ -82,23 +68,23 @@ function MenuEntry({ item, run }: { item: MenuItem; run: (item: MenuItem) => voi
   );
 }
 
-function MenuButton({ menu, open, onToggle, onHover, run }: {
+function MenuButton({ menu, open, onToggle, onHover, onClose, run }: {
   menu: MenuDef;
   open: boolean;
   onToggle: () => void;
   onHover: () => void;
+  onClose: () => void;
   run: (item: MenuItem) => void;
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
   return (
     <div className="cmd-menu" onMouseEnter={onHover}>
-      <button type="button" className="cmd-menu-btn" aria-haspopup="menu" aria-expanded={open} onClick={onToggle}>
+      <button ref={btnRef} type="button" className="cmd-menu-btn" aria-haspopup="menu" aria-expanded={open} onClick={onToggle}>
         {menu.label}
       </button>
-      {open && (
-        <div className="cmd-drop" role="menu">
-          {menu.items.map((item) => <MenuEntry key={`${item.id}-${item.label}`} item={item} run={run} />)}
-        </div>
-      )}
+      <Dropdown open={open} anchorRef={btnRef} align="left" role="menu" onClose={onClose}>
+        {menu.items.map((item) => <MenuEntry key={`${item.id}-${item.label}`} item={item} run={run} />)}
+      </Dropdown>
     </div>
   );
 }
@@ -135,22 +121,14 @@ function TemplatePicker() {
   const { t } = useTranslation();
   const templateId = useEditorDoc((s) => s.doc?.templateId);
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown, true);
-    return () => document.removeEventListener('mousedown', onDown, true);
-  }, [open]);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const current = TEMPLATE_OPTIONS.find((tp) => tp.id === templateId) ?? TEMPLATE_OPTIONS[0];
 
   return (
-    <div className="cmd-template" ref={ref}>
+    <div className="cmd-template">
       <button
+        ref={btnRef}
         type="button"
         className="cmd-template-btn"
         aria-haspopup="listbox"
@@ -159,31 +137,29 @@ function TemplatePicker() {
         onClick={() => setOpen((o) => !o)}
       >
         <span className="muted">{t('editor.template')}：</span>
-        {t(current.key)}
+        <span className="cmd-template-value">{t(current.key)}</span>
         <ChevronDown size={12} strokeWidth={2} />
       </button>
-      {open && (
-        <div className="cmd-drop cmd-drop-left" role="listbox">
-          {TEMPLATE_OPTIONS.map((tp) => (
-            <button
-              type="button"
-              key={tp.id}
-              role="option"
-              aria-selected={templateId === tp.id}
-              className="cmd-item"
-              onClick={() => {
-                setOpen(false);
-                const d = useEditorDoc.getState().doc;
-                if (!d || d.templateId === tp.id) return;
-                useEditorDoc.getState().applyDoc({ ...d, templateId: tp.id });
-              }}
-            >
-              <span className="cmd-item-label">{t(tp.key)}</span>
-              {templateId === tp.id && <Check size={12} strokeWidth={2.4} />}
-            </button>
-          ))}
-        </div>
-      )}
+      <Dropdown open={open} anchorRef={btnRef} align="left" role="listbox" onClose={() => setOpen(false)}>
+        {TEMPLATE_OPTIONS.map((tp) => (
+          <button
+            type="button"
+            key={tp.id}
+            role="option"
+            aria-selected={templateId === tp.id}
+            className="cmd-item"
+            onClick={() => {
+              setOpen(false);
+              const d = useEditorDoc.getState().doc;
+              if (!d || d.templateId === tp.id) return;
+              useEditorDoc.getState().applyDoc({ ...d, templateId: tp.id });
+            }}
+          >
+            <span className="cmd-item-label">{t(tp.key)}</span>
+            {templateId === tp.id && <Check size={12} strokeWidth={2.4} />}
+          </button>
+        ))}
+      </Dropdown>
     </div>
   );
 }
@@ -204,8 +180,9 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
     theme: themeMode,
     zoomMode: 'fit-width',
   });
-  const { rootRef, openId, toggle, hover, close } = useMenus();
+  const { openId, toggle, hover, close } = useMenus();
   const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLButtonElement>(null);
   const isTauri = '__TAURI_INTERNALS__' in globalThis;
   const win = isTauri ? getCurrentWindow() : undefined;
   const [maximized, setMaximized] = useState(false);
@@ -243,7 +220,7 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
         <span className="app mono" data-tauri-drag-region>FAIRLENS</span>
       )}
 
-      <div className="cmd-menus" ref={rootRef}>
+      <div className="cmd-menus">
         {menus.map((menu) => (
           <MenuButton
             key={menu.id}
@@ -251,13 +228,11 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
             open={openId === menu.id}
             onToggle={() => toggle(menu.id)}
             onHover={() => hover(menu.id)}
+            onClose={close}
             run={runItem}
           />
         ))}
       </div>
-
-      {/* 拖动区：菜单与图标之间的伸缩空白（data-tauri-drag-region 不落在按钮上） */}
-      <span className="cmd-drag" data-tauri-drag-region />
 
       {inEditor && (
         <>
@@ -273,32 +248,36 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
         </>
       )}
 
+      {/* 拖动区：编辑区群组与右群组之间的伸缩空白。
+          伸缩区必须落在模板右侧——保存按钮按模式显隐时只改变它自己左侧的空隙，
+          「菜单 / 撤销 / 模板」零位移（#124 回归修复，2026-11-17） */}
       <span className="cmd-drag" data-tauri-drag-region />
 
-      {inEditor && !autosave && (
-        <button type="button" className="cmd-save" onClick={() => onAction('file.save')}>
-          <span className={`dot ${dirty ? 'warn' : 'ok'}`} />
-          {t('menu.fileSave')}
-        </button>
-      )}
-
-      {inEditor && <AutosaveSwitch />}
-
       {inEditor && (
-        <div className="cmd-export">
-          <button
-            type="button"
-            className="cmd-export-btn"
-            aria-haspopup="menu"
-            aria-expanded={exportOpen}
-            disabled={exporting}
-            onClick={() => setExportOpen((o) => !o)}
-          >
-            {exporting ? t('menu.exporting') : t('menu.fileExport')}
-            <ChevronDown size={12} strokeWidth={2} />
-          </button>
-          {exportOpen && (
-            <div className="cmd-drop cmd-drop-right" role="menu">
+        <div className="cmd-right">
+          {!autosave && (
+            <button type="button" className="cmd-save" onClick={() => onAction('file.save')}>
+              <span className={`dot ${dirty ? 'warn' : 'ok'}`} />
+              {t('menu.fileSave')}
+            </button>
+          )}
+
+          <AutosaveSwitch />
+
+          <div className="cmd-export">
+            <button
+              ref={exportRef}
+              type="button"
+              className="cmd-export-btn"
+              aria-haspopup="menu"
+              aria-expanded={exportOpen}
+              disabled={exporting}
+              onClick={() => setExportOpen((o) => !o)}
+            >
+              {exporting ? t('menu.exporting') : t('menu.fileExport')}
+              <ChevronDown size={12} strokeWidth={2} />
+            </button>
+            <Dropdown open={exportOpen} anchorRef={exportRef} align="right" role="menu" onClose={() => setExportOpen(false)}>
               {exportItems.map((item) => (
                 <MenuEntry
                   key={`${item.id}-${item.label}`}
@@ -309,16 +288,16 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
                   }}
                 />
               ))}
-            </div>
-          )}
+            </Dropdown>
+          </div>
+
+          <span
+            className={`cmd-activation${activated ? ' on' : ''}`}
+            title={activated ? t('status.activated') : t('status.unactivated')}
+            aria-label={activated ? t('status.activated') : t('status.unactivated')}
+          />
         </div>
       )}
-
-      <span
-        className={`cmd-activation${activated ? ' on' : ''}`}
-        title={activated ? t('status.activated') : t('status.unactivated')}
-        aria-label={activated ? t('status.activated') : t('status.unactivated')}
-      />
 
       <div className="wbtns">
         <button aria-label={t('titlebar.theme', { theme: t(`theme.${themeMode}`) })} onClick={cycleTheme} title={t(`theme.${themeMode}`)}>

@@ -83,3 +83,15 @@
 - [x] `packages/core` 新增 `doc-stats.ts`（纯函数 + 7 单测）
 - [x] 模块 MD：m1.1（命令栏取代双行）、m1.5（搜索条 + 快捷键表）、m5.1（PDF 已提前落地）
 - [x] STATE / 验收手册第 12 节
+
+## 9. 修复记录（2026-11-17，用户直报两项 + 实测发现一项）
+
+| # | 现象 | 根因（文件:行） | 修法 |
+|---|---|---|---|
+| 1 | 切自动保存时「模板：经典单栏」左右移动 | `CommandBar.tsx` 保存按钮按 `!autosave` 条件渲染；`shell.css` 两段 `.cmd-drag{flex:1 1 8px}` 在按钮卸载后各长胖 ~32px，把后面的图标+模板整体推右 | 伸缩空白减为一段并移到**编辑区群组之后**；右群组（保存/自动保存/导出/激活点）包进 `.cmd-right{margin-left:auto}`。保存按钮显隐只改变它自己左侧空隙，模板/菜单/撤销零位移（浏览器实测：切换前后 template.left=275/ icons=212/ menus=46/ export=794 全部不变） |
+| 2 | 顶栏下拉看不到 | `.cmdbar{overflow:hidden}` 裁掉 `position:absolute; top:calc(100%+4px)` 的下拉：锚 28px 高按钮 → 下拉顶边 32px，44px 栏只留 12px | 下拉改 `createPortal(body)` + `position:fixed`（`app/dropdown.tsx`）。纯函数 `placeDropdown` 负责左右对齐/视口夹取/下方不足翻转向上，`resize`+`scroll` 重定位；样式坐标全由内联给，CSS 只留外观与 `max-height` 兜底 |
+| 3 | 内联搜索条浮在命令栏上挡住「导出」（实测发现） | `SearchBar` 挂在 `.editor-mock` 下，而 `.editor-mock` 无 `position` → `absolute; top:10px` 按视口算，落在 y=10（命令栏 0–44） | `.editor-mock{position:relative}`，搜索条回到画布顶部 y=54 |
+
+**portal 化的连带必改点**：下拉节点搬进 body 后，旧的「锚点 ref 是否包含 target」dismiss 判定会把「点下拉项」误判成「点外面」——mousedown 先卸载、click 随后丢失，菜单项点不动。`Dropdown` 的判定改为 **锚点 ∪ 下拉节点**，并统一接管 Esc（模板/导出下拉原先没有 Esc，现三个下拉行为一致）。
+
+**顺带兜底**：`.cmd-template` 改为唯一可收缩项（`flex:0 1 auto; min-width:0` + 值文本省略号），保证 960px 下永远不会把窗口三键挤出视口。`.cmd-drop-left/right` 两个类被 `align` prop 取代后删除。

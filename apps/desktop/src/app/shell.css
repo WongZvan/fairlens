@@ -29,21 +29,20 @@ html[data-maximized='true'] .shell { border-radius: 0; }
 
 /* 顶级菜单（文件/编辑/视图/AI） */
 .cmd-menus { display: flex; align-items: center; gap: 1px; flex: none; }
-.cmd-menu { position: relative; }
 .cmd-menu-btn {
   height: 28px; padding: 0 9px; border-radius: 4px;
   color: var(--ade-ink); font-size: 12px;
 }
 .cmd-menu-btn:hover, .cmd-menu-btn[aria-expanded='true'] { background: var(--ade-hover); }
 .cmd-drop {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 90;
+  /* portal 到 body + fixed（2026-11-17）：坐标由 dropdown.tsx 的 placeDropdown 内联给出。
+     不再用 absolute —— 那会被 .cmdbar 的 overflow:hidden 裁成一条边（#124 回归）。 */
+  position: fixed; z-index: 90;
   min-width: 208px; padding: 5px;
   background: var(--ade-panel); border: 1px solid var(--ade-line); border-radius: 8px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
   max-height: min(70vh, 520px); overflow: auto;
 }
-.cmd-drop-right { left: auto; right: 0; }
-.cmd-drop-left { left: 0; right: auto; }
 .cmd-item {
   width: 100%; height: 28px; padding: 0 8px; border-radius: 5px;
   display: flex; align-items: center; gap: 10px;
@@ -64,14 +63,15 @@ html[data-maximized='true'] .shell { border-radius: 0; }
 .cmd-icons { display: flex; gap: 1px; flex: none; }
 .cmd-icon { width: 28px; height: 28px; border-radius: 4px; color: var(--ade-muted); display: flex; align-items: center; justify-content: center; }
 .cmd-icon:hover { background: var(--ade-hover); color: var(--ade-ink); }
-.cmd-template { position: relative; flex: none; }
+.cmd-template { min-width: 0; flex: 0 1 auto; } /* 960px 下唯一可收缩项：文字截断，绝不挤掉窗口三键 */
 .cmd-template-btn {
   height: 28px; padding: 0 8px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px;
   color: var(--ade-ink); font-size: 12px; border: 1px solid var(--ade-line); background: var(--ade-panel);
-  max-width: 190px;
+  max-width: 190px; min-width: 0;
 }
 .cmd-template-btn:hover { border-color: var(--ade-accent); }
-.cmd-template-btn .muted { font-size: 11px; }
+.cmd-template-btn .muted { font-size: 11px; flex: none; }
+.cmd-template-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 保存按钮（仅手动模式显形，见 #124） */
 .cmd-save {
@@ -99,8 +99,12 @@ html[data-maximized='true'] .shell { border-radius: 0; }
 .cmd-switch.on .cmd-switch-knob { transform: translateX(11px); background: #fff; }
 .cmd-switch-label { white-space: nowrap; }
 
+/* 右群组（保存/自动保存/导出/激活点）：整体贴右。
+   保存按钮按模式显隐时群组只向左生长，导出与开关位置不动（#124 回归修复） */
+.cmd-right { display: flex; align-items: center; gap: 6px; margin-left: auto; flex: none; }
+
 /* 导出下拉（主按钮） */
-.cmd-export { position: relative; flex: none; }
+.cmd-export { flex: none; }
 .cmd-export-btn {
   height: 28px; padding: 0 10px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px;
   background: var(--ade-accent); border: 1px solid var(--ade-accent); color: #fff; font-size: 12px;
