@@ -408,7 +408,7 @@ function StatusBar({ view, lastExportPath, onReveal, onShortcuts }: {
           {t('menu.openFolder')}
         </button>
       )}
-      {/* #127 三次打磨：不再显示「Ctrl+K 命令面板」长文案（中文在 mono 栈里回退）；改为可点击的 [?] 快捷键入口 */}
+      {/* #127 四次打磨：只留 `?` 键帽（点击开速查表）——文字说明在 tooltip/aria 里 */}
       {view === 'editor' && (
         <button
           type="button"
@@ -418,8 +418,7 @@ function StatusBar({ view, lastExportPath, onReveal, onShortcuts }: {
           title={t('status.shortcutHelpTitle')}
           aria-label={t('status.shortcutHelpTitle')}
         >
-          <kbd className="kbd" aria-hidden="true">?</kbd>
-          <span>{t('status.shortcutHelp')}</span>
+          ?
         </button>
       )}
     </footer>

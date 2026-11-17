@@ -119,3 +119,8 @@
   - 底栏右下「Ctrl+K 命令面板 · ? 快捷键」→ 可点击 `[?] 快捷键` 按钮（`statusbar-help`）：根因=`.statusbar-hint` 子选择器写回 mono + Plex Mono 无 CJK 字形（汉字落系统等宽回退）+ 10.5px/opacity 使 light 对比度约 3.3:1
   - 键帽 `?` 走 mono、中文标签走 UI 体 11px，点击打开速查表；`?` 键补 IME 守卫；顺修 FloatingToolbar 链接按钮 title（Ctrl+K→Ctrl+Shift+K）
   - 验证：326 测试绿 / lint / typecheck / build；浏览器点击打开速查表、截图确认键帽与中文 UI 体
+- 2026-11-17 克制原则（#127 四次打磨，ADR §10）：
+  - 底栏右下只留 `?` 键帽（去掉「快捷键」文字，按钮即键帽 22×20；点击开速查表）
+  - 下拉触发器（模板/导出）箭头默认隐藏，hover/:focus-visible/aria-expanded 时原地淡入；箭头绝对定位在预留 padding 内 → 按钮宽度与文字零位移（浏览器 rect 实测一致）
+  - 范围：只改下拉触发器；大纲树/搜索上下列/抽屉把手等功能性箭头保持常显
+  - 验证：326 测试 / lint / typecheck / build；浏览器 hover 前后 rect 相同、展开后移开指针仍显示；截图对照

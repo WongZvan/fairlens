@@ -140,7 +140,6 @@ export default {
     unactivated: '未激活',
     online: '在线',
     offline: '离线：AI 与更新不可用',
-    shortcutHelp: '快捷键',
     shortcutHelpTitle: '快捷键速查（?）',
   },
   license: {},

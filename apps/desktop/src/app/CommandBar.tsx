@@ -140,7 +140,7 @@ function TemplatePicker() {
       >
         <LayoutTemplate size={13} strokeWidth={2} className="cmd-template-icon" aria-hidden="true" />
         <span className="cmd-template-value">{t(current.key)}</span>
-        <ChevronDown size={12} strokeWidth={2} />
+        <ChevronDown size={12} strokeWidth={2} className="cmd-chevron" />
       </button>
       <Dropdown open={open} anchorRef={btnRef} align="left" role="listbox" onClose={() => setOpen(false)}>
         {TEMPLATE_OPTIONS.map((tp) => (
@@ -277,7 +277,7 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
               onClick={() => setExportOpen((o) => !o)}
             >
               {exporting ? t('menu.exporting') : t('menu.fileExport')}
-              <ChevronDown size={12} strokeWidth={2} />
+              <ChevronDown size={12} strokeWidth={2} className="cmd-chevron" />
             </button>
             <Dropdown open={exportOpen} anchorRef={exportRef} align="right" role="menu" onClose={() => setExportOpen(false)}>
               {exportItems.map((item) => (
