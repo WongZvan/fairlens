@@ -160,7 +160,7 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
     if (wrap) wrap.style.pointerEvents = visible ? 'auto' : 'none';
   }, [visible]);
 
-  // Ctrl+K（选中文字）经 fl:insert-link 进入链接编辑态
+  // Ctrl+Shift+K（选中文字）经 fl:insert-link 进入链接编辑态（#127 起 Ctrl+K 恒为命令面板）
   useEffect(() => {
     const onInsertLink = () => {
       if (!editor || editor.isDestroyed) return;
@@ -314,7 +314,7 @@ export function FloatingToolbar({ editor, readOnly }: { editor: Editor | null; r
             <button
               aria-label="链接"
               aria-pressed={editor.isActive('link')}
-              title="Ctrl+K（选中文字时）"
+              title="Ctrl+Shift+K（选中文字时）"
               onClick={() => {
                 if (editor.isActive('link')) {
                   editor.chain().focus().unsetLink().run();

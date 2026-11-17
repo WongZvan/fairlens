@@ -79,3 +79,15 @@
 | 4 | 废话文案 | `tplNote` 等常驻解释句 | 删除左栏 tplNote；空态缩为「暂无内容」；简历库/评估/设置/清空回执/导出 hint 缩短；清死键（pagebreak/m1/unactivated/mockOnly） |
 
 **验证**：326 测试绿 / lint / typecheck / contract / build；浏览器 960×640 实测：文件菜单无退出项、✕ label 正确、胶囊 (233,54) 与搜索条共存不重叠、底栏 computed font-family=Plex Sans、数字=Plex Mono、模板按钮仅"经典单栏"。
+
+## 9. 底栏帮助入口（2026-11-17 三次打磨）
+
+**问题**：底栏右下「Ctrl+K 命令面板 · ? 快捷键」依旧难看。
+**根因**（实测）：
+- `.statusbar-hint` 子选择器又把字体写回 `var(--ade-font-mono)`（父级已改 UI 体，但子规则覆盖）；
+- IBM Plex Mono 字体包**不含任何 CJK 字形**（只有 latin/cyrillic/vietnamese 五段）→ ASCII 用 Plex Mono、7 个汉字落系统泛型 monospace 回退，同行两种字面、基线不齐；
+- 10.5px + `opacity:.85` 使 light 主题等效对比度约 3.3:1（低于 4.5 可读线）。
+
+**决定（用户拍板）**：不再显示 Ctrl+K 长文案，底栏右侧改为**可点击的 `[?] 快捷键` 按钮**（`?` 键帽用 mono，中文标签走 UI 体 11px，无 opacity）；点击打开快捷键速查。发现路径 = `?` / 视图菜单 / 该按钮；速查表内仍列 Ctrl+K。
+
+**顺带修复**：`FloatingToolbar` 链接按钮 title 仍写 `Ctrl+K`（#127 已改为 Ctrl+Shift+K）→ 改正；`?` 全局键补 `isComposing` 守卫。

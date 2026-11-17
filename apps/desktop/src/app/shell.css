@@ -229,8 +229,17 @@ html[data-maximized='true'] .shell { border-radius: 0; }
   font-family: var(--ade-font-mono); font-size: 11px;
   font-variant-numeric: tabular-nums; color: var(--ade-ink);
 }
-.statusbar .statusbar-hint {
-  font-family: var(--ade-font-mono); font-size: 10.5px; color: var(--ade-muted); opacity: 0.85;
+/* #127 三次打磨：底栏快捷键入口 = 键帽「?」+ UI 体「快捷键」按钮（不再显示混排 mono 长文案） */
+.statusbar .statusbar-help {
+  pointer-events: auto; height: 20px; display: inline-flex; align-items: center; gap: 5px;
+  padding: 0 6px; border-radius: 4px; font-size: 11px; color: var(--ade-muted);
+}
+.statusbar .statusbar-help:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.statusbar .statusbar-help:focus-visible { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
+.statusbar .kbd {
+  font-family: var(--ade-font-mono); font-size: 10px; line-height: 14px;
+  padding: 0 4px; border: 1px solid var(--ade-line); border-radius: 3px;
+  background: var(--ade-panel); color: var(--ade-muted);
 }
 .statusbar .statusbar-action {
   height: 20px; padding: 0 8px; border-radius: 4px; font-size: 11px;

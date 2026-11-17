@@ -161,6 +161,7 @@ export function AppShell() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.isComposing) return; // 中文输入法组合态不抢键
       const target = e.target as HTMLElement | null;
       if (target && typeof target.closest === 'function' && (target.closest('input, textarea, select') || target.isContentEditable)) return;
       if (document.querySelector('[data-overlay-open]')) return;
@@ -270,7 +271,12 @@ export function AppShell() {
         exporting={exporting}
       />
       {view === 'library' ? <LibraryPlaceholder onOpenMockup={() => setView('editor')} /> : <EditorMockup />}
-      <StatusBar view={view} lastExportPath={lastExportPath} onReveal={() => lastExportPath && void revealInFolder(lastExportPath)} />
+      <StatusBar
+        view={view}
+        lastExportPath={lastExportPath}
+        onReveal={() => lastExportPath && void revealInFolder(lastExportPath)}
+        onShortcuts={() => setShortcutsOpen(true)}
+      />
       <SettingsWindow open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ShortcutHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <ToastHost />
@@ -378,7 +384,12 @@ function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
 }
 
 /** 状态栏（M0 组件迁入文件以集中壳层；#111 保存状态显示在此；#124 加字数统计；#125 加导出回执） */
-function StatusBar({ view, lastExportPath, onReveal }: { view: 'library' | 'editor'; lastExportPath: string | null; onReveal: () => void }) {
+function StatusBar({ view, lastExportPath, onReveal, onShortcuts }: {
+  view: 'library' | 'editor';
+  lastExportPath: string | null;
+  onReveal: () => void;
+  onShortcuts: () => void;
+}) {
   const { t } = useTranslation();
   const doc = useEditorDoc((s) => s.doc);
   const stats = docStats(doc);
@@ -397,8 +408,20 @@ function StatusBar({ view, lastExportPath, onReveal }: { view: 'library' | 'edit
           {t('menu.openFolder')}
         </button>
       )}
-      {/* #127：简历库没有 Ctrl+K 处理器，不再显示骗人的快捷键提示 */}
-      {view === 'editor' && <span className="statusbar-hint" style={{ marginLeft: 'auto' }}>{t('status.commandHint')}</span>}
+      {/* #127 三次打磨：不再显示「Ctrl+K 命令面板」长文案（中文在 mono 栈里回退）；改为可点击的 [?] 快捷键入口 */}
+      {view === 'editor' && (
+        <button
+          type="button"
+          className="statusbar-help"
+          style={{ marginLeft: 'auto' }}
+          onClick={onShortcuts}
+          title={t('status.shortcutHelpTitle')}
+          aria-label={t('status.shortcutHelpTitle')}
+        >
+          <kbd className="kbd" aria-hidden="true">?</kbd>
+          <span>{t('status.shortcutHelp')}</span>
+        </button>
+      )}
     </footer>
   );
 }

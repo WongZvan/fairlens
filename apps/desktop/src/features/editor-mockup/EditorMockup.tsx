@@ -359,7 +359,7 @@ export function EditorMockup() {
           void useEditorDoc.getState().saveNow().then((r) => toast(r.ok ? t('titlebar.saved') : t('menu.saveFailed')));
           break;
         case 'insert-link':
-          // #106：选中文字按 Ctrl+K → 工具条进入链接编辑态（此前 resolveShortcut 有路由但无人消费）
+          // #106/#127：选中文字按 Ctrl+Shift+K → 工具条进入链接编辑态（Ctrl+K 恒为命令面板）
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('fl:insert-link'));
           break;
