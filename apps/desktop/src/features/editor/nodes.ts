@@ -16,7 +16,9 @@ import { hrefFromLinkMouseDown } from '../../lib/link-click.js';
 import { isSafeHref } from './link-policy.js';
 import { partitionSections, sortSectionsByOrder } from './paper-model.js';
 import { nextBulletDepth } from './bullet-depth.js';
+import { AtomGuard } from './atom-guard.js';
 import { PageHeaderView } from './nodeviews/PageHeaderView.js';
+import { SectionHeaderView } from './nodeviews/SectionHeaderView.js';
 import { EntryHeaderView } from './nodeviews/EntryHeaderView.js';
 import { BasicFieldView } from './nodeviews/BasicFieldView.js';
 import { SkillGroupView } from './nodeviews/SkillGroupView.js';
@@ -69,6 +71,9 @@ export const SectionNode = Node.create({
       /**
        * 新增分区（#121）：插到当前分区之后（无当前分区则插到文档末尾）。
        * 标题为空时给「新分区」占位——契约要求 title min(1)，空标题会存不进库。
+       * #127 修复：分区 content 只允许 entry/field/skill/photo，原实现直插 flBullet 会被
+       * schema 判为非法、序列化 sectionOf 也不收集 → 用户在新区里打的字重开即丢。
+       * 现改为插入「header + 一个空 flEntry（header + 一条空 bullet）」。
        */
       insertSection:
         (attrs: { type: string; title: string }) =>
@@ -76,16 +81,22 @@ export const SectionNode = Node.create({
           const { schema } = state;
           const sectionType = schema.nodes.flSection;
           const headerType = schema.nodes.flSectionHeader;
+          const entryType = schema.nodes.flEntry;
+          const entryHeaderType = schema.nodes.flEntryHeader;
           const bulletType = schema.nodes.flBullet;
-          if (!sectionType || !headerType || !bulletType) return false;
+          if (!sectionType || !headerType || !entryType || !entryHeaderType || !bulletType) return false;
 
           const title = attrs.title.trim() || '新分区';
           const sectionId = nanoid12();
+          const entryId = nanoid12();
           const node = sectionType.create(
             { id: sectionId, type: attrs.type || 'custom', title, order: null },
             [
               headerType.create({ id: sectionId }, schema.text(title)),
-              bulletType.create({ id: nanoid12() }),
+              entryType.create({ id: entryId }, [
+                entryHeaderType.create({ id: entryId }),
+                bulletType.create({ id: nanoid12() }),
+              ]),
             ],
           );
 
@@ -142,6 +153,63 @@ export const SectionNode = Node.create({
           }
           return false;
         },
+
+      /**
+       * 新增条目（#127）：在指定分区的第 index 个条目之前插入空条目（缺省追加到分区末尾）。
+       * 新条目 = 空 flEntryHeader + 一条空 flBullet，光标落在首条要点里。
+       * 空分区也能用——这是「写自己的简历」的第一道门。
+       */
+      insertEntry:
+        (attrs?: { sectionId?: string; index?: number }) =>
+        ({ state, tr, dispatch }) => {
+          const { schema, doc, selection } = state;
+          const entryType = schema.nodes.flEntry;
+          const entryHeaderType = schema.nodes.flEntryHeader;
+          const bulletType = schema.nodes.flBullet;
+          if (!entryType || !entryHeaderType || !bulletType) return false;
+
+          let target: { pos: number; node: PMDocNode } | null = null;
+          if (attrs?.sectionId) {
+            doc.descendants((node, pos) => {
+              if (target) return false;
+              if (node.type.name === 'flSection' && node.attrs.id === attrs.sectionId) {
+                target = { pos, node };
+                return false;
+              }
+              return true;
+            });
+          } else {
+            const { $from } = selection;
+            for (let d = $from.depth; d > 0; d -= 1) {
+              if ($from.node(d).type.name === 'flSection') {
+                target = { pos: $from.before(d), node: $from.node(d) };
+                break;
+              }
+            }
+          }
+          if (!target) return false;
+
+          const entryId = nanoid12();
+          const entry = entryType.create({ id: entryId }, [
+            entryHeaderType.create({ id: entryId }),
+            bulletType.create({ id: nanoid12() }),
+          ]);
+
+          // 每个 entry 子节点的绝对偏移（pos+1 = 分区内容起点）
+          const entryOffsets: number[] = [];
+          target.node.forEach((child, offset) => {
+            if (child.type.name === 'flEntry') entryOffsets.push(target!.pos + 1 + offset);
+          });
+          const index = Math.max(0, Math.min(attrs?.index ?? entryOffsets.length, entryOffsets.length));
+          const insertAt = entryOffsets[index] ?? target.pos + target.node.nodeSize - 1;
+
+          if (dispatch) {
+            tr.insert(insertAt, entry);
+            // entry → header(1) → bullet 起点 = +2，文本起点 = +3
+            tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(insertAt + 3, tr.doc.content.size))));
+          }
+          return true;
+        },
     };
   },
   parseHTML() {
@@ -187,6 +255,9 @@ export const SectionHeaderNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['h3', mergeAttributes(HTMLAttributes, { 'data-type': 'fl-section-header' }), 0];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(SectionHeaderView);
   },
 });
 
@@ -436,7 +507,81 @@ export const EntryNode = Node.create({
       0,
     ];
   },
+  addCommands() {
+    return {
+      /** 删除条目（#127）：按 entryId 或光标所在条目；事务内删除，可 Ctrl+Z 撤销 */
+      deleteEntry:
+        (attrs?: { entryId?: string }) =>
+        ({ state, tr, dispatch }) => {
+          const target = findEntryIn(state.doc, state.selection, attrs?.entryId);
+          if (!target) return false;
+          if (dispatch) {
+            const from = target.pos;
+            const to = target.pos + target.node.nodeSize;
+            tr.delete(from, to);
+            tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(from, tr.doc.content.size))));
+          }
+          return true;
+        },
+
+      /** 复制条目（#127）：紧跟在原条目后插入副本，entry/header 共享新 id，bullet 各自换新 id */
+      duplicateEntry:
+        (attrs?: { entryId?: string }) =>
+        ({ state, tr, dispatch }) => {
+          const target = findEntryIn(state.doc, state.selection, attrs?.entryId);
+          if (!target) return false;
+          if (dispatch) {
+            const at = target.pos + target.node.nodeSize;
+            tr.insert(at, cloneEntryFresh(target.node));
+            tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(at + 3, tr.doc.content.size))));
+          }
+          return true;
+        },
+    };
+  },
 });
+
+/** 定位条目：优先 entryId，否则光标所在条目 */
+function findEntryIn(
+  doc: PMDocNode,
+  selection: { $from: { depth: number; node: (d: number) => PMDocNode; before: (d: number) => number } },
+  entryId?: string,
+): { pos: number; node: PMDocNode } | null {
+  if (entryId) {
+    let found: { pos: number; node: PMDocNode } | null = null;
+    doc.descendants((node, pos) => {
+      if (found) return false;
+      if (node.type.name === 'flEntry' && node.attrs.id === entryId) {
+        found = { pos, node };
+        return false;
+      }
+      return true;
+    });
+    return found;
+  }
+  const $from = selection.$from;
+  for (let d = $from.depth; d > 0; d -= 1) {
+    const node = $from.node(d);
+    if (node.type.name === 'flEntry') return { pos: $from.before(d), node };
+  }
+  return null;
+}
+
+/** 复制条目：entry 与 header 共用新 id（画布依赖两者一致），bullet 各自换新 */
+function cloneEntryFresh(node: PMDocNode): PMDocNode {
+  const id = nanoid12();
+  const content: PMDocNode[] = [];
+  node.forEach((child) => {
+    if (child.type.name === 'flEntryHeader') {
+      content.push(child.type.create({ ...child.attrs, id }, [], child.marks));
+    } else if (child.type.name === 'flBullet') {
+      content.push(child.type.create({ ...child.attrs, id: nanoid12() }, child.content, child.marks));
+    } else {
+      content.push(child);
+    }
+  });
+  return node.type.create({ ...node.attrs, id }, content, node.marks);
+}
 
 /** 条目头（#117）：atom，org/role/date 三段由 attrs 驱动；序列化直接读 attrs */
 export const EntryHeaderNode = Node.create({
@@ -723,6 +868,7 @@ export const flExtensions = [
   contextMenuForward,
   linkClickPlugin,
   linkWhitespaceGuard,
+  AtomGuard,
   HardBreakNode,
   PageHeaderNode,
   SectionNode,
@@ -841,7 +987,7 @@ function entryOf(entry: PMNode): Section['entries'][number] {
   const attrs = { ...(entry.attrs ?? {}), ...(header?.attrs ?? {}) };
   const out: Record<string, unknown> = {
     id: String(attrs.id ?? '') || nanoid12(),
-    org: String(attrs.org ?? ''),
+    // #127：org 空串不落库（新建条目先空着，UI 显示占位）；契约 org 可缺省
     // 契约 Bullet.runs min(1)：删空文本的 bullet（PM 空段）不序列化——曾流入大纲/快照造成"空壳条目"（m1.6 反馈）
     bullets: (entry.content ?? [])
       .filter((n): n is PMNode & { type: 'flBullet' } => n.type === 'flBullet')
@@ -856,6 +1002,8 @@ function entryOf(entry: PMNode): Section['entries'][number] {
       })
       .filter((b) => b.runs.length > 0),
   };
+  const org = String(attrs.org ?? '').trim();
+  if (org) out.org = org;
   for (const k of ['role', 'start', 'end', 'ongoing', 'pageBreakBefore'] as const) {
     const v = attrs[k];
     if (v !== null && v !== undefined) out[k] = v; // 契约为 absent≠undefined：仅写实际存在字段
@@ -1052,13 +1200,18 @@ export function resumeDocToPm(doc: ResumeDoc): PMNode {
   return { type: 'doc', content: [...header, ...doc.sections.map(sectionPm)] };
 }
 
-/** 分区结构命令的类型声明（Tiptap 通过模块增强收集 addCommands） */
+/** 分区/条目结构命令的类型声明（Tiptap 通过模块增强收集 addCommands） */
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     flSection: {
       insertSection: (attrs: { type: string; title: string }) => ReturnType;
       deleteSection: () => ReturnType;
       addBasicField: () => ReturnType;
+      insertEntry: (attrs?: { sectionId?: string; index?: number }) => ReturnType;
+    };
+    flEntry: {
+      deleteEntry: (attrs?: { entryId?: string }) => ReturnType;
+      duplicateEntry: (attrs?: { entryId?: string }) => ReturnType;
     };
   }
 }

@@ -3,7 +3,7 @@ import { createAutosave, parseSettingValue, sameDoc, type AutosaveController, ty
 import type { ResumeDoc, ResumeRow, SnapshotRow } from '@fairlens/shared';
 import { persistence } from '../lib/persistence/index.js';
 import { nanoid } from '../lib/nanoid.js';
-import { sampleDoc } from '../features/editor-mockup/sample-data.js';
+import { sampleDoc, SAMPLE_RESUME_TITLE } from '../features/editor-mockup/sample-data.js';
 
 /**
  * 编辑器文档状态（m1.6）：当前简历 + 自动保存防抖状态机 + 快照。
@@ -22,6 +22,8 @@ let currentRow: ResumeRow | null = null;
 interface EditorDocState {
   ready: boolean;
   resumeId: string | null;
+  /** 当前简历记录标题（#127：示例简历识别与清空入口用） */
+  resumeTitle: string | null;
   doc: ResumeDoc | null;
   /** 最近一次成功落盘的文档（dirty 判定的基线；不参与渲染） */
   savedDoc: ResumeDoc | null;
@@ -33,10 +35,10 @@ interface EditorDocState {
   openCurrent(): Promise<void>;
   /** CanvasEditor onDocChange 唯一入口 */
   applyDoc(doc: ResumeDoc): void;
-  /** Ctrl+S：立即落盘（双模式通用） */
-  saveNow(): Promise<void>;
+  /** Ctrl+S：立即落盘（双模式通用）；返回是否真正写入成功——调用方据此决定 toast */
+  saveNow(): Promise<{ ok: boolean }>;
   /** 关闭/返回库前的 flush（自动模式落盘挂起变更；手动模式无挂起则 no-op） */
-  flushPending(): Promise<void>;
+  flushPending(): Promise<{ ok: boolean }>;
   /** 关闭弹窗「不保存」：丢弃挂起变更并把文档复位到最后保存版本 */
   discardPendingChanges(): void;
   createSnapshot(label?: string): Promise<void>;
@@ -45,6 +47,8 @@ interface EditorDocState {
   restoreSnapshot(id: string): Promise<void>;
   /** 设置→通用「自动保存」开关（§5.7；写 settings 表，跨会话生效） */
   setAutosave(value: boolean): Promise<void>;
+  /** #127：整篇替换（清空为空白简历）+ 改记录标题；自动模式落盘、手动模式立即保存 */
+  replaceDoc(doc: ResumeDoc, title: string): Promise<void>;
 }
 
 export const useEditorDoc = create<EditorDocState>((set, get) => {
@@ -60,6 +64,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
   return {
     ready: false,
     resumeId: null,
+    resumeTitle: null,
     doc: null,
     savedDoc: null,
     autosave: true,
@@ -81,7 +86,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       }
       if (!row) {
         const now = new Date().toISOString();
-        row = { id: nanoid(), title: '示例简历', verticalId: 'general', doc: sampleDoc, status: 'active', createdAt: now, updatedAt: now };
+        row = { id: nanoid(), title: SAMPLE_RESUME_TITLE, verticalId: 'general', doc: sampleDoc, status: 'active', createdAt: now, updatedAt: now };
         try {
           await port.upsertResume(row);
         } catch (err) {
@@ -100,6 +105,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       set({
         ready: true,
         resumeId: row.id,
+        resumeTitle: row.title,
         doc: row.doc,
         savedDoc: row.doc,
         autosave,
@@ -122,18 +128,20 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
 
     async saveNow() {
       const doc = get().doc;
-      if (!doc || !currentRow) return;
+      if (!doc || !currentRow) return { ok: false };
       controller?.schedule(doc); // 两模式统一走控制器（自动模式顺带取消挂起防抖合并写入）
-      await controller?.flush();
+      const result = await controller?.flush();
       // 手动模式用基线比较兜底：保存失败时 controller.dirty() 已为真，不会误清
       set({ dirty: get().autosave ? (controller?.dirty() ?? false) : !sameDoc(get().savedDoc, get().doc) });
+      return { ok: result?.ok ?? false };
     },
 
     async flushPending() {
       // 手动模式（§5.7 Word 式）：不 flush、不改写 dirty——未保存状态由用户保存/丢弃决定
-      if (!get().autosave) return;
-      if (controller) await controller.flush();
+      if (!get().autosave) return { ok: true };
+      const result = controller ? await controller.flush() : { ok: true };
       set({ dirty: controller?.dirty() ?? false });
+      return { ok: result.ok };
     },
 
     discardPendingChanges() {
@@ -184,6 +192,15 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       set({ autosave: value, saveStatus: 'saved' });
       // 切到自动：把手动模式下积压的未保存变更立即落盘
       if (value && get().dirty) await get().saveNow();
+    },
+
+    async replaceDoc(doc, title) {
+      if (!currentRow) return;
+      // 丢弃挂起的旧文档变更，避免防抖计时器把刚清空的文档又写回旧内容
+      controller?.discardPending();
+      currentRow = { ...currentRow, title, doc, updatedAt: new Date().toISOString() };
+      set({ doc, resumeTitle: title, dirty: get().autosave ? false : true });
+      await get().saveNow();
     },
   };
 });

@@ -17,8 +17,8 @@ export interface AutosaveOptions<T> {
 export interface AutosaveController<T> {
   /** 记录最新值并重置防抖计时（调用方传不可变引用；同值重放=新变更轮次） */
   schedule(payload: T): void;
-  /** 清计时器并同步等待落盘完成（关闭 flush 语义）；失败中止不抛出（状态置 error） */
-  flush(): Promise<void>;
+  /** 清计时器并同步等待落盘完成；返回是否全部落盘成功（失败不抛出，状态置 error） */
+  flush(): Promise<{ ok: boolean; pending: boolean }>;
   /** 丢弃未落盘变更（回滚覆盖/重新打开后以新基线开始） */
   discardPending(): void;
   status(): SaveStatus;
@@ -100,6 +100,8 @@ export function createAutosave<T>(options: AutosaveOptions<T>): AutosaveControll
           break;
         }
       }
+      // #127：把落盘结果交给调用方——「已保存」toast 只能建立在真正成功之上
+      return { ok: current !== 'error' && !hasPending, pending: hasPending };
     },
 
     discardPending() {

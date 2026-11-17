@@ -7,6 +7,7 @@ import { docStats, formatCount } from '@fairlens/core';
 import { ActivationGate } from './ActivationGate.js';
 import { CommandBar } from './CommandBar.js';
 import { SettingsWindow } from './SettingsWindow.js';
+import { ShortcutHelp } from './ShortcutHelp.js';
 import { CloseGuardDialog, collectPendingIssues, resolveGuardMode, type CloseGuardMode, type CloseIntent } from './CloseGuard.js';
 import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
@@ -25,6 +26,8 @@ export function AppShell() {
   const { t } = useTranslation();
   const [view, setView] = useState<'library' | 'editor'>('library');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /** #127：快捷键速查（视图菜单 / `?`） */
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [guard, setGuard] = useState<{ mode: CloseGuardMode; intent: CloseIntent } | null>(null);
   const activated = useLicense((s) => s.activated);
   const hydrated = useLicense((s) => s.hydrated);
@@ -65,7 +68,10 @@ export function AppShell() {
   const handleAction = (id: MenuActionId) => {
     // —— 文件 / 窗口 ——
     if (id === 'file.save') {
-      void useEditorDoc.getState().saveNow().then(() => toast(t('titlebar.saved')));
+      void useEditorDoc
+        .getState()
+        .saveNow()
+        .then((r) => toast(r.ok ? t('titlebar.saved') : t('menu.saveFailed')));
       return;
     }
     if (id === 'file.back-library') {
@@ -143,12 +149,30 @@ export function AppShell() {
     if (id === 'view.theme-light') return void useTheme.getState().setMode('light');
     if (id === 'view.theme-dark') return void useTheme.getState().setMode('dark');
     if (id === 'view.theme-system') return void useTheme.getState().setMode('system');
+    if (id === 'view.shortcuts') {
+      setShortcutsOpen(true);
+      return;
+    }
 
     // —— 编辑器项（undo/redo/粘贴/查找/快照/分区）——
     if (!dispatchEditorAction(id as EditorActionId)) {
       toast(t('status.editorNotReady'));
     }
   };
+
+  // #127：`?` 打开快捷键速查（输入框/正文/浮层内不抢键）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && typeof target.closest === 'function' && (target.closest('input, textarea, select') || target.isContentEditable)) return;
+      if (document.querySelector('[data-overlay-open]')) return;
+      e.preventDefault();
+      setShortcutsOpen((o) => !o);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const proceedClose = async (intent: CloseIntent) => {
     setGuard(null);
@@ -171,7 +195,12 @@ export function AppShell() {
   const requestClose = async (intent: CloseIntent, opts: { save?: boolean; discard?: boolean } = {}) => {
     const st = useEditorDoc.getState();
     if (opts.save) {
-      await st.saveNow();
+      const saved = await st.saveNow();
+      // #127：保存失败时不放行关闭——重新弹保护框，让用户重试或明确选择"仍然关闭"
+      if (!saved.ok) {
+        setGuard({ mode: 'save-error', intent });
+        return;
+      }
       await proceedClose(intent);
       return;
     }
@@ -180,9 +209,10 @@ export function AppShell() {
       await proceedClose(intent);
       return;
     }
-    await st.flushPending();
+    const flushed = await st.flushPending();
     const after = useEditorDoc.getState();
-    const mode = resolveGuardMode(after.autosave, after.dirty, collectPendingIssues());
+    const saveError = !flushed.ok || after.saveStatus === 'error';
+    const mode = resolveGuardMode(after.autosave, after.dirty, collectPendingIssues(), saveError);
     if (!mode) {
       await proceedClose(intent);
       return;
@@ -243,8 +273,9 @@ export function AppShell() {
         exporting={exporting}
       />
       {view === 'library' ? <LibraryPlaceholder onOpenMockup={() => setView('editor')} /> : <EditorMockup />}
-      <StatusBar lastExportPath={lastExportPath} onReveal={() => lastExportPath && void revealInFolder(lastExportPath)} />
+      <StatusBar view={view} lastExportPath={lastExportPath} onReveal={() => lastExportPath && void revealInFolder(lastExportPath)} />
       <SettingsWindow open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ShortcutHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <ToastHost />
       <CloseGuardDialog
         open={!!guard}
@@ -304,7 +335,7 @@ function useActivationWindowShape(activated: boolean, hydrated: boolean, isTauri
   }, [activated, hydrated, isTauri]);
 }
 
-/** 状态栏保存指示（#112）：圆点=模式（绿自动/红手动），文字=模式 + 即时状态 */
+/** 状态栏保存指示（#112）：圆点=模式（绿自动/红手动），文字=模式 + 即时状态；#127 失败可重试 */
 function SaveStatusText() {
   const { t } = useTranslation();
   const autosave = useEditorDoc((s) => s.autosave);
@@ -315,6 +346,20 @@ function SaveStatusText() {
     <span className={view.warn ? 'save warn' : 'save'}>
       <i className={`dot ${view.dot}`} />
       {t(`saveStatus.${view.modeKey}`)} · {t(`saveStatus.${view.stateKey}`)}
+      {status === 'error' && (
+        <button
+          type="button"
+          className="statusbar-action"
+          onClick={() => {
+            void useEditorDoc
+              .getState()
+              .saveNow()
+              .then((r) => toast(r.ok ? t('titlebar.saved') : t('menu.saveFailed')));
+          }}
+        >
+          {t('saveStatus.retry')}
+        </button>
+      )}
     </span>
   );
 }
@@ -322,7 +367,6 @@ function SaveStatusText() {
 /** 简历库占位（m1.8 真实化；当前为打样入口） */
 function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
   const { t } = useTranslation();
-  const activated = useLicense((s) => s.activated);
   return (
     <main className="library-empty">
       <h1>{t('library.title')}</h1>
@@ -330,14 +374,12 @@ function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
       <button className="m-btn primary" style={{ marginTop: 8 }} onClick={onOpenMockup}>
         <FileText size={14} />{t('library.openMockup')}
       </button>
-      <p className="muted small">{t('library.buildSoon')}</p>
-      {!activated && <p className="muted small">{t('license.unactivated')}</p>}
     </main>
   );
 }
 
 /** 状态栏（M0 组件迁入文件以集中壳层；#111 保存状态显示在此；#124 加字数统计；#125 加导出回执） */
-function StatusBar({ lastExportPath, onReveal }: { lastExportPath: string | null; onReveal: () => void }) {
+function StatusBar({ view, lastExportPath, onReveal }: { view: 'library' | 'editor'; lastExportPath: string | null; onReveal: () => void }) {
   const { t } = useTranslation();
   const doc = useEditorDoc((s) => s.doc);
   const stats = docStats(doc);
@@ -352,7 +394,8 @@ function StatusBar({ lastExportPath, onReveal }: { lastExportPath: string | null
           {t('menu.openFolder')}
         </button>
       )}
-      <span className="muted" style={{ marginLeft: 'auto' }}>{t('status.commandHint')}</span>
+      {/* #127：简历库没有 Ctrl+K 处理器，不再显示骗人的快捷键提示 */}
+      {view === 'editor' && <span className="muted" style={{ marginLeft: 'auto' }}>{t('status.commandHint')}</span>}
     </footer>
   );
 }

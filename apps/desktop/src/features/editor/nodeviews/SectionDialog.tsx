@@ -2,11 +2,10 @@
  * 分区新增对话框（#121）：标题必填 + 类型（内置五类预设或自由输入）。
  * 结构与 MetaDialog 一致（同一套 meta-* 样式与 Esc/遮罩行为），额外带一个 type 下拉。
  */
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BUILTIN_SECTION_TYPES } from '@fairlens/shared';
-import { isComposingKey } from '../ime.js';
+import { Overlay } from '../../../app/Overlay.js';
 
 export interface SectionDraft {
   type: string;
@@ -36,18 +35,6 @@ export function SectionDialog({
   const [customType, setCustomType] = useState('custom');
   const titleRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    titleRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isComposingKey(e)) onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const type = preset === 'custom' ? customType.trim() || 'custom' : preset;
 
   const submit = () => {
@@ -57,16 +44,16 @@ export function SectionDialog({
     onClose();
   };
 
-  return createPortal(
-    <div
-      className="meta-overlay"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+  return (
+    <Overlay
+      open
+      onClose={onClose}
+      label={t('editor.sectionAdd')}
+      overlayClassName="meta-overlay"
+      boxClassName="meta-win"
+      initialFocusRef={titleRef}
     >
-      <div className="meta-win" role="dialog" aria-modal="true" aria-label={t('editor.sectionAdd')}>
-        <h3>{t('editor.sectionAdd')}</h3>
+      <h3>{t('editor.sectionAdd')}</h3>
         <label className="meta-field">
           <span>{t('editor.sectionType')}</span>
           <select
@@ -119,8 +106,6 @@ export function SectionDialog({
             {t('common.save')}
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Overlay>
   );
 }

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Check, ChevronDown, Copy, Minus, Redo2, Square, Undo2, X } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEditorDoc } from '../stores/editor-doc.js';
+import { useMockup } from '../stores/mockup.js';
 import { useTheme } from '../stores/theme.js';
 import { useLicense } from '../stores/license.js';
 import { toast } from './Toast.js';
@@ -55,7 +56,7 @@ function MenuEntry({ item, run }: { item: MenuItem; run: (item: MenuItem) => voi
           role="menuitem"
           className="cmd-item"
           disabled={item.disabled}
-          title={item.disabled ? item.badge : undefined}
+          title={item.disabled ? (item.note ?? item.badge) : undefined}
           onClick={() => !item.disabled && run(item)}
         >
           <span className="cmd-item-label">{item.label}</span>
@@ -171,14 +172,14 @@ export function CommandBar({ view, onBack, onSettings, onAction, exporting }: Co
   const activated = useLicense((s) => s.activated);
   const themeMode = useTheme((s) => s.mode);
   const cycleTheme = useTheme((s) => s.cycle);
+  // #127：视图菜单按真实缩放档位打勾（此前写死 fit-width，切到 100% 菜单仍显示适应宽度）
+  const zoomMode = useMockup((s) => s.zoomMode);
   const inEditor = view === 'editor';
 
   const menus = buildMenus(t, {
     inEditor,
-    manualMode: !autosave,
-    dirty,
     theme: themeMode,
-    zoomMode: 'fit-width',
+    zoomMode,
   });
   const { openId, toggle, hover, close } = useMenus();
   const [exportOpen, setExportOpen] = useState(false);

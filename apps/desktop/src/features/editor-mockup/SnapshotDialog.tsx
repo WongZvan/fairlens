@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { alignBlockDiff, type DiffStatus } from '@fairlens/core';
 import type { SnapshotRow } from '@fairlens/shared';
 import { useEditorDoc } from '../../stores/editor-doc.js';
+import { Overlay } from '../../app/Overlay.js';
 import { CanvasEditor } from '../editor/CanvasEditor.js';
 import { toast } from '../../app/Toast.js';
 
@@ -39,85 +40,99 @@ export function SnapshotDialog({ open, onClose }: { open: boolean; onClose: () =
   const refresh = () => useEditorDoc.getState().listSnapshots().then(setSnaps);
 
   const create = async () => {
-    await useEditorDoc.getState().createSnapshot(label.trim() || undefined);
-    setLabel('');
-    await refresh();
-    toast(t('snapshot.savedToast'));
+    try {
+      await useEditorDoc.getState().createSnapshot(label.trim() || undefined);
+      setLabel('');
+      await refresh();
+      toast(t('snapshot.savedToast'));
+    } catch (err) {
+      console.error('[snapshot] create failed', err);
+      toast(t('snapshot.failed'));
+    }
   };
 
   const rollback = async (id: string) => {
-    await useEditorDoc.getState().restoreSnapshot(id);
-    await refresh();
-    toast(t('snapshot.rollbackToast'));
-    onClose();
+    try {
+      await useEditorDoc.getState().restoreSnapshot(id);
+      await refresh();
+      toast(t('snapshot.rollbackToast'));
+      onClose();
+    } catch (err) {
+      console.error('[snapshot] rollback failed', err);
+      toast(t('snapshot.failed'));
+    }
   };
 
   const diff = selected && currentDoc ? alignBlockDiff(selected.doc, currentDoc) : null;
 
   return (
-    <div className="guard-overlay" role="dialog" aria-modal="true" aria-label={t('snapshot.title')}>
-      <div className="guard-box snapshot-box">
-        <h2>{t('snapshot.title')}</h2>
-        <div className="snap-save-row">
-          <input
-            className="snap-label-input"
-            placeholder={t('snapshot.labelPlaceholder')}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing) return; // IME 合成态：Enter 确认候选，不创建快照
-              if (e.key === 'Enter') void create();
-            }}
-          />
-          <button className="m-btn primary" onClick={() => void create()}>{t('snapshot.saveNow')}</button>
-        </div>
-        {snaps.length === 0 ? (
-          <p className="muted">{t('snapshot.empty')}</p>
-        ) : (
-          <ul className="snap-list">
-            {snaps.map((s) => (
-              <li key={s.id} className={selected?.id === s.id ? 'on' : ''}>
-                <button className="snap-pick" onClick={() => setSelected(s)}>
-                  <span className="mono">{new Date(s.createdAt).toLocaleString()}</span>
-                  <span className="muted"> · {t(`snapshot.trigger.${s.trigger}`)}</span>
-                  {s.label && <span> · {s.label}</span>}
-                </button>
-                <button className="m-btn" onClick={() => void rollback(s.id)}>{t('snapshot.rollback')}</button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {selected && diff && (
-          <div className="snap-compare">
-            <div className="snap-diff-side">
-              <h3>{t('snapshot.blockDiffs')}</h3>
-              <ul className="snap-diff-list">
-                {diff.items.filter((i) => i.status !== 'unchanged').map((i) => (
-                  <li key={`${i.status}-${i.id}`} className={`diff-${STATUS_KEY[i.status]}`}>
-                    <span className="sev-tag mono">{t(`snapshot.diff.${STATUS_KEY[i.status]}`)}</span>
-                    <span className="kind mono">{t(`snapshot.kind.${i.kind}`)}</span>
-                    <span className="lbl">{i.label || '—'}</span>
-                  </li>
-                ))}
-                {diff.hasChanges === false && <li className="muted">{t('snapshot.noChanges')}</li>}
-              </ul>
+    <Overlay
+      open={open}
+      onClose={onClose}
+      label={t('snapshot.title')}
+      overlayClassName="guard-overlay"
+      boxClassName="guard-box snapshot-box"
+    >
+      <h2>{t('snapshot.title')}</h2>
+      <div className="snap-save-row">
+        <input
+          className="snap-label-input"
+          placeholder={t('snapshot.labelPlaceholder')}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return; // IME 合成态：Enter 确认候选，不创建快照
+            if (e.key === 'Enter') void create();
+          }}
+        />
+        <button className="m-btn primary" onClick={() => void create()}>{t('snapshot.saveNow')}</button>
+      </div>
+      {snaps.length === 0 ? (
+        <p className="muted">{t('snapshot.empty')}</p>
+      ) : (
+        <ul className="snap-list">
+          {snaps.map((s) => (
+            <li key={s.id} className={selected?.id === s.id ? 'on' : ''}>
+              <button className="snap-pick" onClick={() => setSelected(s)}>
+                <span className="mono">{new Date(s.createdAt).toLocaleString()}</span>
+                <span className="muted"> · {t(`snapshot.trigger.${s.trigger}`)}</span>
+                {s.label && <span> · {s.label}</span>}
+              </button>
+              <button className="m-btn" onClick={() => void rollback(s.id)}>{t('snapshot.rollback')}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {selected && diff && (
+        <div className="snap-compare">
+          <div className="snap-diff-side">
+            <h3>{t('snapshot.blockDiffs')}</h3>
+            <ul className="snap-diff-list">
+              {diff.items.filter((i) => i.status !== 'unchanged').map((i) => (
+                <li key={`${i.status}-${i.id}`} className={`diff-${STATUS_KEY[i.status]}`}>
+                  <span className="sev-tag mono">{t(`snapshot.diff.${STATUS_KEY[i.status]}`)}</span>
+                  <span className="kind mono">{t(`snapshot.kind.${i.kind}`)}</span>
+                  <span className="lbl">{i.label || '—'}</span>
+                </li>
+              ))}
+              {diff.hasChanges === false && <li className="muted">{t('snapshot.noChanges')}</li>}
+            </ul>
+          </div>
+          <div className="snap-panes">
+            <div className="snap-pane">
+              <h4>{t('snapshot.leftPane')}</h4>
+              <CanvasEditor doc={selected.doc} onDocChange={() => {}} readOnly />
             </div>
-            <div className="snap-panes">
-              <div className="snap-pane">
-                <h4>{t('snapshot.leftPane')}</h4>
-                <CanvasEditor doc={selected.doc} onDocChange={() => {}} readOnly />
-              </div>
-              <div className="snap-pane">
-                <h4>{t('snapshot.rightPane')}</h4>
-                {currentDoc && <CanvasEditor doc={currentDoc} onDocChange={() => {}} readOnly />}
-              </div>
+            <div className="snap-pane">
+              <h4>{t('snapshot.rightPane')}</h4>
+              {currentDoc && <CanvasEditor doc={currentDoc} onDocChange={() => {}} readOnly />}
             </div>
           </div>
-        )}
-        <div className="guard-actions">
-          <button className="m-btn" onClick={onClose}>{t('closeGuard.cancel')}</button>
         </div>
+      )}
+      <div className="guard-actions">
+        <button className="m-btn" onClick={onClose}>{t('closeGuard.cancel')}</button>
       </div>
-    </div>
+    </Overlay>
   );
 }

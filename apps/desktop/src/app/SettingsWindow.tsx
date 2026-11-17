@@ -1,28 +1,18 @@
 import { Settings, ShieldCheck, SunMoon, SlidersHorizontal, Plug, Info } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { useLicense } from '../stores/license.js';
-import { isComposingKey } from '../features/editor/ime.js';
+import { Overlay } from './Overlay.js';
 
 /**
  * 设置窗口壳（m1.1 打样；真功能=m2.3）。
- * 独立系统窗口形态（Windows 惯例）：居中浮层+遮罩，点遮罩/Esc 即关——
- * 永不占用主视图路由，关掉即回工作区（docs/01 §12.5「独立设置窗口」决策的打样呈现）。
+ * 独立系统窗口形态（Windows 惯例）：居中浮层+遮罩，点遮罩/Esc 即关 + 焦点归还（#127 Overlay 基座）。
+ * 默认落在「通用」——唯一有真实控件的页，而不是空占位页。
  */
 export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<'activation' | 'appearance' | 'general' | 'llm' | 'about'>('appearance');
-  // 注释承诺「点遮罩/Esc 即关」——补上 Esc（此前只实现了遮罩点击）
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isComposingKey(e)) onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-  if (!open) return null;
+  const [tab, setTab] = useState<'activation' | 'appearance' | 'general' | 'llm' | 'about'>('general');
   const nav: Array<{ id: typeof tab; label: string; icon: React.ReactNode }> = [
     { id: 'activation', label: t('settings.activation'), icon: <ShieldCheck size={15} /> },
     { id: 'appearance', label: t('settings.appearance'), icon: <SunMoon size={15} /> },
@@ -31,39 +21,43 @@ export function SettingsWindow({ open, onClose }: { open: boolean; onClose: () =
     { id: 'about', label: t('settings.about'), icon: <Info size={15} /> },
   ];
   return (
-    <div className="settings-overlay" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={onClose}>
-      <div className="settings-win" onClick={(e) => e.stopPropagation()}>
-        <div className="settings-bar">
-          <b>{t('settings.title')}</b>
-          <span className="muted">{t(`settings.${tab}`)}</span>
-          <span style={{ flex: 1 }} />
-          <button className="settings-close" onClick={onClose} aria-label={t('common.close')}>✕</button>
-        </div>
-        <div className="settings-body">
-          <nav className="settings-nav" aria-label={t('settings.title')}>
-            {nav.map((n) => (
-              <button
-                key={n.id}
-                className={n.id === tab ? 'on' : ''}
-                onClick={() => setTab(n.id)}
-                aria-current={n.id === tab ? 'page' : undefined}
-              >
-                {n.icon}{n.label}
-              </button>
-            ))}
-          </nav>
-          <div className="settings-pane">
-            {tab === 'general' ? (
-              <GeneralPane />
-            ) : tab === 'activation' ? (
-              <ActivationPane />
-            ) : (
-              <p className="muted">{t('settings.mockNote', { module: 'm2.3' })}</p>
-            )}
-          </div>
+    <Overlay
+      open={open}
+      onClose={onClose}
+      label={t('settings.title')}
+      overlayClassName="settings-overlay"
+      boxClassName="settings-win"
+    >
+      <div className="settings-bar">
+        <b>{t('settings.title')}</b>
+        <span className="muted">{t(`settings.${tab}`)}</span>
+        <span style={{ flex: 1 }} />
+        <button className="settings-close" onClick={onClose} aria-label={t('common.close')}>✕</button>
+      </div>
+      <div className="settings-body">
+        <nav className="settings-nav" aria-label={t('settings.title')}>
+          {nav.map((n) => (
+            <button
+              key={n.id}
+              className={n.id === tab ? 'on' : ''}
+              onClick={() => setTab(n.id)}
+              aria-current={n.id === tab ? 'page' : undefined}
+            >
+              {n.icon}{n.label}
+            </button>
+          ))}
+        </nav>
+        <div className="settings-pane">
+          {tab === 'general' ? (
+            <GeneralPane />
+          ) : tab === 'activation' ? (
+            <ActivationPane />
+          ) : (
+            <p className="muted">{t('settings.mockNote', { module: 'm2.3' })}</p>
+          )}
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }
 

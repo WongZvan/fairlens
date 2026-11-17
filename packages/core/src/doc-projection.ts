@@ -238,8 +238,8 @@ export interface ProjectedField {
 
 export interface ProjectedEntry {
   blockId: string;
-  /** 结构化头（org / role / 日期），不参与就地改写，只做上下文 */
-  org: string;
+  /** 结构化头（org / role / 日期），不参与就地改写，只做上下文；#127 起新建条目可以还没有 org */
+  org?: string;
   role?: string;
   date?: string;
   pageBreakBefore?: boolean;
@@ -279,7 +279,7 @@ function projectEntry(entry: Entry): ProjectedEntry {
   const date = formatDateRange(entry.start, entry.end, entry.ongoing);
   return {
     blockId: entry.id,
-    org: entry.org,
+    ...(entry.org ? { org: entry.org } : {}),
     ...(entry.role ? { role: entry.role } : {}),
     ...(date ? { date } : {}),
     ...(entry.pageBreakBefore ? { pageBreakBefore: true } : {}),

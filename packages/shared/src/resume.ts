@@ -24,7 +24,8 @@ export type Bullet = z.infer<typeof Bullet>;
 export const Entry = z
   .object({
     id: Nanoid12,
-    org: z.string().min(1),
+    // #127：org 可缺省——新建条目先空着（UI 显示占位），填了才落库；非空时仍要求至少 1 字
+    org: z.string().min(1).optional(),
     role: z.string().optional(),
     // #122 日期放开为自由文本：'2022'、'2022年9月'、'2022.09.15'、'大三' 均合法
     start: z.string().optional(),

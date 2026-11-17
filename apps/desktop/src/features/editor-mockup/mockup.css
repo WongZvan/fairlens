@@ -285,6 +285,29 @@
 .fl-basic-field:hover .fl-field-actions,
 .fl-field-actions:focus-within { opacity: 1; }
 
+/* 示例简历横幅（#127）：屏幕 chrome，导出隐藏 */
+.sample-banner {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px; font-size: 12px; color: var(--ade-ink);
+  background: var(--ade-accent-soft); border-bottom: 1px solid var(--ade-line);
+}
+.sample-banner span { flex: 1; }
+.sample-banner .m-btn { padding: 3px 10px; font-size: 12px; }
+
+/* 分区标题「添加条目」内联入口（#127）：屏幕 chrome，导出由 print-shell 隐藏 */
+.fl-section > h3 { position: relative; }
+.fl-add-entry {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 22px; padding: 0 8px; border-radius: 4px;
+  font-size: 11px; letter-spacing: 0; color: var(--ade-muted);
+  background: var(--ade-panel); border: 1px solid var(--ade-line);
+  cursor: pointer; opacity: 0; transition: opacity 120ms;
+}
+.fl-section > h3:hover .fl-add-entry,
+.fl-add-entry:focus-visible { opacity: 1; }
+.fl-add-entry:hover { color: var(--ade-accent); border-color: var(--ade-accent); }
+
 /* 内联搜索条（#126）：浮在画布顶部，不占布局 */
 .search-bar {
   position: absolute; top: 10px; right: 18px; z-index: 40;

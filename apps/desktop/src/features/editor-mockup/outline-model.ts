@@ -2,7 +2,7 @@
  * 大纲完整树模型（#118）：纯函数，组件只负责渲染。
  * 规则（用户 2026-11-05 拍板）：
  * - 分区标题=section.title（空则回落类型 i18n）；所有分区都显示（含空基本信息）；
- * - 条目仅保留有 bullet 的（空壳不进树，仍可拖拽排序）；
+ * - 条目全部显示（#127 起含空条目——新建条目必须先在大纲里可见，否则无法排序/定位；标题回落「未命名条目」）；
  * - basicFields/skillGroups 作为只读导航叶节点。
  */
 import type { BasicField, Entry, ResumeDoc, Section, SkillGroup } from '@fairlens/shared';
@@ -22,7 +22,7 @@ export interface OutlineSection {
 
 export function buildOutlineTree(doc: ResumeDoc): OutlineSection[] {
   return doc.sections.map((section) => {
-    const entries = section.entries.filter((entry) => entry.bullets.length > 0);
+    const entries = section.entries;
     const fields = section.basicFields ?? [];
     const skills = section.skills ?? [];
     return {

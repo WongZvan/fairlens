@@ -3,7 +3,7 @@ import { buildMenus, findItem, flattenItems, type MenuContext } from './menu-mod
 
 /** 假 i18n：key 直接回显，便于断言结构而非文案 */
 const t = (key: string) => key;
-const baseCtx: MenuContext = { inEditor: true, manualMode: false, dirty: false, theme: 'system', zoomMode: 'fit-width' };
+const baseCtx: MenuContext = { inEditor: true, theme: 'system', zoomMode: 'fit-width' };
 
 describe('命令栏菜单模型（#124）', () => {
   it('四个顶级菜单：文件/编辑/视图/AI', () => {
@@ -11,16 +11,19 @@ describe('命令栏菜单模型（#124）', () => {
     expect(menus.map((m) => m.id)).toEqual(['file', 'edit', 'view', 'ai']);
   });
 
-  it('未实现项一律 disabled 且带里程碑徽标（不留"点了没反应"的空按钮）', () => {
+  it('未实现项一律 disabled + 「未开放」徽标 + 人话说明（#127，不再显示里程碑编号）', () => {
     const menus = buildMenus(t, baseCtx);
     const newItem = findItem(menus, 'file.new');
     const openItem = findItem(menus, 'file.open');
     const word = findItem(menus, 'file.export-word');
     const evaluate = findItem(menus, 'ai.evaluate');
-    expect(newItem).toMatchObject({ disabled: true, badge: 'm1.8' });
-    expect(openItem).toMatchObject({ disabled: true, badge: 'm1.8' });
-    expect(word).toMatchObject({ disabled: true, badge: 'M5' });
-    expect(evaluate).toMatchObject({ disabled: true, badge: 'M4' });
+    expect(newItem).toMatchObject({ disabled: true, badge: 'menu.unavailable', note: 'menu.noteNewOpen' });
+    expect(openItem).toMatchObject({ disabled: true, badge: 'menu.unavailable', note: 'menu.noteNewOpen' });
+    expect(word).toMatchObject({ disabled: true, badge: 'menu.unavailable', note: 'menu.noteExportFormats' });
+    expect(evaluate).toMatchObject({ disabled: true, badge: 'menu.unavailable', note: 'menu.noteAi' });
+    // 界面上不得再出现里程碑编号
+    const all = menus.flatMap((m) => flattenItems(m.items));
+    expect(all.some((i) => i.badge && /^m\d|^M\d/.test(i.badge))).toBe(false);
   });
 
   it('已实现项不带 badge 且默认可用（PDF 导出/保存/快照/查找）', () => {
@@ -49,12 +52,20 @@ describe('命令栏菜单模型（#124）', () => {
     expect(findItem(menus, 'view.theme-light')!.hint).toBeUndefined();
   });
 
-  it('导出子菜单按 §9 分组：定稿版 PDF 可用，其余 M5', () => {
+  it('导出子菜单按 §9 分组：PDF + 归档可用，其余未开放（#127 归档并入导出下拉）', () => {
     const menus = buildMenus(t, baseCtx);
     const exportGroup = menus.find((m) => m.id === 'file')!.items.find((i) => i.submenu)!;
     const ids = exportGroup.submenu!.map((s) => s.id);
-    expect(ids).toEqual(['file.export-pdf', 'file.export-word', 'file.export-pdf-annotated', 'file.export-png', 'file.export-html']);
-    expect(exportGroup.submenu!.filter((s) => !s.disabled).map((s) => s.id)).toEqual(['file.export-pdf']);
+    expect(ids).toEqual(['file.export-pdf', 'file.export-archive', 'file.export-word', 'file.export-pdf-annotated', 'file.export-png', 'file.export-html']);
+    expect(exportGroup.submenu!.filter((s) => !s.disabled).map((s) => s.id)).toEqual(['file.export-pdf', 'file.export-archive']);
+  });
+
+  it('视图菜单按真实缩放档位打勾（#127 修写死 fit-width）', () => {
+    const menus = buildMenus(t, { ...baseCtx, zoomMode: 1 });
+    expect(findItem(menus, 'view.zoom-100')!.hint).toBe('✓');
+    expect(findItem(menus, 'view.zoom-fit-width')!.hint).toBeUndefined();
+    const fitPage = buildMenus(t, { ...baseCtx, zoomMode: 'fit-page' });
+    expect(findItem(fitPage, 'view.zoom-fit-page')!.hint).toBe('✓');
   });
 
   it('flattenItems 展开子菜单（命令查找用）', () => {

@@ -59,9 +59,9 @@ describe('大纲完整树模型（#118）', () => {
     expect(tree[2]!.title).toBeNull();
   });
 
-  it('条目只保留有 bullet 的（空壳条目不进树）', () => {
+  it('条目全部进树（#127 起含空条目，标题由组件回落「未命名条目」）', () => {
     const tree = buildOutlineTree(doc());
-    expect(tree[1]!.entries.map((e) => e.org)).toEqual(['华中科技大学']);
+    expect(tree[1]!.entries.map((e) => e.org)).toEqual(['华中科技大学', '空壳条目']);
   });
 
   it('basicFields / skills 进入叶节点；hasChildren 覆盖三种子节点', () => {

@@ -1,7 +1,6 @@
 /**
- * 画布右键菜单项构建（#93 / #106）：纯函数，便于单测锁定顺序与条件。
- * 语义（#106 修订 #93）：选区态提供剪切/复制/粘贴/全选（显式告诉用户快捷键）；
- * 条目命中的「创建条目副本」是**原地副本**（非剪贴板复制），与 Ctrl+D 同源。
+ * 画布右键菜单项构建（#93 / #106 / #127）：纯函数，便于单测锁定顺序与条件。
+ * 文案走 i18n（#127 清理硬编码）；命中条目时给「复制 / 删除」。
  */
 import type { ContextMenuEntry } from './ContextMenu.js';
 
@@ -11,38 +10,51 @@ export interface CanvasMenuActions {
   paste: () => void;
   selectAll: () => void;
   duplicate: (sectionId: string, entryId: string) => void;
+  /** #127：删除条目（可 Ctrl+Z 撤销） */
+  deleteEntry: (entryId: string) => void;
 }
 
 export interface CanvasMenuCtx {
   hasSelection: boolean;
   entry: { sectionId: string; entryId: string } | null;
   actions: CanvasMenuActions;
+  t: (key: string) => string;
 }
 
-export function buildCanvasMenuItems({ hasSelection, entry, actions }: CanvasMenuCtx): ContextMenuEntry[] {
+export function buildCanvasMenuItems({ hasSelection, entry, actions, t }: CanvasMenuCtx): ContextMenuEntry[] {
+  const divider: ContextMenuEntry = { divider: true };
   const duplicate: ContextMenuEntry | null =
     entry && entry.sectionId
-      ? { label: '创建条目副本', hint: 'Ctrl+D', run: () => actions.duplicate(entry.sectionId, entry.entryId) }
+      ? { label: t('editor.duplicateEntry'), hint: 'Ctrl+D', run: () => actions.duplicate(entry.sectionId, entry.entryId) }
       : null;
-  const divider: ContextMenuEntry = { divider: true };
+  const remove: ContextMenuEntry | null = entry ? { label: t('editor.deleteEntry'), run: () => actions.deleteEntry(entry.entryId) } : null;
   const items: ContextMenuEntry[] = [];
 
   if (hasSelection) {
     items.push(
-      { label: '剪切', hint: 'Ctrl+X', run: actions.cut },
-      { label: '复制', hint: 'Ctrl+C', run: actions.copy },
-      { label: '粘贴', hint: 'Ctrl+V', run: actions.paste },
+      { label: t('menu.editCut'), hint: 'Ctrl+X', run: actions.cut },
+      { label: t('menu.editCopy'), hint: 'Ctrl+C', run: actions.copy },
+      { label: t('menu.editPaste'), hint: 'Ctrl+V', run: actions.paste },
       divider,
-      { label: '全选', hint: 'Ctrl+A', run: actions.selectAll },
+      { label: t('menu.editSelectAll'), hint: 'Ctrl+A', run: actions.selectAll },
     );
     if (duplicate) items.push(divider, duplicate);
+    if (remove) items.push(remove);
     return items;
   }
 
-  if (duplicate) items.push(duplicate, divider);
+  if (duplicate) items.push(duplicate);
+  if (remove) {
+    items.push(remove, divider);
+    items.push(
+      { label: t('menu.editPaste'), hint: 'Ctrl+V', run: actions.paste },
+      { label: t('menu.editSelectAll'), hint: 'Ctrl+A', run: actions.selectAll },
+    );
+    return items;
+  }
   items.push(
-    { label: '粘贴', hint: 'Ctrl+V', run: actions.paste },
-    { label: '全选', hint: 'Ctrl+A', run: actions.selectAll },
+    { label: t('menu.editPaste'), hint: 'Ctrl+V', run: actions.paste },
+    { label: t('menu.editSelectAll'), hint: 'Ctrl+A', run: actions.selectAll },
   );
   return items;
 }

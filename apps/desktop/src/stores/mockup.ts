@@ -30,8 +30,13 @@ const quantize = (z: number) => Math.min(1.5, Math.max(0.5, Math.round(z * 10) /
 const quantizeFit = (z: number) => Math.min(1.5, Math.max(0.5, Math.round(z * 100) / 100));
 
 const SIDEBAR_LS = { leftWidth: 'fairlens.leftWidth', rightWidth: 'fairlens.rightWidth' };
+const PANEL_LS = { leftOpen: 'fairlens.leftOpen', rightOpen: 'fairlens.rightOpen' };
 const COLLAPSED_LS = 'fairlens.collapsedSections';
 const clampW = (w: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(w)));
+const readBool = (key: string, fallback: boolean) => {
+  const raw = localStorage.getItem(key);
+  return raw === null ? fallback : raw === '1';
+};
 const readCollapsed = (): string[] => {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(COLLAPSED_LS) ?? '[]');
@@ -44,16 +49,27 @@ const readCollapsed = (): string[] => {
 export const useMockup = create<MockupState>((set) => ({
   zoomMode: 'fit-width', // 默认适应宽度（#90）
   zoom: 1,
-  leftOpen: true,
-  rightOpen: true,
+  leftOpen: readBool(PANEL_LS.leftOpen, true),
+  // #127：右栏默认关闭——AI 评估尚未开放，常开空面板会挤压 960px 下的画布
+  rightOpen: readBool(PANEL_LS.rightOpen, false),
   collapsedSections: readCollapsed(),
   leftWidth: clampW(Number(localStorage.getItem(SIDEBAR_LS.leftWidth)) || 208, 150, 320),
   rightWidth: clampW(Number(localStorage.getItem(SIDEBAR_LS.rightWidth)) || 296, 220, 420),
   setZoomMode: (zoomMode) => set({ zoomMode }),
   setResolvedZoom: (zoom) => set({ zoom: quantizeFit(zoom) }),
   bumpZoom: (delta) => set((s) => ({ zoomMode: quantize(s.zoom + delta), zoom: quantize(s.zoom + delta) })),
-  toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
-  toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
+  toggleLeft: () =>
+    set((s) => {
+      const leftOpen = !s.leftOpen;
+      localStorage.setItem(PANEL_LS.leftOpen, leftOpen ? '1' : '0');
+      return { leftOpen };
+    }),
+  toggleRight: () =>
+    set((s) => {
+      const rightOpen = !s.rightOpen;
+      localStorage.setItem(PANEL_LS.rightOpen, rightOpen ? '1' : '0');
+      return { rightOpen };
+    }),
   toggleSection: (id) =>
     set((s) => {
       const collapsedSections = toggleCollapsed(s.collapsedSections, id);

@@ -1,10 +1,12 @@
 /**
- * 命令面板（m1.5）：Ctrl+K 无选区唤起；模糊搜索；Esc 关闭；↑↓ 选择 Enter 执行。
+ * 命令面板（m1.5）：Ctrl+K 唤起（#127 起恒为命令面板，不再与链接编辑二义）；
+ * 模糊搜索；Esc/点遮罩关闭 + 焦点归还（Overlay 基座）；↑↓ 选择 Enter 执行。
  * 命令源=commandRegistry（devOnly 由 license 角色门控）。
  */
 import { CornerDownLeft, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Overlay } from '../../app/Overlay.js';
 import { useLicense } from '../../stores/license.js';
 import { commandRegistry, type CommandDef } from '../editor/command-registry.js';
 
@@ -28,7 +30,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     if (open) {
       setQuery('');
       setActive(0);
-      setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [open]);
 
@@ -40,43 +41,52 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   };
 
   return (
-    <div className="settings-overlay" role="dialog" aria-modal="true" aria-label={t('palette.title')} onClick={onClose}>
-      <div className="palette" onClick={(e) => e.stopPropagation()}>
-        <div className="palette-input">
-          <Search size={15} />
-          <input
-            ref={inputRef}
-            value={query}
-            placeholder={t('palette.placeholder')}
-            aria-label={t('palette.placeholder')}
-            onChange={(e) => { setQuery(e.target.value); setActive(0); }}
-            onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing) return; // IME 合成态：Enter/方向键交输入法
-              if (e.key === 'Escape') onClose();
-              if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, results.length - 1)); }
-              if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
-              if (e.key === 'Enter' && results[active]) run(results[active]);
-            }}
-          />
-        </div>
-        <ul className="palette-list" role="listbox">
-          {results.map((c, i) => (
-            <li
-              key={c.id}
-              role="option"
-              aria-selected={i === active}
-              className={i === active ? 'on' : ''}
-              onMouseEnter={() => setActive(i)}
-              onClick={() => run(c)}
-            >
-              <span>{c.title}</span>
-              {c.hint && <span className="muted mono">{c.hint}</span>}
-              {i === active && <CornerDownLeft size={13} className="enter" />}
-            </li>
-          ))}
-          {results.length === 0 && <li className="muted empty">{t('palette.empty')}</li>}
-        </ul>
+    <Overlay
+      open={open}
+      onClose={onClose}
+      label={t('palette.title')}
+      overlayClassName="settings-overlay"
+      boxClassName="palette"
+      initialFocusRef={inputRef}
+    >
+      <div className="palette-input">
+        <Search size={15} />
+        <input
+          ref={inputRef}
+          value={query}
+          placeholder={t('palette.placeholder')}
+          aria-label={t('palette.placeholder')}
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="palette-listbox"
+          aria-activedescendant={results[active] ? `palette-opt-${results[active].id}` : undefined}
+          onChange={(e) => { setQuery(e.target.value); setActive(0); }}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return; // IME 合成态：Enter/方向键交输入法
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, results.length - 1)); }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+            if (e.key === 'Enter' && results[active]) run(results[active]);
+          }}
+        />
       </div>
-    </div>
+      <ul className="palette-list" role="listbox" id="palette-listbox">
+        {results.map((c, i) => (
+          <li
+            key={c.id}
+            id={`palette-opt-${c.id}`}
+            role="option"
+            aria-selected={i === active}
+            className={i === active ? 'on' : ''}
+            onMouseEnter={() => setActive(i)}
+            onClick={() => run(c)}
+          >
+            <span>{c.title}</span>
+            {c.hint && <span className="muted mono">{c.hint}</span>}
+            {i === active && <CornerDownLeft size={13} className="enter" />}
+          </li>
+        ))}
+        {results.length === 0 && <li className="muted empty">{t('palette.empty')}</li>}
+      </ul>
+    </Overlay>
   );
 }

@@ -25,7 +25,8 @@ export interface BubblePlacement {
   placement: 'below' | 'above';
 }
 
-export const PASTE_BUBBLE_TIMEOUT_MS = 4000;
+/** #127：4s → 8s——读完提示再决定"仅文本"时，气泡不应先消失 */
+export const PASTE_BUBBLE_TIMEOUT_MS = 8000;
 export const BUBBLE_VIEWPORT_MARGIN = 8;
 export const BUBBLE_GAP = 8;
 

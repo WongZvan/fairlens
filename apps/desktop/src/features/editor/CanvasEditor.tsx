@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import type { DocStyle, ResumeDoc } from '@fairlens/shared';
 import { validateDocStyleAgainstManifest } from '@fairlens/shared';
 import { flExtensions, pmToResumeDoc, resumeDocToPm } from './nodes.js';
-import { pickAppendTarget } from './blank-click.js';
+import { pickClickTarget, type ClickTarget } from './blank-click.js';
 import { TextSelection } from '@tiptap/pm/state';
 import { searchPluginKey, computeSearchState, SearchHighlight } from './search-plugin.js';
 import { nextIndex, prevIndex } from './search.js';
@@ -314,24 +314,40 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
   }, [editor, closeBubble]);
 
   /**
-   * #114 点纸面空白新增要点：条目下方空白 / 纸面底部空白 → 在该条目末尾追加一条要点。
-   * 点文字（要点/标题/链接）不拦截，交给编辑器默认光标。
+   * #127 空白点击全量执行（判定见 blank-click.ts 的 pickClickTarget）：
+   * - append-bullet：条目末尾追加要点
+   * - insert-bullet：在条目第 index 条要点之前插新要点
+   * - insert-entry：在分区第 index 个条目之前插新条目（空分区=第一条）
    */
-  const appendBulletToEntry = (entryId: string) => {
+  const runClickTarget = (target: ClickTarget) => {
     if (!editor || editor.isDestroyed) return;
-    editor.commands.command(({ tr, state }) => {
-      let target = -1;
-      state.doc.descendants((node, pos) => {
-        if (node.type.name === 'flEntry' && String(node.attrs.id) === entryId) target = pos + node.nodeSize - 1;
+    if (target.kind === 'insert-entry') {
+      editor.commands.insertEntry({ sectionId: target.sectionId, index: target.index });
+    } else {
+      editor.commands.command(({ tr, state }) => {
+        let entryPos = -1;
+        let entrySize = 0;
+        const bulletOffsets: number[] = [];
+        state.doc.descendants((node, pos) => {
+          if (node.type.name === 'flEntry' && String(node.attrs.id) === target.entryId) {
+            entryPos = pos;
+            entrySize = node.nodeSize;
+            node.forEach((child, offset) => {
+              if (child.type.name === 'flBullet') bulletOffsets.push(pos + 1 + offset);
+            });
+            return false;
+          }
+          return true;
+        });
+        if (entryPos < 0) return false;
+        const bulletType = state.schema.nodes.flBullet;
+        if (!bulletType) return false;
+        const insertAt = target.kind === 'insert-bullet' ? (bulletOffsets[target.index] ?? entryPos + entrySize - 1) : entryPos + entrySize - 1;
+        tr.insert(insertAt, bulletType.create({ id: nanoid() }));
+        tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(insertAt + 1, tr.doc.content.size))));
+        return true;
       });
-      if (target < 0) return false;
-      const bulletType = state.schema.nodes.flBullet;
-      if (!bulletType) return false;
-      const bullet = bulletType.create({ id: nanoid() });
-      tr.insert(target, bullet);
-      tr.setSelection(TextSelection.near(tr.doc.resolve(target + 1)));
-      return true;
-    });
+    }
     editor.commands.focus();
   };
 
@@ -355,44 +371,34 @@ export function CanvasEditor({ doc, onDocChange, onReady, readOnly }: CanvasEdit
         'a',
       ].join(', '),
     );
+
+    const bulletBottoms = (entry: HTMLElement) =>
+      Array.from(entry.querySelectorAll(':scope > li[data-type="fl-bullet"]')).map(
+        (el) => (el as HTMLElement).getBoundingClientRect().bottom,
+      );
+    const entryBox = (el: HTMLElement) => {
+      const id = el.getAttribute('data-block-id');
+      if (!id) return null;
+      const rect = el.getBoundingClientRect();
+      return { entryId: id, top: rect.top, bottom: rect.bottom, bulletBottoms: bulletBottoms(el) };
+    };
+
     const entryEl = target.closest('article[data-type="fl-entry"]') as HTMLElement | null;
     const sectionEl = target.closest('section[data-type="fl-section"]') as HTMLElement | null;
-    const paper = editor.view.dom;
-
-    const lastBulletBottom = (entry: HTMLElement) => {
-      const bullets = entry.querySelectorAll('li[data-type="fl-bullet"]');
-      const last = bullets[bullets.length - 1] as HTMLElement | undefined;
-      return (last ?? entry).getBoundingClientRect().bottom;
-    };
-    const boxOf = (el: HTMLElement) => {
-      const id = el.getAttribute('data-block-id');
-      return id ? { entryId: id, lastBulletBottom: lastBulletBottom(el) } : null;
-    };
-
-    const hitEntry = entryEl ? boxOf(entryEl) : null;
-    // 分区空白（条目之间/分区内边距）：取点击位置上方最近的条目
-    let aboveEntryInSection: { entryId: string; lastBulletBottom: number } | null = null;
-    if (sectionEl && !entryEl) {
-      const entries = Array.from(sectionEl.querySelectorAll('article[data-type="fl-entry"]')) as HTMLElement[];
-      const above = entries.filter((el) => el.getBoundingClientRect().top <= e.clientY).pop();
-      if (above) aboveEntryInSection = boxOf(above);
-    }
-    // 纸面底部空白：文档最后一个条目
-    const allSections = Array.from(paper.querySelectorAll('section[data-type="fl-section"]')) as HTMLElement[];
-    const lastSection = allSections[allSections.length - 1];
-    const lastEntries = lastSection ? (Array.from(lastSection.querySelectorAll('article[data-type="fl-entry"]')) as HTMLElement[]) : [];
-    const lastEntryEl = lastEntries[lastEntries.length - 1] ?? null;
-    const lastEntryInDoc = lastEntryEl && !entryEl && !sectionEl
-      ? (() => {
-          const id = lastEntryEl.getAttribute('data-block-id');
-          return id ? { entryId: id, lastEntryBottom: lastBulletBottom(lastEntryEl) } : null;
-        })()
+    const hitEntry = entryEl ? entryBox(entryEl) : null;
+    const section = sectionEl
+      ? {
+          sectionId: sectionEl.getAttribute('data-block-id') ?? '',
+          entries: Array.from(sectionEl.querySelectorAll(':scope > article[data-type="fl-entry"]'))
+            .map((el) => entryBox(el as HTMLElement))
+            .filter((box): box is NonNullable<typeof box> => !!box),
+        }
       : null;
 
-    const entryId = pickAppendTarget({ onText, hitEntry, aboveEntryInSection, lastEntryInDoc, clickY: e.clientY });
-    if (!entryId) return;
+    const picked = pickClickTarget({ onText, hitEntry, section: section && section.sectionId ? section : null, clickY: e.clientY });
+    if (!picked) return;
     e.preventDefault();
-    appendBulletToEntry(entryId);
+    runClickTarget(picked);
   };
 
   return (

@@ -20,7 +20,8 @@ export type EditorActionId =
   | 'edit.add-section'
   | 'edit.delete-section'
   | 'file.snapshot-create'
-  | 'file.snapshot-restore';
+  | 'file.snapshot-restore'
+  | 'file.clear-sample';
 
 type Handler = (id: EditorActionId) => boolean;
 

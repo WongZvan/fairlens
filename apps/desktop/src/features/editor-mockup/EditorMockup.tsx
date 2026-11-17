@@ -1,5 +1,5 @@
 import {
-  ChevronLeft, ChevronRight, FileText, Minus, PanelRightClose, Plus,
+  ChevronLeft, ChevronRight, Minus, PanelRightClose, Plus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
@@ -11,7 +11,10 @@ import { SnapshotDialog } from './SnapshotDialog.js';
 import { SectionDialog } from '../editor/nodeviews/SectionDialog.js';
 import { SearchBar } from '../editor/SearchBar.js';
 import { toast } from '../../app/Toast.js';
-import { resolveShortcut } from '../editor/shortcuts.js';
+import { ConfirmDialog } from '../../app/ConfirmDialog.js';
+import { createBlankDoc } from './blank-doc.js';
+import { SAMPLE_RESUME_TITLE } from './sample-data.js';
+import { resolveShortcut, shouldIgnoreShortcut } from '../editor/shortcuts.js';
 import { registerEditorActions } from '../editor/editor-action-bus.js';
 import { commandRegistry } from '../editor/command-registry.js';
 import { OutlineTreeLive } from './OutlineTreeLive.js';
@@ -22,7 +25,6 @@ import { buildCanvasMenuItems } from './canvas-menu.js';
 import { moveEntry } from './entry-order.js';
 import { duplicateEntry as duplicateEntryDoc } from '../editor/entry-duplicate.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
-import { dims, findings } from './sample-data.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
 export function EditorMockup() {
@@ -35,7 +37,7 @@ export function EditorMockup() {
   useEffect(() => {
     const offs = [
       commandRegistry.register({
-        id: 'view.back-library', title: '返回简历库', hint: 'Ctrl+Alt+←', keywords: ['返回', '简历库'],
+        id: 'view.back-library', title: '返回简历库', keywords: ['返回', '简历库'],
         run: () => window.dispatchEvent(new CustomEvent('fl:back-library')),
       }),
       commandRegistry.register({
@@ -49,20 +51,52 @@ export function EditorMockup() {
       commandRegistry.register({
         id: 'file.save', title: '立即保存', hint: 'Ctrl+S', keywords: ['保存'],
         run: async () => {
-          await useEditorDoc.getState().saveNow();
-          toast('已保存');
+          const r = await useEditorDoc.getState().saveNow();
+          toast(r.ok ? t('titlebar.saved') : t('menu.saveFailed'));
         },
       }),
       commandRegistry.register({
         id: 'file.snapshot-create', title: '保存快照', keywords: ['快照', '版本'],
         run: async () => {
           await useEditorDoc.getState().createSnapshot();
-          toast('快照已保存');
+          toast(t('snapshot.savedToast'));
         },
       }),
       commandRegistry.register({
         id: 'file.snapshot-restore', title: '回滚到快照…', keywords: ['快照', '回滚', '版本'],
         run: () => setSnapOpen(true),
+      }),
+      commandRegistry.register({
+        id: 'structure.add-entry', title: t('menu.insertEntry'), keywords: ['条目', '新增', '经历', '项目'],
+        run: () => {
+          const ed = editorApiRef.current?.getEditor();
+          if (!ed) return;
+          const { $from } = ed.state.selection;
+          for (let d = $from.depth; d > 0; d -= 1) {
+            const node = $from.node(d);
+            if (node.type.name !== 'flSection') continue;
+            let count = 0;
+            node.forEach((child) => {
+              if (child.type.name === 'flEntry') count += 1;
+            });
+            ed.commands.insertEntry({ sectionId: String(node.attrs.id ?? ''), index: count });
+            ed.commands.focus();
+            return;
+          }
+        },
+      }),
+      commandRegistry.register({
+        id: 'structure.delete-entry', title: t('menu.deleteEntry'), keywords: ['条目', '删除'],
+        run: () => {
+          const ed = editorApiRef.current?.getEditor();
+          if (!ed) return;
+          if (!ed.commands.deleteEntry()) return;
+          toast(t('editor.entryDeleted'));
+        },
+      }),
+      commandRegistry.register({
+        id: 'file.clear-sample', title: t('menu.fileClear'), keywords: ['清空', '空白', '示例'],
+        run: () => setClearConfirm(true),
       }),
       commandRegistry.register({
         id: 'structure.add-section', title: '新增分区…', keywords: ['分区', '标题', '经历', '自我评价', '证书'],
@@ -99,6 +133,10 @@ export function EditorMockup() {
   const [snapOpen, setSnapOpen] = useState(false);
   // #121：新增分区对话框
   const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
+  /** #127：删除分区确认（取代原生 window.confirm） */
+  const [sectionConfirm, setSectionConfirm] = useState<string | null>(null);
+  /** #127：清空示例确认 */
+  const [clearConfirm, setClearConfirm] = useState(false);
   // #126：内联搜索（本次接入；Ctrl+F 不再吞键）
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchState, setSearchState] = useState({ current: -1, total: 0 });
@@ -175,6 +213,9 @@ export function EditorMockup() {
         case 'file.snapshot-restore':
           setSnapOpen(true);
           return true;
+        case 'file.clear-sample':
+          setClearConfirm(true);
+          return true;
         default:
           return false;
       }
@@ -205,10 +246,38 @@ export function EditorMockup() {
       return;
     }
     const name = currentSectionName();
-    if (name && !window.confirm(t('editor.sectionDeleteConfirm', { name }))) return;
+    // #127：改用应用内确认浮层，可撤销（Ctrl+Z）
+    if (name) {
+      setSectionConfirm(name);
+      return;
+    }
     editor.chain().focus().deleteSection().run();
   }
+
+  const confirmDeleteSection = () => {
+    editorApiRef.current?.getEditor()?.chain().focus().deleteSection().run();
+    setSectionConfirm(null);
+  };
+
+  /** #127：清空示例为空白简历（先自动存快照，可回滚） */
+  const clearToBlank = async () => {
+    setClearConfirm(false);
+    try {
+      const st = useEditorDoc.getState();
+      if (st.doc) await st.createSnapshot(t('editor.clearSnapshotLabel'));
+      await st.replaceDoc(
+        createBlankDoc({ name: t('editor.blankName'), basicSection: t('editor.blankSectionTitle') }),
+        t('editor.myResumeTitle'),
+      );
+      toast(t('editor.clearedToast'));
+    } catch (err) {
+      console.error('[editor] clear to blank failed', err);
+      toast(t('editor.clearFailed'));
+    }
+  };
   const canvasDoc = useEditorDoc((s) => s.doc);
+  const resumeTitle = useEditorDoc((s) => s.resumeTitle);
+  const isSample = resumeTitle === SAMPLE_RESUME_TITLE;
   const applyDoc = useEditorDoc((s) => s.applyDoc);
   const loadError = useEditorDoc((s) => s.lastError);
   const leftWidth = useMockup((s) => s.leftWidth);
@@ -263,6 +332,9 @@ export function EditorMockup() {
   // 全局快捷键（§5.6；编辑器内键位由 Tiptap 自理，此处管全局态）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // #127 守卫：输入框里或任何浮层打开时，全局快捷键不抢键（此前字段编辑框 Ctrl+D 会复制条目）
+      const hasOverlay = !!document.querySelector('[data-overlay-open]');
+      if (shouldIgnoreShortcut(e.target, hasOverlay)) return;
       const inEditor = !!document.activeElement?.closest('.ProseMirror');
       const hasSelection = inEditor && !window.getSelection()?.isCollapsed;
       const action = resolveShortcut(
@@ -284,7 +356,7 @@ export function EditorMockup() {
           break;
         case 'save':
           e.preventDefault();
-          void useEditorDoc.getState().saveNow().then(() => toast('已保存'));
+          void useEditorDoc.getState().saveNow().then((r) => toast(r.ok ? t('titlebar.saved') : t('menu.saveFailed')));
           break;
         case 'insert-link':
           // #106：选中文字按 Ctrl+K → 工具条进入链接编辑态（此前 resolveShortcut 有路由但无人消费）
@@ -355,7 +427,26 @@ export function EditorMockup() {
         <Rail side="left" />
       )}
       <CenterPane canvasDoc={canvasDoc} onCanvasDocChange={applyDoc} editorApiRef={editorApiRef}
-        onDuplicateEntry={duplicateEntry} />
+        onDuplicateEntry={duplicateEntry}
+        banner={
+          isSample ? (
+            <div className="sample-banner">
+              <span>{t('editor.sampleBanner')}</span>
+              <button type="button" className="m-btn" onClick={() => setClearConfirm(true)}>{t('editor.clearSample')}</button>
+            </div>
+          ) : null
+        }
+        search={
+          <SearchBar
+            open={searchOpen}
+            current={searchState.current}
+            total={searchState.total}
+            onQuery={handleSearchQuery}
+            onNext={handleSearchNext}
+            onPrev={handleSearchPrev}
+            onClose={handleSearchClose}
+          />
+        } />
       {rightOpen ? (
         <>
           <SidebarResizer side="right" />
@@ -366,17 +457,24 @@ export function EditorMockup() {
       ) : (
         <Rail side="right" />
       )}
-      <SearchBar
-        open={searchOpen}
-        current={searchState.current}
-        total={searchState.total}
-        onQuery={handleSearchQuery}
-        onNext={handleSearchNext}
-        onPrev={handleSearchPrev}
-        onClose={handleSearchClose}
-      />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <SnapshotDialog open={snapOpen} onClose={() => setSnapOpen(false)} />
+      <ConfirmDialog
+        open={sectionConfirm !== null}
+        title={t('editor.sectionDeleteTitle')}
+        body={t('editor.sectionDeleteConfirm', { name: sectionConfirm ?? '' })}
+        confirmLabel={t('editor.sectionDeleteAction')}
+        onConfirm={confirmDeleteSection}
+        onClose={() => setSectionConfirm(null)}
+      />
+      <ConfirmDialog
+        open={clearConfirm}
+        title={t('editor.clearSampleTitle')}
+        body={t('editor.clearSampleBody')}
+        confirmLabel={t('editor.clearSample')}
+        onConfirm={() => void clearToBlank()}
+        onClose={() => setClearConfirm(false)}
+      />
       {sectionDialogOpen && (
         <SectionDialog
           onSave={(draft) => {
@@ -431,8 +529,12 @@ interface CenterPaneProps {
   onCanvasDocChange: (d: ResumeDoc) => void;
   editorApiRef: React.MutableRefObject<EditorApi | null>;
   onDuplicateEntry: (sectionId: string, entryId: string) => void;
+  /** #127：搜索条渲染在画布列内（.m-center），右栏打开时不再盖住评估面板 */
+  search: React.ReactNode;
+  /** #127：示例简历横幅（只在系统示例上显示） */
+  banner?: React.ReactNode;
 }
-function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry }: CenterPaneProps) {
+function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEntry, search, banner }: CenterPaneProps) {
   const { t } = useTranslation();
   const { zoomMode, zoom } = useMockup();
   const setCanvasDoc = onCanvasDocChange;
@@ -452,12 +554,16 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
     const items = buildCanvasMenuItems({
       hasSelection,
       entry: entry && entry.sectionId ? entry : null,
+      t,
       actions: {
         cut: () => api?.cut(),
         copy: () => api?.copy(),
         paste: () => void api?.paste().catch(() => toast('粘贴失败：剪贴板不可读或格式不支持')),
         selectAll: () => api?.selectAll(),
         duplicate: (sectionId, entryId) => onDuplicateEntry(sectionId, entryId),
+        deleteEntry: (entryId) => {
+          if (api?.getEditor()?.commands.deleteEntry({ entryId })) toast(t('editor.entryDeleted'));
+        },
       },
     });
     ctx.open(e.clientX, e.clientY, items);
@@ -517,6 +623,7 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
   }, []);
   return (
     <section className="m-center">
+      {banner}
       <div
         className="m-canvas"
         ref={canvasRef}
@@ -538,10 +645,10 @@ function CenterPane({ canvasDoc, onCanvasDocChange, editorApiRef, onDuplicateEnt
             <CanvasEditor doc={canvasDoc} onDocChange={setCanvasDoc} onReady={(api) => { editorApiRef.current = api; }} />
           </div>
         </div>
-        <div className="pagebreak mono">{t('editor.pagebreak')}</div>
       </div>
       <ContextMenuView state={ctx.state} onClose={ctx.close} />
       <ZoomCtl />
+      {search}
     </section>
   );
 }
@@ -576,69 +683,11 @@ function EvalPanel() {
         <PanelRightClose size={14} />{t('editor.collapse')}
       </button>
       <h2>{t('editor.evalReport')}</h2>
-      <p className="meta mono">10-24 14:02 · glm-4.7 · general v4</p>
-      <div className="score-row">
-        <span className="big">62</span><span className="lvl">{t('editor.levelMid')}</span><span className="delta">+4</span>
+      {/* #127 去假象：不再展示硬编码分数/模型/批注（会误导成真实评估结果） */}
+      <div className="eval-empty">
+        <p className="muted">{t('editor.evalUnavailable')}</p>
+        <p className="muted small">{t('editor.evalUnavailableHint')}</p>
       </div>
-      <p className="summary-serif">
-        {t('editor.summaryLead')}<b>{t('editor.summaryA')}</b>{t('editor.summaryAnd')}<b>{t('editor.summaryB')}</b>{t('editor.summaryTail')}
-      </p>
-      <Radar />
-      <table className="dims-tb">
-        <tbody>
-          {dims.map((d) => (
-            <tr key={d.name}>
-              <td className="dnm">{d.name}</td>
-              <td className="trk"><i style={{ ['--w' as string]: `${d.score}%` }} /></td>
-              <td className="num">{d.score}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="m-findings">
-        <h3>{t('editor.findings', { count: findings.length })}</h3>
-        {findings.map((f) => (
-          <div className="finding" key={f.target} role="button" tabIndex={0}>
-            <span className={`sev ${f.sev}`} />
-            <p>{f.title}<span>{f.sub}</span></p>
-          </div>
-        ))}
-      </div>
-      <button className="cta">{t('editor.goFix')}<FileText size={14} /></button>
     </div>
-  );
-}
-
-/** 雷达（打样静态值；真实=评估管道产出） */
-function Radar() {
-  const labels = [
-    { t: '结构 72', x: 90, y: 20 }, { t: 'STAR 61', x: 146, y: 58 }, { t: '量化 48', x: 146, y: 132 },
-    { t: '匹配 55', x: 90, y: 166 }, { t: '关键词 66', x: 4, y: 132 }, { t: '清晰 78', x: 10, y: 58 },
-  ];
-  const grid = (r: number) =>
-    `90,${90 - r} ${90 + r * 0.866},${90 - r * 0.5} ${90 + r * 0.866},${90 + r * 0.5} 90,${90 + r} ${90 - r * 0.866},${90 + r * 0.5} ${90 - r * 0.866},${90 - r * 0.5}`;
-  const poly = '90,48.2 120.6,72.3 114.1,103.9 90,121.9 56.9,109.1 50.8,67.4';
-  const accent = 'var(--ade-accent)';
-  return (
-    <svg
-      viewBox="-10 0 200 176"
-      role="img"
-      aria-label="六维雷达"
-      style={{ display: 'block', width: '100%', maxWidth: 196, height: 'auto', margin: '2px auto 4px' }}
-    >
-      <polygon points={grid(29)} fill="none" stroke="var(--ade-line)" />
-      <polygon points={grid(58)} fill="none" stroke="var(--ade-line)" />
-      {[0, 60, 120, 180, 240, 300].map((a) => {
-        const rad = (a * Math.PI) / 180;
-        return <line key={a} x1="90" y1="90" x2={90 + 58 * Math.sin(rad)} y2={90 - 58 * Math.cos(rad)} stroke="var(--ade-line)" />;
-      })}
-      <polygon points={poly} fill="var(--ade-accent-soft)" stroke={accent} strokeWidth="1.6" />
-      {[['90', '48.2'], ['120.6', '72.3'], ['114.1', '103.9'], ['90', '121.9'], ['56.9', '109.1'], ['50.8', '67.4']].map(([x, y]) => (
-        <circle key={`${x},${y}`} cx={x} cy={y} r="2.4" fill={accent} />
-      ))}
-      {labels.map((l) => (
-        <text key={l.t} x={l.x} y={l.y} textAnchor={l.x === 90 ? 'middle' : 'start'} fontSize="10.5" fill="var(--ade-muted)">{l.t}</text>
-      ))}
-    </svg>
   );
 }

@@ -1,14 +1,19 @@
-/** 条目头 NodeView（#117）：org/role/date 三段；点击编辑元信息（日期纯文本解析） */
+/** 条目头 NodeView（#117）：org/role/date 三段；点击编辑元信息（日期纯文本解析）；#127 加 ⋯ 复制/删除 */
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
-import { Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { MoreHorizontal, Pencil } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Dropdown } from '../../../app/dropdown.js';
+import { toast } from '../../../app/Toast.js';
 import { formatDateRange, parseDateRange } from '../entry-meta.js';
 import { MetaDialog } from './MetaDialog.js';
 
-export function EntryHeaderView({ node, updateAttributes }: NodeViewProps) {
+export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const entryId = String(node.attrs.id ?? '');
   const org = String(node.attrs.org ?? '');
   const role = String(node.attrs.role ?? '');
   const date = formatDateRange(
@@ -46,12 +51,53 @@ export function EntryHeaderView({ node, updateAttributes }: NodeViewProps) {
         >
           <Pencil size={12} />
         </button>
+        <button
+          ref={moreRef}
+          type="button"
+          className="fl-edit-btn"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          aria-label={t('editor.entryMenu')}
+          title={t('editor.entryMenu')}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen((o) => !o);
+          }}
+        >
+          <MoreHorizontal size={13} />
+        </button>
       </div>
+      <Dropdown open={menuOpen} anchorRef={moreRef} align="right" className="ctx-menu" role="menu" onClose={() => setMenuOpen(false)}>
+        <button
+          type="button"
+          role="menuitem"
+          className="ctx-item"
+          onClick={() => {
+            setMenuOpen(false);
+            editor.commands.duplicateEntry({ entryId });
+          }}
+        >
+          {t('editor.duplicateEntry')}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          className="ctx-item"
+          onClick={() => {
+            setMenuOpen(false);
+            editor.commands.deleteEntry({ entryId });
+            toast(t('editor.entryDeleted'));
+          }}
+        >
+          {t('editor.deleteEntry')}
+        </button>
+      </Dropdown>
       {open && (
         <MetaDialog
           title={t('editor.entryMetaTitle')}
           fields={[
-            { key: 'org', label: t('editor.org'), value: org, required: true },
+            { key: 'org', label: t('editor.org'), value: org },
             { key: 'role', label: t('editor.role'), value: role },
             { key: 'date', label: t('editor.dateRange'), value: date, placeholder: t('editor.dateRangePlaceholder') },
           ]}

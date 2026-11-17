@@ -1,5 +1,8 @@
 import { ResumeDoc } from '@fairlens/shared';
 
+/** 系统示例简历的标题（#127）：用于识别"这是示例，不是用户数据"并显示清空入口 */
+export const SAMPLE_RESUME_TITLE = '示例简历';
+
 /** m1.4 起打样画布改挂真编辑器：此为初始样例文档（blockId 稳定不随刷新变——快照/批注锚点要求） */
 export const sampleDoc: ResumeDoc = ResumeDoc.parse({
   templateId: 'tpl-classic',
