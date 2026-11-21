@@ -151,5 +151,6 @@
   - **Playwright**：`playwright.config.ts` + `e2e/smoke.spec.ts`（激活→编辑→切模板→保存，断言 `data-template` 与 `.toast`），本地 8.1s 通过；CI 新增 `e2e` job。**边界**：浏览器模式，不替代真窗人工验收
   - **STATE 指针根治**：改为「HEAD→最近 squash→代码基线」三层 + 明确「表内 hash 恒比 HEAD 少一个回填提交」的约定，不再每轮追 hash
   - **附带修复（缺陷直报即修）**：根 `pnpm build` 在 Windows 上一直空转——`--filter './packages/*'` 的单引号在 cmd.exe 下是字面量，pnpm 报 No projects matched；改双引号后恢复（CI 在 Linux 无感，故长期未暴露）。教训：跨平台 scripts 只用双引号，CI 绿不代表本地脚本可用
+  - **CI 首跑复盘**：六 job 中只有 `e2e` 红（2m48s，Run pnpm e2e）。根因=Vite 在 Linux 上 `localhost` 可能只绑 `::1`，Playwright 等 `127.0.0.1` 空等满 120s；修法=`webServer.command` 显式 `--host 127.0.0.1`（timeout 102→180s）。其余五 job 首跑即绿
   - 验证：**334 测试 / 43 文件全绿**；lint / typecheck / contract 零漂移 / build / e2e 1 passed；CI YAML 六 job 且全部 SHA 已校验
   - **通用教训**：①规格里写的门禁 ≠ 仓库里真实存在的门禁，收口应逐条对照 §14 而不是只看「测试全绿」；②文档写「已完成」的纪律项要能指到具体配置（pin 要看到 SHA），否则是自述而非证据

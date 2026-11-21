@@ -18,9 +18,11 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'pnpm --filter @fairlens/desktop dev',
+    // 显式绑 IPv4：Linux runner 上 `localhost` 可能只解析到 ::1，而 Playwright 等的是 127.0.0.1，
+    // 会让 webServer 空等满 120s（2026-11-21 CI 首次运行的真实失败原因）
+    command: 'pnpm --filter @fairlens/desktop dev -- --host 127.0.0.1',
     url: 'http://127.0.0.1:1420',
     reuseExistingServer: !CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });
