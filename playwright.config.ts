@@ -18,9 +18,10 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    // 显式绑 IPv4：Linux runner 上 `localhost` 可能只解析到 ::1，而 Playwright 等的是 127.0.0.1，
-    // 会让 webServer 空等满 120s（2026-11-21 CI 首次运行的真实失败原因）
-    command: 'pnpm --filter @fairlens/desktop dev -- --host 127.0.0.1',
+    // 用 exec 而不是 run：`pnpm run dev -- --host …` 会把 `--` 原样传给 vite
+    // （实测 `vite "--" "--host" …`），参数不生效；exec 直接透传 argv。
+    // 显式绑 IPv4：Linux runner 上 localhost 可能只解析到 ::1，Playwright 等的是 127.0.0.1。
+    command: 'pnpm --filter @fairlens/desktop exec vite --host 127.0.0.1',
     url: 'http://127.0.0.1:1420',
     reuseExistingServer: !CI,
     timeout: 180_000,
