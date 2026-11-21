@@ -8,7 +8,7 @@
 |---|---|
 | 里程碑 | M1 进行中（6/8，m1.1 待过目）：**m1.1–m1.6 已收口**（m1.4 尾项 2026-11-04 补齐；m1.6=deb5d6a）；**2026-11-05 预览纸面结构/字体/雷达/大纲修复（#116/#117/#118）**；**2026-11-13 人工验收手册 + AI 读取契约（#119）+ 反馈六项（#120–#123）+ 单行命令栏/导出 PDF/归档/内联搜索（#124–#126）**；下一 m1.7 暂缓；M0 已收口（tag v0.1.0-m0） |
 | 当前模块 | 预览纸面结构/反馈修复/命令栏已落地；**2026-11-17 命令栏回归修复（下拉 portal 化 + 右群组右对齐 + 搜索条定位）+ UIUX 契约轮（#127：结构编辑/空白点击全量/浮层契约/去假象）**；验收手册见 `acceptance/M1.md`（§12.7–§13.7 为新增待验项）；**2026-11-17 二次打磨：退出项移除/示例胶囊/底栏字体/模板按钮/文案清理**；**m5.1 导出 PDF 与归档已提前落地（#125）**，Word/批注版/长图/HTML 仍待 M5；下一 **m1.7 导入管线**（用户指示暂缓；LLM 接入点留 m3.5）；m1.1 打样待用户最终过目 |
-| 当前分支 | dev=b4cc253（2026-11-18 交接前文档核对同步，零代码改动）；其前 dev=cceb793=#127 四次打磨（底栏只留 ? / 箭头随悬停）、58f1525=三次打磨、4749f71=二次打磨、340e4bf=UIUX 契约轮、b3468f3=命令栏回归修复、4ed17b4=#124–#126。`fix/m1-doc-sync`、`feat/m1-ux-contract`、`feat/m1-ui-polish` 均已删。main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。历史：m1.6 squash=09ecebf（+8353bcd 归因更正/deb5d6a 反馈轮四项），feat/m1.6 已删；#107–#123 反馈修复与文档同步直推 dev |
+| 当前分支 | **HEAD=`<以 git log -1 为准>` → 最近 squash=`4b3d943`（文档核对同步）/ 代码基线=`cceb793`**（#127 四次打磨）；此后 `fix/m0-ci-gates` 分支正在做 CI 门禁补齐（coverage/SHA pin/E2E）。**指针约定**：本表写在提交里，故 HEAD 恒比表内所写 hash 多一个回填提交——核对时先跑 `git log -1`，不要把表内 hash 当 HEAD 追。历史：58f1525=三次打磨、4749f71=二次打磨、340e4bf=UIUX 契约轮、b3468f3=命令栏回归修复、4ed17b4=#124–#126。`fix/m1-doc-sync`、`feat/m1-ux-contract`、`feat/m1-ui-polish` 均已删。main=e3956fe（按流程 M1 整体收口时合并，落后属预期）。历史：m1.6 squash=09ecebf（+8353bcd 归因更正/deb5d6a 反馈轮四项），feat/m1.6 已删；#107–#123 反馈修复与文档同步直推 dev |
 | 已落地 | 编辑器核心全通：真 Tiptap 画布/3 套模板（切换真实生效）/Ctrl+K 面板/快捷键全集/悬浮工具条(悬停门控)/右键菜单/侧栏拖拽调宽/缩放三态/激活门/**m1.6 持久层**（packages/core 首落/SQLite 迁移/自动保存防抖+失焦保存/关闭保护双模式/快照四态 diff+双栏对比+回滚/settings 六键预留）+ **tauri 启动入口**（`pnpm tauri:dev`）与**窗口操作权限修复**（三键/任务栏关闭可用）+ **m1.4 尾项**（粘贴气泡/仅文本 Ctrl+Shift+V/大段提示/图片 toast/链接白名单/maxEntries gating/IME 守卫）+ **预览纸面结构**（ResumeDoc.profile/页头/basicFields/skills/照片槽占位/条目三段行/duo 双栏/Plex Sans SC/A4 等比 printCSS）+ **大纲完整树**（标题跟随画布 section.title/全部分区/字段与技能组叶节点）+ **2026-11-13 反馈六项**（dirty 基线比较/粘贴块转要点/长文提示/分区自由化+增删命令/页头附加字段/日期自由文本/要点 Tab 缩进 0–2）——实录见 `modules/m1/` 八文件；**#106–#114 反馈修复见文末流程增补**；**2026-11-13 命令栏/导出/搜索（#124–#126）+ 2026-11-17 命令栏回归修复与 UIUX 契约轮（#127：结构编辑/空白点击/浮层契约/去假象）** |
 | 未落地 | m1.7–m1.8（m1.7 暂缓）；**m1.4 背景层 #86**（定案延后 m2.3）；packages/core 后续（**diff-apply** 等 M3）与 prompts（M1–M3）· lease 实现（M2）· keygen issue 等（M2/M5）。**AI 读取层已就位**（#119：`packages/core/doc-projection.ts` 投影/编解码/token 估算/作用域切片）——M3/M4 直接消费，勿重造。**分区拖拽排序**未做（顺序=文档顺序，新增追加末尾）；**Word 生成器必须读 bullet.depth**（m5.1）；下拉键盘方向键导航（Tab 可达，属可访问性增强，未排期）；**命令面板/悬浮工具条标题仍硬编码中文**（i18n 清理下一轮；canvas-menu 已迁） |
 
@@ -18,8 +18,9 @@
 - **tauri dev 中断会残留进程**（Ctrl+C/关终端后 `fairlens.exe` 与 vite 可能存活）→ 二启动报 `Port 1420 already in use` 但仍拉窗；先跑 `pnpm dev:kill`（清 1420 端口+fairlens.exe）再启动（`tauri:dev` 已内置前置清理）
 - **窗口圆角=透明窗口+CSS**（#112）：Win10 无原生窗口圆角，依赖 `transparent:true`+`noRedirectionBitmap:true`；改 window 配置（tauri.conf.json）必须重编（见 `Compiling fairlens`），仅热更前端无效
 - git 本地代理=7897（全局 2334 失效，会间歇掉线，掉线时本地提交不丢、恢复后推送）；npm registry 直连（~/.npmrc 死代理已删，有备份）
+- **2026-11-21 网络实录**：registry.npmjs.org 与本地代理同时不可达，`pnpm add` 用**一次性** `--registry=https://registry.npmmirror.com` 完成（未改任何配置文件；lockfile 无镜像 URL，仅 integrity）。Playwright 浏览器用 `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright` 安装。这两条只在网络挂掉时用
 - pnpm 11 构建许可=pnpm-workspace.yaml `allowBuilds`；契约校验已做 CRLF 归一；.gitattributes 统一 LF；`@ibm/plex-sans-sc` postinstall 仅 telemetry → `allowBuilds: false`（字体已随包，不执行上报脚本）
-- 分支保护待用户在 GitHub 开启（CI 已就绪）
+- 分支保护待用户在 GitHub 开启（CI 已就绪；2026-11-21 起为六 job，需勾 `coverage` 与 `e2e`）
 - 真窗取证=CDP（`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` + Runtime.evaluate）；capabilities 改动须强制重编并核对生成物 `out/capabilities.json`——细节见 `notes/env-quirks.md`
 - 测试激活码：`FL-2026-Q4XY-8F3K`（格式校验态；真验签=M2；#113 起打样态激活记忆存 settings.license，重开免门）
 
@@ -29,9 +30,10 @@
 
 | 项 | 值 |
 |---|---|
-| 代码基线 | `dev=b4cc253`（文档核对同步）；代码基线=`cceb793`（#127 四次打磨，其后仅文档提交）；**工作区干净** |
-| 当前分支 | `dev`（`fix/m1-doc-sync` 已 squash 合并并删除） |
-| 测试基线 | **326 全绿**；lint / typecheck / contract 零漂移 / vite build 全过 |
+| 代码基线 | 代码=`cceb793`（#127 四次打磨）；其后为文档提交与 CI 门禁补齐；**工作区干净** |
+| 当前分支 | `dev`（`fix/m1-doc-sync` 已合并删除；`fix/m0-ci-gates` 合并后同样删除） |
+| 测试基线 | **334 全绿**（43 文件）；覆盖率四包达标（core 96.27 / shared 100 / keygen 93.84 / lease 100 行）；lint / typecheck / contract 零漂移 / build / E2E 1 条全过 |
+| CI 门禁 | 六 job：`lint` / `typecheck` / `test` / `coverage` / `contract-zero-drift` / `e2e`（全部 actions 已固定 SHA） |
 | 唯一事实源 | `docs/01-技术开发文档.md`（附录 E 总账 **127 条**）+ `packages/shared/src/`（zod 契约）。**引用字段名前去读源** |
 | 下一步 | ① **人工验收**（`acceptance/M1.md` §1–§13.8，需 `pnpm tauri:dev`，见下「待人工验收」）② 之后 **m1.7 导入管线**（用户指示暂缓，等拍板） |
 | 不要做 | 不要把 `dev` 推成 `main`（M1 整体收口才合并）；不要改 `AGENTS.md` 入 git；不要凭记忆引用字段名 |
@@ -61,7 +63,7 @@
 7. **m1.4 尾项真窗**：富文本粘贴气泡定位/观感 →「仅文本」原地替换；Ctrl+Shift+V 纯文本；大段粘贴提示；图片忽略 toast；条目上限 toast（浏览器冒烟已过，见 m1.4 MD）→ 手册 §7
 8. **预览纸面真窗（#117）**：Plex Sans SC 中文渲染、页头/条目三段行/duo 侧栏/照片虚线槽观感；三套模板切换；页头与条目头 MetaDialog 编辑后 SQLite 持久化 → 手册 §8
 9. **雷达/大纲真窗**：右栏 220/296 两档雷达完整可见；大纲分区折叠面板收起再开仍保留；大纲标题跟随画布改名、基本信息字段/技能组叶节点可点击定位 → 手册 §9
-10. **项目级三项**：m1.1 打样最终过目 / GitHub 分支保护三步 / CI 首跑四 job 全绿 → 手册 §10
+10. **项目级三项**：m1.1 打样最终过目 / GitHub 分支保护三步（2026-11-21 起需勾 **六个** checks：lint/typecheck/test/coverage/contract-zero-drift/e2e）/ CI 首跑六 job 全绿 → 手册 §10（`coverage` 与 `e2e` 为 2026-11-21 新增，首跑前分支保护列表里还没有这两项）
 11. **编辑器工具条真窗**：工具条 B/I/链接点击 / 点纸面空白新增要点 / 空要点 Enter 删行（浏览器与单测均已过）；顺手验链接文字首尾空格不延长下划线（暂未单独成节，可并入手册 §7 顺手做）
 12. **命令栏下拉与零位移（#124 回归，2026-11-17）**：五个下拉完整可见/跟随窗口缩放/Esc 可关/下拉项真的能点；切自动保存时菜单、撤销、模板像素级不动，960×640 下窗口三键完整 → 手册 §12.7/§12.8（浏览器已程序化验证，真窗待点）
 13. **UIUX 契约轮（#127，2026-11-17）**：结构编辑（新增/删除/复制条目、空分区可用）、空白点击全量、结构锚点防误删、保存失败可见可重试+关窗拦截、浮层关闭/焦点、示例清空与去假象 → 手册 §13（浏览器已程序化验证关键路径，真窗待点；保存失败需只读目录造障）
@@ -141,3 +143,13 @@
   - 范围：只改下拉触发器；大纲树/搜索上下列/抽屉把手等功能性箭头保持常显
   - 验证：326 测试 / lint / typecheck / build；浏览器 hover 前后 rect 相同、展开后移开指针仍显示；截图对照
 - 2026-11-18 交接前文档全量核对（`fix/m1-doc-sync`，零代码改动；ADR §11）：修 6 处漂移——①docs/01 附录 E 条数 126→127（含日期补 11-17）；②#127 总账条目缺 ⑭四次打磨 → 补；③§12.5 状态栏仍写「Ctrl+K 提示」+ 三/四次打磨归属混淆 → 分开；④README 状态行停在 11-05、总账条数 → 更新；⑤验收手册 §12.1/§12.8 仍写 `模板：经典单栏 ▾` 与里程碑徽标 → 改版式图标+「未开放」；⑥§13.8 排在 §13.7 之前 → 归位。另修导航表 m1.5「Ctrl+F 待后续」过时注记。**通用教训**：多轮打磨的收口 DoD 必须把「附录 E 条数 + 对应条目编号」当独立勾选项，否则只更 ADR/STATE、漏掉唯一事实源正文与账本
+- 2026-11-21 CI 门禁补齐（`fix/m0-ci-gates`，ADR `decisions/2026-11-21-ci-gates-e2e.md`；外部审查 3 项 + 自查 4 项）：
+  - **coverage**：`@vitest/coverage-v8` + `vitest.config.ts` 逐包 glob 阈值（行/函数/分支各 80%）；`projects` 加 `functions/*`；根脚本 `test:coverage`；CI 新增 `coverage` job。实测 core 96.27 / shared 100 / keygen 93.84 / lease 100（行）
+  - **keygen CLI 重构**：顶层 `cli.ts`（37 行、含 `process.exit`、零覆盖）抽为 `run.ts` 的 `runCli(argv, deps)`；`cli.ts` 只留 4 行入口装配；+7 测试。**行为不变**，`keygen` 脚本不动
+  - **lease 占位补测**：501 + `invalid-request` 断言，占位也受门禁管
+  - **actions SHA pin**：checkout/setup-node/pnpm-action-setup 全部 40 位 SHA + 版本注释；顶层 `permissions: contents: read`；**修正 m0.1 MD 中「actions 版本 pin」的不实记录**
+  - **Playwright**：`playwright.config.ts` + `e2e/smoke.spec.ts`（激活→编辑→切模板→保存，断言 `data-template` 与 `.toast`），本地 8.1s 通过；CI 新增 `e2e` job。**边界**：浏览器模式，不替代真窗人工验收
+  - **STATE 指针根治**：改为「HEAD→最近 squash→代码基线」三层 + 明确「表内 hash 恒比 HEAD 少一个回填提交」的约定，不再每轮追 hash
+  - **附带修复（缺陷直报即修）**：根 `pnpm build` 在 Windows 上一直空转——`--filter './packages/*'` 的单引号在 cmd.exe 下是字面量，pnpm 报 No projects matched；改双引号后恢复（CI 在 Linux 无感，故长期未暴露）。教训：跨平台 scripts 只用双引号，CI 绿不代表本地脚本可用
+  - 验证：**334 测试 / 43 文件全绿**；lint / typecheck / contract 零漂移 / build / e2e 1 passed；CI YAML 六 job 且全部 SHA 已校验
+  - **通用教训**：①规格里写的门禁 ≠ 仓库里真实存在的门禁，收口应逐条对照 §14 而不是只看「测试全绿」；②文档写「已完成」的纪律项要能指到具体配置（pin 要看到 SHA），否则是自述而非证据

@@ -4,7 +4,7 @@
 
 | # | 模块 | 面归属 | 状态 | 细节文件 | feat 分支 |
 |---|---|---|---|---|---|
-| m0.1 | Monorepo+CI 三门禁 | 共享 | ✅ 872b440 | [m0/m0.1-monorepo-ci.md](m0/m0.1-monorepo-ci.md) | feat/m0-scaffold |
+| m0.1 | Monorepo+CI 门禁（六 job） | 共享 | ✅ 872b440（2026-11-21 补 coverage/e2e/SHA pin） | [m0/m0.1-monorepo-ci.md](m0/m0.1-monorepo-ci.md) | feat/m0-scaffold |
 | m0.2 | shared 全契约+单测 | 共享 | ✅ 872b440 | [m0/m0.2-shared-contracts.md](m0/m0.2-shared-contracts.md) | feat/m0-scaffold |
 | m0.3 | desktop 应用壳 | 共享 | ✅ 872b440（2026-11-05 主窗 min 960×640） | [m0/m0.3-desktop-shell.md](m0/m0.3-desktop-shell.md) | feat/m0-scaffold |
 | m0.4 | keygen init+契约冻结 | 共享 | ✅ 872b440 | [m0/m0.4-keygen-contract.md](m0/m0.4-keygen-contract.md) | feat/m0-scaffold |

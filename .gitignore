@@ -27,5 +27,10 @@ apps/desktop/dist/
 *.tsbuildinfo
 .zcode/
 
+# 测试产物（2026-11-21：coverage / Playwright）
+coverage/
+test-results/
+playwright-report/
+
 # 项目级 SOP 副本（源=~/.agents/SOP-标准化开发流程.md，按约定不入 git）
 AGENTS.md
