@@ -19,6 +19,7 @@ import { useMockup } from '../stores/mockup.js';
 import { useTheme } from '../stores/theme.js';
 import { dispatchEditorAction, type EditorActionId } from '../features/editor/editor-action-bus.js';
 import { buildArchiveRecord, exportArchive, exportPdf, revealInFolder } from '../lib/export-service.js';
+import { isNameMissing } from '../lib/export-guard.js';
 import type { MenuActionId } from './menu-model.js';
 
 /** 应用壳：标题栏 + 主区（路由骨架 library|editor；dev 面路由 m4/m5 懒加载挂载） */
@@ -89,13 +90,17 @@ export function AppShell() {
         try {
           const st = useEditorDoc.getState();
           const name = st.doc?.profile?.name;
+          // #128：姓名未填不导出（空白简历在数据层是空串，不编造「你的姓名」）
+          if (isNameMissing(name)) {
+            toast(t('editor.nameRequired'));
+            return;
+          }
           if (!isTauri) {
             toast(t('menu.archiveNotInTauri'));
             return;
           }
           if (id === 'file.export-pdf') {
-            // 先落盘再打印：PrintToPdf 读的是当前页，未保存不影响，但保证数据一致
-            await st.flushPending();
+            // PrintToPdf 打印的是实时 DOM，无需先落盘；姓名已在上面校验
             const result = await exportPdf(name);
             if (!result) return; // 用户取消
             if (result.ok && result.path) {
@@ -106,10 +111,14 @@ export function AppShell() {
             }
             return;
           }
-          // 归档：需要 resume 记录 + 快照
+          // 归档：正文用**当前文档**（不是库里的行——防读到防抖前的旧版本），
+          // 行只提供元数据；快照仍从库读。
           const resumeId = st.resumeId;
           const doc = st.doc;
-          if (!resumeId || !doc) return;
+          if (!resumeId || !doc) {
+            toast(t('menu.exportFailed', { reason: '简历记录不存在' }));
+            return;
+          }
           const [row, snaps] = await Promise.all([
             persistence().getResume(resumeId),
             persistence().listSnapshots(resumeId),
@@ -119,7 +128,13 @@ export function AppShell() {
             return;
           }
           const payload = buildArchiveRecord({
-            resume: { id: row.id, title: row.title, verticalId: row.verticalId, doc: row.doc, status: row.status },
+            resume: {
+              id: row.id,
+              title: st.resumeTitle ?? row.title,
+              verticalId: row.verticalId,
+              doc,
+              status: row.status,
+            },
             snapshots: snaps,
           });
           const result = await exportArchive(payload, name);
@@ -393,23 +408,29 @@ function StatusBar({ view, lastExportPath, onReveal, onShortcuts }: {
   const { t } = useTranslation();
   const doc = useEditorDoc((s) => s.doc);
   const stats = docStats(doc);
+  const inEditor = view === 'editor';
   return (
     <footer className="statusbar" data-tauri-drag-region>
-      <SaveStatusText />
-      <span className="muted stats" title={t('menu.docStats', { chars: stats.chars, bullets: stats.bullets })}>
-        <Trans
-          i18nKey="menu.docStatsRich"
-          values={{ chars: formatCount(stats.chars), bullets: formatCount(stats.bullets) }}
-          components={{ n: <span className="num" /> }}
-        />
-      </span>
-      {lastExportPath && (
+      {/* #128：保存状态/字数属于编辑器；库页显示它们会让人以为库里有这张卡 */}
+      {inEditor && (
+        <>
+          <SaveStatusText />
+          <span className="muted stats" title={t('menu.docStats', { chars: stats.chars, bullets: stats.bullets })}>
+            <Trans
+              i18nKey="menu.docStatsRich"
+              values={{ chars: formatCount(stats.chars), bullets: formatCount(stats.bullets) }}
+              components={{ n: <span className="num" /> }}
+            />
+          </span>
+        </>
+      )}
+      {inEditor && lastExportPath && (
         <button type="button" className="statusbar-action" onClick={onReveal}>
           {t('menu.openFolder')}
         </button>
       )}
       {/* #127 四次打磨：只留 `?` 键帽（点击开速查表）——文字说明在 tooltip/aria 里 */}
-      {view === 'editor' && (
+      {inEditor && (
         <button
           type="button"
           className="statusbar-help"

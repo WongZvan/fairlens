@@ -59,4 +59,6 @@
   .fl-search-hit { background: transparent !important; }
   .ProseMirror-focused { outline: none !important; }
   .is-editor-empty:first-child::before { content: '' !important; }
+  /* #128：未填姓名的画布占位不印进纸面（导出前 UI 已拦截，这里是兜底） */
+  .fl-head .name .name-placeholder { display: none !important; }
 }

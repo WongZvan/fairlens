@@ -265,10 +265,15 @@ export function EditorMockup() {
     try {
       const st = useEditorDoc.getState();
       if (st.doc) await st.createSnapshot(t('editor.clearSnapshotLabel'));
-      await st.replaceDoc(
-        createBlankDoc({ name: t('editor.blankName'), basicSection: t('editor.blankSectionTitle') }),
+      const result = await st.replaceDoc(
+        createBlankDoc({ basicSection: t('editor.blankSectionTitle') }),
         t('editor.myResumeTitle'),
       );
+      // #128：落盘失败不再谎报成功（replaceDoc 返回真实结果）
+      if (!result.ok) {
+        toast(t('editor.clearFailed'));
+        return;
+      }
       toast(t('editor.clearedToast'));
     } catch (err) {
       console.error('[editor] clear to blank failed', err);

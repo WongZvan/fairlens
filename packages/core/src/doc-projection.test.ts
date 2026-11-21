@@ -244,6 +244,14 @@ describe('渲染文本', () => {
     expect(text).not.toContain('求职意向：求职意向：');
   });
 
+  it('姓名为空（空白简历 #128）时显式标注未填写，不产出空「姓名：」', () => {
+    const d = doc();
+    d.profile!.name = '';
+    const text = renderProjection(projectDoc(d));
+    expect(text).toContain('姓名：（未填写）');
+    expect(text).not.toContain('姓名： ·');
+  });
+
   it('渲染文本可被 token 估算消费', () => {
     const tree = projectDoc(doc());
     expect(estimateProjection(tree)).toBe(estimateTokens(renderProjection(tree)));

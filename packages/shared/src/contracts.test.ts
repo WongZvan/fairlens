@@ -78,7 +78,7 @@ describe('ResumeDoc 契约', () => {
     expect(ResumeDoc.safeParse(bad).success).toBe(false);
   });
 
-  it('profile 可选；合法 profile 通过；空 name 拒绝（#117）', () => {
+  it('profile 可选；合法 profile 通过；空 name 允许（#128 空白简历不在数据层编造姓名）', () => {
     expect(ResumeDoc.safeParse(doc()).success).toBe(true);
     expect(
       ResumeDoc.safeParse({
@@ -86,7 +86,7 @@ describe('ResumeDoc 契约', () => {
         profile: { name: '李思远', headline: '产品经理（26 届）', contactLine: '138****2321 · a@b.c' },
       }).success,
     ).toBe(true);
-    expect(ResumeDoc.safeParse({ ...doc(), profile: { name: '' } }).success).toBe(false);
+    expect(ResumeDoc.safeParse({ ...doc(), profile: { name: '' } }).success).toBe(true);
   });
 
   it('refine：end 早于 start 被拒；ongoing 带 end 被拒', () => {

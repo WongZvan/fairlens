@@ -343,7 +343,8 @@ export function projectDoc(doc: ResumeDoc): DocProjection {
 export function renderProjection(tree: DocProjection): string {
   const out: string[] = [];
   if (tree.profile) {
-    const head = [`姓名：${tree.profile.name}`];
+    // #128：姓名可为空（空白简历不编造姓名）——投影里如实标注未填写，不产出空的「姓名：」
+    const head = [`姓名：${tree.profile.name.trim() || '（未填写）'}`];
     // 数据里 headline 可能已自带「求职意向：」前缀（示例数据即如此）——不重复加
     if (tree.profile.headline) {
       const h = tree.profile.headline;

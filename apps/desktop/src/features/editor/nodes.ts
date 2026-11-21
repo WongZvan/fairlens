@@ -89,15 +89,20 @@ export const SectionNode = Node.create({
           const title = attrs.title.trim() || '新分区';
           const sectionId = nanoid12();
           const entryId = nanoid12();
-          const node = sectionType.create(
-            { id: sectionId, type: attrs.type || 'custom', title, order: null },
-            [
-              headerType.create({ id: sectionId }, schema.text(title)),
+          // #128：基本信息分区不放「条目」（机构名/职位不是基本信息），只留 header；
+          // 字段由分区标题的「添加字段」入口追加（addBasicField）。
+          const children: PMDocNode[] = [headerType.create({ id: sectionId }, schema.text(title))];
+          if (attrs.type !== 'basic') {
+            children.push(
               entryType.create({ id: entryId }, [
                 entryHeaderType.create({ id: entryId }),
                 bulletType.create({ id: nanoid12() }),
               ]),
-            ],
+            );
+          }
+          const node = sectionType.create(
+            { id: sectionId, type: attrs.type || 'custom', title, order: null },
+            children,
           );
 
           if (dispatch) {
@@ -133,25 +138,48 @@ export const SectionNode = Node.create({
           return false;
         },
 
-      /** 追加基本信息字段（#121/#122）到当前分区末尾（光标不在分区内则无操作） */
+      /**
+       * 追加基本信息字段（#121/#122；#128 支持显式 sectionId 与标签）：
+       * 优先按 sectionId 定位（分区标题按钮用），否则回退当前选区；插到分区末尾。
+       * label 由 UI 传入 i18n 文案——命令层不写死中文。
+       */
       addBasicField:
-        () =>
+        (attrs: { sectionId?: string; label: string }) =>
         ({ state, tr, dispatch }) => {
-          const { $from } = state.selection;
-          for (let d = $from.depth; d > 0; d -= 1) {
-            if ($from.node(d).type.name !== 'flSection') continue;
-            const fieldType = state.schema.nodes.flBasicField;
-            if (!fieldType) return false;
-            if (dispatch) {
-              const at = $from.after(d);
-              tr.insert(
-                Math.min(at, state.doc.content.size),
-                fieldType.create({ id: nanoid12(), label: '新字段', href: null }, state.schema.text(' ')),
-              );
+          const { schema, doc, selection } = state;
+          const fieldType = schema.nodes.flBasicField;
+          if (!fieldType) return false;
+
+          let target: { pos: number; node: PMDocNode } | null = null;
+          if (attrs.sectionId) {
+            doc.descendants((node, pos) => {
+              if (target) return false;
+              if (node.type.name === 'flSection' && node.attrs.id === attrs.sectionId) {
+                target = { pos, node };
+                return false;
+              }
+              return true;
+            });
+          } else {
+            const { $from } = selection;
+            for (let d = $from.depth; d > 0; d -= 1) {
+              if ($from.node(d).type.name === 'flSection') {
+                target = { pos: $from.before(d), node: $from.node(d) };
+                break;
+              }
             }
-            return true;
           }
-          return false;
+          if (!target) return false;
+
+          if (dispatch) {
+            const at = Math.min(target.pos + target.node.nodeSize - 1, state.doc.content.size);
+            tr.insert(
+              at,
+              fieldType.create({ id: nanoid12(), label: attrs.label, href: null }, schema.text(' ')),
+            );
+            tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(at + 1, tr.doc.content.size))));
+          }
+          return true;
         },
 
       /**
@@ -1206,7 +1234,7 @@ declare module '@tiptap/core' {
     flSection: {
       insertSection: (attrs: { type: string; title: string }) => ReturnType;
       deleteSection: () => ReturnType;
-      addBasicField: () => ReturnType;
+      addBasicField: (attrs: { sectionId?: string; label: string }) => ReturnType;
       insertEntry: (attrs?: { sectionId?: string; index?: number }) => ReturnType;
     };
     flEntry: {

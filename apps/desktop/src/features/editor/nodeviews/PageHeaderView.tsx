@@ -25,7 +25,8 @@ export function PageHeaderView({ node, updateAttributes }: NodeViewProps) {
   return (
     <NodeViewWrapper className="fl-head" data-type="fl-page-header" contentEditable={false}>
       <div className="name">
-        <b>{name || t('editor.namePlaceholder')}</b>
+        {/* #128：未填姓名时画布显示占位；打印时由 print-shell 隐藏，绝不印进纸面 */}
+        <b className={name.trim() ? undefined : 'name-placeholder'}>{name || t('editor.namePlaceholder')}</b>
         {headline && <span className="intent">{headline}</span>}
         <button
           type="button"

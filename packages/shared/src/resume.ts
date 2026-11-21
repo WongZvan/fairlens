@@ -95,9 +95,10 @@ export const DocStyle = z.object({
 });
 export type DocStyle = z.infer<typeof DocStyle>;
 
-/** 页头（2026-11-05，#117；2026-11-13 #122 增 fields）：三项固定 + 可自由增删的附加字段 */
+/** 页头（2026-11-05，#117；2026-11-13 #122 增 fields；2026-11-21 #128 name 允许未填） */
 export const Profile = z.object({
-  name: z.string().min(1),
+  /** 可空：空白简历在用户填写前不编造姓名（导出前由 UI 拦截并提示） */
+  name: z.string(),
   headline: z.string().optional(),
   contactLine: z.string().optional(),
   /** 附加字段（籍贯/政治面貌/个人网站…）；复用 BasicField 契约，模板不保证渲染全部 */
