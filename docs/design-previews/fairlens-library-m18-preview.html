@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FairLens · 简历库预览（m1.8）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ color-scheme: dark light; }
+  body{ margin:0; padding:28px; background:#17181B; font-family:'IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif; }
+  @media (prefers-color-scheme: light){ body{ background:#E9E7E1; } }
+  #fl-lib{
+    --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23; --card:#2A2B30;
+    --fg:#E8E6E1; --muted:#9B998F; --line:#3A3B40; --hover:#33343A;
+    --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
+    --ok:#7FB89A; --warn:#D6A831; --pen-red:#D96A5F;
+    font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+    font-size:14px; line-height:1.5; color:var(--fg);
+    max-width:1180px; margin:0 auto;
+  }
+  #fl-lib.light{
+    --bench:#F2F1ED; --panel:#F7F6F2; --chrome:#ECEAE4; --card:#FFFFFF;
+    --fg:#1C1D1B; --muted:#8B8983; --line:#E4E2DC; --hover:#ECEAE4;
+    --accent:#33518E; --accent-solid:#33518E; --accent-tint:rgba(51,81,142,.08);
+    --ok:#2E6E4E; --warn:#A37F18; --pen-red:#C4372B;
+  }
+  #fl-lib .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; }
+  #fl-lib .preview-bar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px; }
+  #fl-lib .preview-bar .caption{ font-size:11px; color:#9B998F; margin:0 auto 0 0; }
+  #fl-lib .demo-toggle{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  #fl-lib .demo-toggle[aria-pressed="true"]{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-tint) inset; }
+  #fl-lib .demo-toggle .dot{ width:6px; height:6px; border-radius:50%; background:var(--muted); }
+  #fl-lib .demo-toggle[aria-pressed="true"] .dot{ background:var(--warn); }
+
+  #fl-lib .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  #fl-lib.light .win{ border-color:#D9D6CF; }
+  #fl-lib .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
+  #fl-lib .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
+  #fl-lib .crumb{ font-size:12px; color:var(--muted); }
+  #fl-lib .wbtns{ margin-left:auto; display:flex; gap:2px; }
+  #fl-lib .wbtn{ width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; }
+  #fl-lib .wbtn:hover{ background:var(--hover); color:var(--fg); }
+  #fl-lib .wbtn.close:hover{ background:#C4372B; color:#fff; }
+
+  #fl-lib .home{ padding:22px 26px 20px; min-height:520px; }
+  #fl-lib .home-head{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  #fl-lib .home-head h1{ font-family:'Noto Serif SC',serif; font-size:19px; font-weight:600; margin:0; letter-spacing:.06em; }
+  #fl-lib .home-head .sub{ font-size:12px; color:var(--muted); }
+  #fl-lib .home-head .spacer{ flex:1; }
+  #fl-lib .btn{ font:inherit; font-size:12.5px; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:7px 12px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg); }
+  #fl-lib .btn:hover:not(:disabled){ border-color:var(--accent); }
+  #fl-lib .btn:disabled{ opacity:.55; cursor:not-allowed; }
+  #fl-lib .btn .chip{ font-size:9.5px; letter-spacing:.04em; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 3px; line-height:14px; }
+  #fl-lib .switch{ display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); cursor:pointer; user-select:none; }
+  #fl-lib .switch input{ position:absolute; opacity:0; pointer-events:none; }
+  #fl-lib .switch .track{ width:28px; height:16px; border-radius:99px; background:var(--line); position:relative; transition:background 140ms; }
+  #fl-lib .switch .track::after{ content:""; position:absolute; width:12px; height:12px; left:2px; top:2px; border-radius:50%; background:var(--panel); transition:transform 140ms; }
+  #fl-lib .switch input:checked + .track{ background:var(--accent); }
+  #fl-lib .switch input:checked + .track::after{ transform:translateX(12px); background:#fff; }
+
+  #fl-lib .create-row{ display:flex; gap:12px; margin-bottom:18px; align-items:stretch; }
+  #fl-lib .tpl-quick{ display:flex; gap:10px; }
+  #fl-lib .tq{ width:108px; border:1px solid var(--line); border-radius:8px; background:var(--card); padding:9px 10px 8px; cursor:pointer; text-align:left; font:inherit; color:inherit; }
+  #fl-lib .tq:hover{ border-color:var(--accent); }
+  #fl-lib .tq:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  #fl-lib .tq .thumb{ height:52px; border-radius:4px; background:var(--panel); border:1px solid var(--line); margin-bottom:7px; position:relative; overflow:hidden; }
+  #fl-lib .tq .thumb i{ position:absolute; background:var(--muted); opacity:.5; }
+  #fl-lib .tq .nm{ font-size:11.5px; }
+  #fl-lib .tq .hint{ font-size:10px; color:var(--muted); margin-top:1px; }
+  #fl-lib .dropzone{ flex:1; border:1.5px dashed var(--line); border-radius:8px; display:flex; align-items:center; gap:12px; padding:12px 18px; color:var(--muted); font-size:12.5px; }
+  #fl-lib .dropzone.disabled{ cursor:not-allowed; background:color-mix(in srgb, var(--panel) 45%, transparent); }
+  #fl-lib .dropzone b{ color:var(--fg); font-weight:500; }
+  #fl-lib .dropzone .tag{ margin-left:auto; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:1px 5px; white-space:nowrap; }
+
+  #fl-lib .cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  #fl-lib .rcard{ border:1px solid var(--line); border-radius:9px; background:var(--card); padding:13px 14px 11px; cursor:pointer; position:relative; text-align:left; font:inherit; color:inherit; }
+  #fl-lib .rcard:hover{ border-color:var(--accent); }
+  #fl-lib .rcard.archived{ opacity:.55; background:color-mix(in srgb, var(--card) 55%, var(--bench)); }
+  #fl-lib .rcard .nm{ font-family:'Noto Serif SC',serif; font-size:14.5px; font-weight:600; padding-right:52px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #fl-lib .rcard .meta{ font-size:11px; color:var(--muted); margin-top:4px; line-height:1.7; }
+  #fl-lib .rcard .foot{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:10.5px; color:var(--muted); }
+  #fl-lib .rcard .badge{ border:1px solid var(--line); border-radius:3px; padding:0 4px; line-height:15px; font-size:9.5px; color:var(--muted); }
+  #fl-lib .rcard .badge.sample{ color:var(--accent); border-color:var(--accent); }
+  #fl-lib .rcard .more{ position:absolute; top:9px; right:9px; width:26px; height:24px; border-radius:5px; border:1px solid transparent; background:none; color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  #fl-lib .rcard .more:hover{ background:var(--hover); color:var(--fg); }
+  #fl-lib .empty-card{ grid-column:1/-1; border:1.5px dashed var(--line); border-radius:10px; padding:44px 20px; text-align:center; color:var(--muted); }
+  #fl-lib .empty-card b{ display:block; font-family:'Noto Serif SC',serif; font-size:15px; color:var(--fg); margin-bottom:5px; }
+
+  #fl-lib .card-menu{ position:absolute; z-index:30; width:200px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; box-shadow:0 14px 38px rgba(0,0,0,.35); }
+  #fl-lib .card-menu .it{ width:100%; display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:6px; border:0; background:none; color:var(--fg); font:inherit; font-size:12.5px; text-align:left; cursor:pointer; }
+  #fl-lib .card-menu .it:hover{ background:var(--hover); }
+  #fl-lib .card-menu .it.danger{ color:var(--pen-red); }
+  #fl-lib .card-menu .sep{ height:1px; background:var(--line); margin:4px 6px; }
+
+  #fl-lib .dialog-mask{ position:absolute; inset:0; background:rgba(0,0,0,.38); display:flex; align-items:center; justify-content:center; z-index:40; }
+  #fl-lib .dialog{ width:430px; max-width:calc(100% - 40px); background:var(--panel); border:1px solid var(--line); border-radius:9px; box-shadow:0 18px 48px rgba(0,0,0,.4); padding:18px; }
+  #fl-lib .dialog h3{ margin:0 0 8px; font-size:15px; }
+  #fl-lib .dialog p{ margin:0 0 12px; font-size:12.5px; color:var(--muted); line-height:1.65; }
+  #fl-lib .dialog input{ width:100%; box-sizing:border-box; font:inherit; font-size:13px; padding:7px 10px; border-radius:5px; border:1px solid var(--line); background:var(--bench); color:var(--fg); }
+  #fl-lib .dialog .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  #fl-lib .dialog .actions .danger{ border-color:var(--pen-red); color:var(--pen-red); }
+
+  #fl-lib .toast-wrap{ position:absolute; left:50%; bottom:18px; transform:translateX(-50%); display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; z-index:50; }
+  #fl-lib .toast{ background:var(--fg); color:var(--bench); font-size:12px; padding:7px 14px; border-radius:6px; animation:fl-toast 180ms ease-out; }
+  @keyframes fl-toast{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+  #fl-lib .notes{ margin:12px 2px 0; font-size:11.5px; line-height:1.8; color:#9B998F; }
+  #fl-lib .notes b{ color:#C9C6BE; font-weight:500; }
+  #fl-lib.light .notes{ color:#8B8983; }
+  #fl-lib.light .notes b{ color:#1C1D1B; }
+</style>
+</head>
+<body>
+<div id="fl-lib">
+  <div class="preview-bar">
+    <p class="caption">FairLens · m1.8 简历库预览（可点击）</p>
+    <button type="button" class="demo-toggle" id="btn-theme">◐ 切换浅色 / 深色</button>
+    <button type="button" class="demo-toggle" id="btn-empty" aria-pressed="false">空库态</button>
+    <button type="button" class="demo-toggle" id="btn-dirty" aria-pressed="false"><span class="dot"></span>模拟未保存</button>
+  </div>
+
+  <div class="win" id="win">
+    <div class="titlebar">
+      <span class="app">FAIRLENS</span>
+      <span class="crumb">简历库</span>
+      <div class="wbtns">
+        <button class="wbtn" type="button" title="主题">☾</button>
+        <button class="wbtn" type="button" title="设置">⚙</button>
+        <button class="wbtn" type="button" title="最小化">─</button>
+        <button class="wbtn" type="button" title="最大化">□</button>
+        <button class="wbtn close" type="button" title="关闭">✕</button>
+      </div>
+    </div>
+
+    <main class="home">
+      <div class="home-head">
+        <h1>简历库</h1>
+        <span class="sub" id="sub-count">3 份简历 · 数据仅存本机</span>
+        <span class="spacer"></span>
+        <label class="switch" title="显示已归档的简历（置灰、不参与统计）">
+          <input type="checkbox" id="chk-archived">
+          <span class="track"></span>
+          显示归档
+        </label>
+        <button class="btn" type="button" disabled title=".fairlens 备份与恢复随 M5 提供">备份与恢复 <span class="chip">未开放</span></button>
+      </div>
+
+      <div class="create-row">
+        <div class="tpl-quick" id="tpl-quick"><!-- 模板卡由 JS 渲染 --></div>
+        <div class="dropzone disabled" aria-disabled="true" title="导入随 m1.7 提供">
+          <span style="font-size:20px; line-height:1">⇩</span>
+          <span><b>导入未开放</b><br>m1.7 接通后支持拖入 DOCX / PDF 与粘贴文本</span>
+          <span class="tag">未开放</span>
+        </div>
+      </div>
+
+      <div class="cards" id="cards"></div>
+    </main>
+
+    <div class="toast-wrap" id="toasts"></div>
+  </div>
+
+  <p class="notes">
+    <b>预览说明</b>：模板卡 = <b>新建一份空白简历</b>（示例卡始终独立，不再被打开）；卡片 <b>⋯</b> = 打开 / 重命名 / 归档 / 删除；
+    「归档」= 软归档（置灰、默认不参与统计），用右上「显示归档」切回；删除确认会列明快照数并建议先归档；
+    导入区与「备份与恢复」为未开放占位，<b>没有可点但完不成的按钮</b>；
+    勾选「模拟未保存」后再点另一张卡，会先弹切换保护（对应真实流程：返回库时走关闭保护）。
+  </p>
+</div>
+
+<script>
+(() => {
+  const root = document.getElementById('fl-lib');
+  const $ = (s) => root.querySelector(s);
+  const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.className = cls; return n; };
+
+  const TEMPLATES = [
+    { id: 'tpl-classic', name: '经典单栏' },
+    { id: 'tpl-duo', name: '侧栏双栏' },
+    { id: 'tpl-sidebar', name: '强调色侧边' },
+  ];
+
+  let nextId = 3;
+  const state = {
+    light: false,
+    emptyDemo: false,
+    dirtyDemo: false,
+    showArchived: false,
+    cards: [
+      { id: 'c1', title: '示例简历', tpl: 'tpl-classic', updated: '今天 10:24', snaps: 0, sample: true, archived: false },
+      { id: 'c2', title: '李思远 · 产品经理', tpl: 'tpl-duo', updated: '10-20 09:12', snaps: 6, sample: false, archived: false },
+      { id: 'c4', title: '校招冲刺 · 通用版', tpl: 'tpl-classic', updated: '10-12 21:03', snaps: 3, sample: false, archived: false },
+      { id: 'c3', title: '实习冲刺 · 9 月版', tpl: 'tpl-sidebar', updated: '09-28 18:40', snaps: 2, sample: false, archived: true },
+    ],
+  };
+
+  const tplName = (id) => (TEMPLATES.find((t) => t.id === id) || TEMPLATES[0]).name;
+  const activeCards = () => state.cards.filter((c) => !c.archived);
+  const visibleCards = () => state.cards.filter((c) => state.showArchived || !c.archived);
+
+  function toast(text) {
+    const wrap = $('#toasts');
+    const n = el('div', 'toast');
+    n.textContent = text;
+    wrap.appendChild(n);
+    setTimeout(() => n.remove(), 2400);
+  }
+
+  function nextTitle() {
+    const base = '我的简历';
+    const titles = new Set(state.cards.map((c) => c.title));
+    if (!titles.has(base)) return base;
+    for (let i = 2; i < 100; i += 1) if (!titles.has(base + ' ' + i)) return base + ' ' + i;
+    return base;
+  }
+
+  function renderTemplates() {
+    const host = $('#tpl-quick');
+    host.textContent = '';
+    for (const t of TEMPLATES) {
+      const b = el('button', 'tq');
+      b.type = 'button';
+      b.dataset.tpl = t.id;
+      b.innerHTML =
+        '<div class="thumb"><i style="left:12px;right:12px;top:8px;height:3px"></i>' +
+        '<i style="left:12px;right:34px;top:17px;height:2px"></i>' +
+        '<i style="left:12px;right:12px;top:25px;height:2px"></i>' +
+        '<i style="left:12px;right:44px;top:33px;height:2px"></i></div>' +
+        '<div class="nm">' + t.name + '</div><div class="hint">点击新建</div>';
+      b.addEventListener('click', () => createFromTemplate(t));
+      host.appendChild(b);
+    }
+  }
+
+  function createFromTemplate(t) {
+    const card = { id: 'c' + (++nextId), title: nextTitle(), tpl: t.id, updated: '刚刚', snaps: 0, sample: false, archived: false };
+    state.cards.unshift(card);
+    state.emptyDemo = false;
+    syncEmptyToggle();
+    render();
+    toast('已新建：' + card.title + '（' + t.name + '）');
+  }
+
+  function cardMeta(c) {
+    return tplName(c.tpl) + ' · 最近编辑 ' + c.updated + '<br>' + (c.snaps ? c.snaps + ' 个快照' : '还没有快照') +
+      (c.archived ? ' · 已归档，不参与统计' : '');
+  }
+
+  function renderCards() {
+    const host = $('#cards');
+    host.textContent = '';
+    const list = visibleCards();
+    if (!list.length) {
+      const empty = el('div', 'empty-card');
+      empty.innerHTML = state.emptyDemo || !activeCards().length
+        ? '<b>还没有简历</b>从上方三套模板新建一份，或等 m1.7 接通后导入 DOCX / PDF。'
+        : '<b>没有可显示的简历</b>已归档的简历被隐藏了，打开右上「显示归档」查看。';
+      host.appendChild(empty);
+      return;
+    }
+    for (const c of list) {
+      const card = el('button', 'rcard' + (c.archived ? ' archived' : ''));
+      card.type = 'button';
+      card.dataset.id = c.id;
+      const nm = el('div', 'nm');
+      nm.textContent = c.title;
+      const meta = el('div', 'meta');
+      meta.innerHTML = cardMeta(c);
+      const foot = el('div', 'foot');
+      if (c.sample) { const badge = el('span', 'badge sample'); badge.textContent = '示例'; foot.appendChild(badge); }
+      if (c.archived) { const badge = el('span', 'badge'); badge.textContent = '已归档'; foot.appendChild(badge); }
+      const more = el('span', 'more');
+      more.setAttribute('role', 'button');
+      more.setAttribute('tabindex', '0');
+      more.setAttribute('aria-label', '卡片操作');
+      more.textContent = '⋯';
+      more.addEventListener('click', (e) => { e.stopPropagation(); openMenu(card, c); });
+      more.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMenu(card, c); } });
+      card.append(nm, meta, foot, more);
+      card.addEventListener('click', () => openCard(c));
+      host.appendChild(card);
+    }
+  }
+
+  function openCard(c) {
+    if (state.dirtyDemo) { switchGuard(c); return; }
+    toast('打开：' + c.title + '（真实实现进入编辑器）');
+  }
+
+  let menuEl = null;
+  function closeMenu() { if (menuEl) { menuEl.remove(); menuEl = null; } }
+  function openMenu(anchor, c) {
+    closeMenu();
+    const m = el('div', 'card-menu');
+    const mk = (label, fn, cls) => {
+      const b = el('button', 'it' + (cls ? ' ' + cls : ''));
+      b.type = 'button';
+      b.textContent = label;
+      b.addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); fn(); });
+      m.appendChild(b);
+    };
+    mk('打开', () => openCard(c));
+    mk('重命名…', () => renameDialog(c));
+    mk(c.archived ? '取消归档' : '归档', () => toggleArchive(c));
+    m.appendChild(el('div', 'sep'));
+    mk('删除…', () => deleteDialog(c), 'danger');
+    $('#win').appendChild(m);
+    const r = anchor.getBoundingClientRect();
+    const w = $('#win').getBoundingClientRect();
+    m.style.left = Math.min(r.right - w.left - 200, w.width - 214) + 'px';
+    m.style.top = (r.top - w.top + 30) + 'px';
+    menuEl = m;
+  }
+  document.addEventListener('click', closeMenu);
+
+  function toggleArchive(c) {
+    c.archived = !c.archived;
+    render();
+    toast(c.archived ? '已归档：' + c.title + '（可在「显示归档」中查看）' : '已取消归档：' + c.title);
+  }
+
+  function dialog(html, onMount) {
+    const mask = el('div', 'dialog-mask');
+    const box = el('div', 'dialog');
+    box.innerHTML = html;
+    mask.appendChild(box);
+    $('#win').appendChild(mask);
+    onMount(box, () => mask.remove());
+    return mask;
+  }
+
+  function renameDialog(c) {
+    dialog(
+      '<h3>重命名简历</h3><p>标题只影响简历库显示，不改变画布内容。</p>' +
+      '<input id="rn" value="" aria-label="简历标题" maxlength="40">' +
+      '<div class="actions"><button class="btn" data-act="cancel">取消</button><button class="btn primary" data-act="ok">保存</button></div>',
+      (box, close) => {
+        const input = box.querySelector('#rn');
+        input.value = c.title;
+        input.focus();
+        input.select();
+        const ok = () => { const v = input.value.trim(); if (!v) return; c.title = v; close(); render(); toast('已重命名'); };
+        box.querySelector('[data-act="ok"]').addEventListener('click', ok);
+        box.querySelector('[data-act="cancel"]').addEventListener('click', close);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok(); if (e.key === 'Escape') close(); });
+      },
+    );
+  }
+
+  function deleteDialog(c) {
+    dialog(
+      '<h3>删除「' + escapeHtml(c.title) + '」？</h3>' +
+      '<p>将一并删除 <b style="color:var(--fg)">' + c.snaps + ' 个快照</b>，且无法撤销。<br>建议先用「归档」保留：卡片置灰、不参与统计，但随时可以找回。</p>' +
+      '<div class="actions"><button class="btn" data-act="cancel">取消</button><button class="btn danger" data-act="del">删除</button></div>',
+      (box, close) => {
+        box.querySelector('[data-act="cancel"]').addEventListener('click', close);
+        box.querySelector('[data-act="del"]').addEventListener('click', () => {
+          state.cards = state.cards.filter((x) => x.id !== c.id);
+          close();
+          render();
+          toast('已删除：' + c.title);
+        });
+      },
+    );
+  }
+
+  function switchGuard(c) {
+    dialog(
+      '<h3>关闭前确认</h3><p>你有尚未保存的更改。<br>目标：打开「' + escapeHtml(c.title) + '」</p>' +
+      '<div class="actions"><button class="btn" data-act="cancel">取消</button><button class="btn" data-act="discard">不保存</button><button class="btn primary" data-act="save">保存并切换</button></div>',
+      (box, close) => {
+        box.querySelector('[data-act="cancel"]').addEventListener('click', close);
+        box.querySelector('[data-act="save"]').addEventListener('click', () => { close(); toast('已保存，打开：' + c.title); });
+        box.querySelector('[data-act="discard"]').addEventListener('click', () => { close(); toast('不保存，打开：' + c.title); });
+      },
+    );
+  }
+
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+
+  function render() {
+    $('#sub-count').textContent = activeCards().length + ' 份简历 · 数据仅存本机';
+    renderCards();
+  }
+
+  function syncEmptyToggle() {
+    const b = $('#btn-empty');
+    b.setAttribute('aria-pressed', String(state.emptyDemo));
+  }
+
+  // 主题 / 空态 / 未保存演示
+  $('#btn-theme').addEventListener('click', () => {
+    state.light = !state.light;
+    root.classList.toggle('light', state.light);
+  });
+  $('#btn-empty').addEventListener('click', () => {
+    state.emptyDemo = !state.emptyDemo;
+    if (state.emptyDemo) state.cards = [];
+    else if (!state.cards.length) {
+      state.cards = [
+        { id: 'c1', title: '示例简历', tpl: 'tpl-classic', updated: '今天 10:24', snaps: 0, sample: true, archived: false },
+      ];
+    }
+    syncEmptyToggle();
+    render();
+  });
+  $('#btn-dirty').addEventListener('click', () => {
+    state.dirtyDemo = !state.dirtyDemo;
+    $('#btn-dirty').setAttribute('aria-pressed', String(state.dirtyDemo));
+  });
+  $('#chk-archived').addEventListener('change', (e) => { state.showArchived = e.target.checked; render(); });
+
+  renderTemplates();
+  render();
+})();
+</script>
+</body>
+</html>
