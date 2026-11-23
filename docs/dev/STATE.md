@@ -30,8 +30,8 @@
 
 | 项 | 值 |
 |---|---|
-| 代码基线 | `69845e0`（#128 首用闭环）；#127 代码基线=`cceb793`；**工作区干净** |
-| 当前分支 | `dev`（`fix/m1-doc-sync`、`fix/m0-ci-gates` 已合并删除；`fix/m1-first-use` 合并后删除） |
+| 代码基线 | `dev=1cfe6f4`；当前工作分支=`feat/m1.8-library@2b113ee`（预览/文档阶段，未合并）；#127 代码基线=`cceb793`；**工作区干净** |
+| 当前分支 | `feat/m1.8-library`（m1.8 预览与文档在改；合并回 dev 后删除） |
 | 测试基线 | **340 全绿**（45 文件）；覆盖率四包达标（core 96.27 / shared 100 / keygen 93.84 / lease 100 行）；lint / typecheck / contract 零漂移 / build / E2E **3 条**全过 |
 | CI 门禁 | 六 job：`lint` / `typecheck` / `test` / `coverage` / `contract-zero-drift` / `e2e`（全部 actions 已固定 SHA）；**2026-11-21 首绿**（run 44884436909 @ dd23b59） |
 | 唯一事实源 | `docs/01-技术开发文档.md`（附录 E 总账 **129 条**）+ `packages/shared/src/`（zod 契约）。**引用字段名前去读源** |
