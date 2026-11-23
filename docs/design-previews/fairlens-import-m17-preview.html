@@ -33,7 +33,7 @@
   #fl-imp .pbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   #fl-imp .pbtn[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-tint); }
 
-  #fl-imp .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; position:relative; height:780px; max-height:calc(100vh - 110px); min-height:560px; }
+  #fl-imp .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; position:relative; height:clamp(480px, calc(100vh - 120px), 780px); }
   #fl-imp.light .win{ border-color:#D9D6CF; }
   #fl-imp .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
   #fl-imp .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
@@ -117,6 +117,7 @@
   #fl-imp .issue .t b{ font-weight:500; }
   #fl-imp .result .actions{ display:flex; gap:8px; margin-top:14px; align-items:center; }
   #fl-imp .result .actions .spacer{ flex:1; }
+  #fl-imp .quiet-note{ font-size:11.5px; color:var(--muted); line-height:1.7; margin:0 0 10px; }
 
   /* 检查视图 */
   #fl-imp .review{ flex:1; min-height:0; display:grid; grid-template-columns:220px 1fr; }
@@ -143,7 +144,9 @@
   #fl-imp .sec.problem{ border-left:3px solid var(--warn); }
   #fl-imp .sec-head{ display:flex; align-items:center; gap:8px; padding:9px 13px; background:var(--panel); border-bottom:1px solid var(--line); }
   #fl-imp .sec-head .nm{ font-family:'Noto Serif SC',serif; font-size:14px; font-weight:600; border-bottom:1px dashed transparent; }
-  #fl-imp .sec-head .nm[contenteditable="true"]{ outline:none; border-bottom-color:var(--accent); }
+  #fl-imp .sec-head .nm[contenteditable="true"]{ outline:none; }
+  #fl-imp [contenteditable="true"]:hover{ background:var(--hover); border-radius:3px; }
+  #fl-imp [contenteditable="true"]:focus{ outline:2px solid var(--accent-tint); outline-offset:1px; border-radius:3px; }
   #fl-imp .sec-head .cnt{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
   #fl-imp .sec-head .spacer{ flex:1; }
   #fl-imp .sec-head .mini{ font:inherit; font-size:11px; color:var(--muted); background:none; border:0; cursor:pointer; padding:2px 4px; border-radius:4px; }
@@ -155,7 +158,8 @@
   #fl-imp .field{ display:flex; gap:8px; align-items:baseline; padding:3px 0; font-size:12.5px; }
   #fl-imp .field .k{ width:66px; flex:none; color:var(--muted); font-size:11px; }
   #fl-imp .field .v{ border-bottom:1px dashed transparent; }
-  #fl-imp .field .v[contenteditable="true"]{ outline:none; border-bottom-color:var(--accent); }
+  #fl-imp .field .v[contenteditable="true"]{ outline:none; }
+  #fl-imp .field .v[contenteditable="true"]:hover{ border-bottom-color:var(--line); }
 
   #fl-imp .entry{ border-top:1px dashed var(--line); padding:9px 0 7px; }
   #fl-imp .entry:first-child{ border-top:0; }
@@ -166,10 +170,9 @@
   #fl-imp .entry ul{ margin:5px 0 0; padding-left:16px; }
   #fl-imp .entry li{ font-size:12px; line-height:1.75; }
   #fl-imp .entry li[data-depth="1"]{ margin-left:14px; }
-  #fl-imp .entry.is-hidden{ background:var(--warn-tint); border-left:2px solid var(--warn); margin-left:-13px; padding-left:11px; }
   #fl-imp .entry .vis{ margin-left:10px; display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--muted); cursor:pointer; }
   #fl-imp .entry .vis input{ accent-color:var(--accent); }
-  #fl-imp .entry.is-hidden .vis{ color:var(--warn-ink); }
+  #fl-imp .sec-head .over-note{ font-size:9.5px; color:var(--warn-ink); border:1px solid var(--warn); border-radius:3px; padding:0 4px; line-height:15px; }
 
   #fl-imp .inbox{ border:1px solid var(--warn); border-radius:9px; background:var(--card); padding:10px 13px; margin-bottom:12px; scroll-margin-top:10px; }
   #fl-imp .inbox .ib-head{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:500; color:var(--warn-ink); margin-bottom:5px; }
@@ -189,6 +192,8 @@
   #fl-imp .drawer .raw{ border-bottom:1px dashed var(--line); padding:8px 0; font-size:11.5px; line-height:1.65; }
   #fl-imp .drawer .raw .dest{ display:inline-block; font-size:9.5px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 4px; margin-top:3px; }
   #fl-imp .drawer .raw .dest.inbox{ color:var(--warn-ink); border-color:var(--warn); }
+  #fl-imp .drawer .raw-page{ font-size:10px; letter-spacing:.06em; color:var(--muted); margin:12px 0 4px; }
+  #fl-imp .drawer .raw.no-text{ color:var(--pen-red); }
 
   /* 错误 */
   #fl-imp .parse-error{ max-width:520px; margin:40px auto 0; border:1px solid var(--line); border-left:3px solid var(--pen-red); border-radius:8px; background:var(--panel); padding:18px 20px; }
@@ -237,6 +242,7 @@
     <button class="pbtn" id="pv-review">检查视图</button>
     <button class="pbtn" id="pv-error">无文本</button>
     <button class="pbtn" id="pv-success">已导入</button>
+    <button class="pbtn" id="pv-paste">粘贴前选择</button>
     <button class="pbtn" id="pv-theme">浅色</button>
   </div>
 
@@ -287,7 +293,7 @@
         <!-- 结果：干净 -->
         <section id="view-clean" hidden>
           <div class="result clean">
-            <div class="head"><div class="mark" aria-hidden="true">✓</div><div><h2>识别到 5 个分区，无待处理内容</h2><div class="sub">教育、实习、项目、技能和基本信息都已归位。</div></div></div>
+            <div class="head"><div class="mark" aria-hidden="true">✓</div><div><h2>文件文字已提取：<span id="clean-pages">4/4</span> 页 · 未发现需确认项</h2><div class="sub">建议打开后快速检查。教育、实习、项目、技能和基本信息都已归位。</div></div></div>
             <div class="card">
               <label for="clean-title">简历标题</label>
               <input id="clean-title" value="林知远">
@@ -297,7 +303,7 @@
                 <span>条目</span><b>6 条</b>
                 <span>要点</span><b>12 条</b>
               </div>
-              <div class="dest">没有待整理内容，也没有超出模板上限的条目。导入后会直接打开草稿。</div>
+              <div class="dest">没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。</div>
             </div>
             <div class="actions">
               <button class="btn primary" id="clean-import">导入并打开</button>
@@ -309,20 +315,13 @@
         <!-- 结果：有疑点 -->
         <section id="view-issues" hidden>
           <div class="result issues">
-            <div class="head"><div class="mark" aria-hidden="true">!</div><div><h2>有 3 处需要检查</h2><div class="sub">文字已经提取出来了；只有下面这些地方不确定，正常分区不用逐条看。</div></div></div>
-            <div class="issues-list">
-              <div class="issue"><span class="t"><b>3 块无法确定属于哪个分区</b><br>会先放进「待整理内容」，不会丢。</span><button class="btn small" data-jump="inbox">查看并处理</button></div>
-              <div class="issue"><span class="t"><b>实习经历有 1 条超出模板上限（8 条）</b><br>「竞赛」默认暂不显示，仍保存在数据里。</span><button class="btn small" data-jump="sec-exp">调整显示</button></div>
-              <div class="issue"><span class="t"><b>第 2 页有 3 段分栏顺序不确定</b><br>可以对照提取原文确认。</span><button class="btn small" id="open-raw">对照原文</button></div>
-            </div>
+            <div class="head"><div class="mark" aria-hidden="true">!</div><div><h2>有 <span id="issues-count">2</span> 处需要检查</h2><div class="sub" id="issues-sub">文字已提取；正常分区不用逐条看，问题项已置顶。</div></div></div>
+            <div class="issues-list" id="issues-list"></div>
+            <p class="quiet-note" id="issues-note"></p>
             <div class="card">
               <label for="issues-title">简历标题</label>
               <input id="issues-title" value="林知远">
-              <div class="dest" id="issues-dest"><b>3 块</b>将放入「待整理内容」；<b>1 条</b>经历暂不显示（竞赛）。</div>
-            </div>
-            <div class="actions">
-              <button class="btn primary" id="issues-review">检查并导入</button>
-              <button class="btn" id="issues-fast">全部保留并导入</button>
+              <div class="dest" id="issues-dest"></div>
             </div>
           </div>
         </section>
@@ -377,9 +376,10 @@
       </div>
 
       <footer class="wiz-foot">
-        <span class="note" id="foot-note">解析在本机完成 · 支持 DOCX / PDF / 粘贴文本</span>
-        <span class="spacer"></span>
+        <span class="note" id="foot-note">解析在本机完成 · 支持 DOCX / PDF / 粘贴文本</span>        <span class="spacer"></span>
         <button class="btn ghost" id="cancel">取消</button>
+        <button class="btn" id="issues-fast" hidden>直接导入</button>
+        <button class="btn primary" id="issues-next" hidden>先检查内容</button>
         <button class="btn primary" id="review-import" hidden>导入并打开</button>
       </footer>
     </div>
@@ -406,139 +406,7 @@
   const btnImport = document.getElementById('review-import');
   const viewIds = ['view-source','view-clean','view-issues','view-review','view-error','view-success','view-library'];
 
-  const TYPES = [
-    ['basic','基本信息'],['education','教育经历'],['experience','实习/工作经历'],
-    ['project','项目经历'],['skill','技能'],['custom','自定义'],['inbox','待整理内容']
-  ];
   const LIMITS = { basic:1, education:4, experience:8, project:6, skill:1 };
-
-  /** 演示草稿：干净 */
-  function cleanDraft(){
-    return {
-      title:'林知远', name:'林知远',
-      sections:[
-        { id:'basic', title:'基本信息', type:'basic', fields:[['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海']], entries:[] },
-        { id:'edu', title:'教育经历', type:'education', entries:[
-          { org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:['GPA 3.6/4.0，主修交互设计与数据分析','校级奖学金两次'] }
-        ]},
-        { id:'exp', title:'实习经历', type:'experience', entries:[
-          { org:'字节跳动', role:'前端开发实习生', date:'2025.06 – 2025.12', bullets:['负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms','搭建组件快照测试，回归缺陷下降 35%'] },
-          { org:'美团', role:'前端开发实习生', date:'2024.07 – 2024.10', bullets:['重构商户后台表单，重复代码减少 40%'] }
-        ]},
-        { id:'proj', title:'项目经历', type:'project', entries:[
-          { org:'课程项目', role:'独立开发', date:'2022.09 – 2022.12', bullets:['实现课程作业协作看板'] }
-        ]},
-        { id:'skills', title:'技能', type:'skill', fields:[['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']], entries:[] }
-      ],
-      inbox:[], pdfWarning:false
-    };
-  }
-
-  /** 演示草稿：有疑点（PDF 场景） */
-  function issuesDraft(){
-    const exp = [
-      ['字节跳动','前端开发实习生','2025.06 – 2025.12',['负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms','搭建组件快照测试，回归缺陷下降 35%']],
-      ['美团','前端开发实习生','2024.07 – 2024.10',['重构商户后台表单，重复代码减少 40%']],
-      ['学校实验室','前端负责人','2023.09 – 2024.05',['维护可视化实验平台，服务 6 个课题组']],
-      ['开源社区','贡献者','2023.03 – 2023.08',['为编辑器库修复中文输入法组合态问题']],
-      ['校园工作室','前端开发','2022.10 – 2023.02',['交付社团招新页，累计访问 1.2 万']],
-      ['课程项目','独立开发','2022.09 – 2022.12',['实现课程作业协作看板']],
-      ['技术博客','作者','2022.05 – 至今',['持续输出前端工程化笔记 30 篇']],
-      ['暑期实践','成员','2022.07 – 2022.08',['完成乡村学校信息化调研']],
-      ['竞赛','前端开发','2021.11 – 2021.12',['校级程序设计竞赛二等奖']]
-    ].map(([org,role,date,bullets]) => ({ org, role, date, bullets, hidden:false }));
-    exp[8].hidden = true; // 第 9 条超出 8
-    return {
-      title:'林知远', name:'林知远',
-      sections:[
-        { id:'basic', title:'基本信息', type:'basic', fields:[['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海']], entries:[] },
-        { id:'edu', title:'教育经历', type:'education', entries:[
-          { org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:['GPA 3.6/4.0，主修交互设计与数据分析','校级奖学金两次'] }
-        ]},
-        { id:'exp', title:'实习经历', type:'experience', entries:exp },
-        { id:'proj', title:'项目经历', type:'project', collapsed:true, entries:[
-          { org:'课程项目', role:'独立开发', date:'2022.09 – 2022.12', bullets:['实现课程作业协作看板'] },
-          { org:'竞赛作品', role:'前端开发', date:'2021.11 – 2021.12', bullets:['可视化数据看板，获校级二等奖'] }
-        ]},
-        { id:'skills', title:'技能', type:'skill', collapsed:true, fields:[['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']], entries:[] }
-      ],
-      inbox:[
-        { id:'i1', text:'获奖：校级程序设计竞赛二等奖（2021.12）', dest:'inbox' },
-        { id:'i2', text:'语言：英语 CET-6（580）', dest:'inbox' },
-        { id:'i3', text:'自我评价：关注可维护性与细节。', dest:'inbox' }
-      ],
-      pdfWarning:true
-    };
-  }
-
-  function issuesCollapsed(d){
-    d.sections.forEach((s) => { if (['edu','proj','skills'].includes(s.id)) s.collapsed = true; });
-    return d;
-  }
-
-  let draft = cleanDraft();
-  let current = 'view-source';
-  let reviewBuilt = false;
-
-  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const typeLabel = (t) => (TYPES.find((x) => x[0] === t) || ['','自定义'])[1];
-  const sectionsOf = () => draft.sections;
-  const visibleEntries = (s) => s.entries.length;
-  const hiddenList = () => draft.sections.flatMap((s) => s.entries.filter((e) => e.hidden).map((e) => ({ sec:s.title, name:e.org })));
-  const inboxPending = () => draft.inbox.filter((b) => b.dest === 'inbox');
-  const inboxAssigned = () => draft.inbox.filter((b) => b.dest !== 'inbox' && b.dest !== 'discard');
-
-  function show(id){
-    current = id;
-    viewIds.forEach((v) => { document.getElementById(v).hidden = v !== id; });
-    body.classList.toggle('flush', id === 'view-review');
-    const isSource = id === 'view-source';
-    steps[0].classList.toggle('on', isSource);
-    steps[1].classList.toggle('on', !isSource);
-    steps[0].classList.toggle('done', !isSource);
-    btnCancel.hidden = id === 'view-success' || id === 'view-library';
-    btnImport.hidden = id !== 'view-review';
-    if (id === 'view-source') footNote.textContent = '解析在本机完成 · 支持 DOCX / PDF / 粘贴文本';
-    else if (id === 'view-review') footNote.textContent = '导入摘要会列明「待整理内容」和「暂不显示」的去向';
-    else footNote.textContent = '解析在本机完成，文件不会上传';
-    setPressed(id);
-  }
-
-  function setPressed(id){
-    const map = { 'view-source':'pv-source','view-clean':'pv-clean','view-issues':'pv-issues','view-review':'pv-review','view-error':'pv-error','view-success':'pv-success' };
-    ['pv-source','pv-clean','pv-issues','pv-review','pv-error','pv-success'].forEach((b) => {
-      const el = document.getElementById(b);
-      if (el) el.setAttribute('aria-pressed', String(b === map[id]));
-    });
-  }
-
-  // 来源：空内容校验（唯一主路径）
-  const ta = document.getElementById('paste-text');
-  const parseBtn = document.getElementById('parse-paste');
-  const pasteErr = document.getElementById('paste-err');
-  const pasteHelp = document.getElementById('paste-help');
-  document.getElementById('clean-title').addEventListener('input', (e) => { draft.title = e.target.value; });
-  document.getElementById('issues-title').addEventListener('input', (e) => { draft.title = e.target.value; });
-  function syncPaste(){
-    const ok = ta.value.trim().length > 0;
-    parseBtn.disabled = !ok;
-    pasteHelp.hidden = ok;
-    if (ok) pasteErr.hidden = true;
-  }
-  ta.addEventListener('input', syncPaste);
-  syncPaste();
-  document.getElementById('fill-sample').onclick = () => { ta.value = SAMPLE_TEXT; syncPaste(); ta.focus(); };
-  document.getElementById('parse-paste').onclick = () => {
-    if (!ta.value.trim()){ pasteErr.hidden = false; return; }
-    draft = parseText(ta.value);
-    goResult();
-  };
-  document.getElementById('drop').onclick = () => {
-    draft = issuesCollapsed(issuesDraft());
-    goResult();
-  };
-
-  // 粘贴文本的演示解析：来源与草稿一致
   const SAMPLE_TEXT = `林知远
 前端工程师 · 3 年经验
 175-0000-0000 · lin@example.com · 上海
@@ -564,14 +432,170 @@
 语言：TypeScript、JavaScript、SQL
 框架：React、Tiptap、Vite`;
 
+  function cleanDraft(){
+    return {
+      title:'林知远', name:'林知远', pages:4, extractedPages:4,
+      sections:[
+        { id:'basic', title:'基本信息', type:'basic', fields:[['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海']], entries:[] },
+        { id:'edu', title:'教育经历', type:'education', entries:[
+          { org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:['GPA 3.6/4.0，主修交互设计与数据分析','校级奖学金两次'] }
+        ]},
+        { id:'exp', title:'实习经历', type:'experience', entries:[
+          { org:'字节跳动', role:'前端开发实习生', date:'2025.06 – 2025.12', bullets:['负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms','搭建组件快照测试，回归缺陷下降 35%'] },
+          { org:'美团', role:'前端开发实习生', date:'2024.07 – 2024.10', bullets:['重构商户后台表单，重复代码减少 40%'] }
+        ]},
+        { id:'proj', title:'项目经历', type:'project', entries:[
+          { org:'课程项目', role:'独立开发', date:'2022.09 – 2022.12', bullets:['实现课程作业协作看板'] }
+        ]},
+        { id:'skills', title:'技能', type:'skill', fields:[['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']], entries:[] }
+      ],
+      inbox:[],
+      raw:[
+        { id:'r1', page:1, text:'林知远 · 前端工程师 · 175-0000-0000 · lin@example.com · 上海', dest:'基本信息' },
+        { id:'r2', page:2, text:'华中科技大学 · 软件工程 · 本科 · 2022.09 – 2026.06 · GPA 3.6/4.0', dest:'教育经历' },
+        { id:'r3', page:3, text:'字节跳动 · 前端开发实习生 · 2025.06 – 2025.12 · 画布性能优化', dest:'实习经历' },
+        { id:'r4', page:4, text:'课程项目 · 独立开发 · 2022.09 – 2022.12 · 协作看板', dest:'项目经历' },
+        { id:'r5', page:4, text:'语言：TypeScript、JavaScript、SQL', dest:'技能' }
+      ]
+    };
+  }
+
+  function issuesDraft(){
+    const exp = [
+      ['字节跳动','前端开发实习生','2025.06 – 2025.12',['负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms','搭建组件快照测试，回归缺陷下降 35%']],
+      ['美团','前端开发实习生','2024.07 – 2024.10',['重构商户后台表单，重复代码减少 40%']],
+      ['学校实验室','前端负责人','2023.09 – 2024.05',['维护可视化实验平台，服务 6 个课题组']],
+      ['开源社区','贡献者','2023.03 – 2023.08',['为编辑器库修复中文输入法组合态问题']],
+      ['校园工作室','前端开发','2022.10 – 2023.02',['交付社团招新页，累计访问 1.2 万']],
+      ['课程项目','独立开发','2022.09 – 2022.12',['实现课程作业协作看板']],
+      ['技术博客','作者','2022.05 – 至今',['持续输出前端工程化笔记 30 篇']],
+      ['暑期实践','成员','2022.07 – 2022.08',['完成乡村学校信息化调研']],
+      ['竞赛','前端开发','2021.11 – 2021.12',['校级程序设计竞赛二等奖']]
+    ].map(([org,role,date,bullets]) => ({ org, role, date, bullets }));
+    return {
+      title:'林知远', name:'林知远', pages:4, extractedPages:3,
+      sections:[
+        { id:'basic', title:'基本信息', type:'basic', fields:[['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海']], entries:[] },
+        { id:'edu', title:'教育经历', type:'education', collapsed:true, entries:[
+          { org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:['GPA 3.6/4.0，主修交互设计与数据分析','校级奖学金两次'] }
+        ]},
+        { id:'exp', title:'实习经历', type:'experience', entries:exp },
+        { id:'proj', title:'项目经历', type:'project', collapsed:true, entries:[
+          { org:'课程项目', role:'独立开发', date:'2022.09 – 2022.12', bullets:['实现课程作业协作看板'] },
+          { org:'竞赛作品', role:'前端开发', date:'2021.11 – 2021.12', bullets:['可视化数据看板，获校级二等奖'] }
+        ]},
+        { id:'skills', title:'技能', type:'skill', collapsed:true, fields:[['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']], entries:[] }
+      ],
+      inbox:[
+        { id:'i1', rawId:'r6', text:'获奖：校级程序设计竞赛二等奖（2021.12）', dest:'inbox' },
+        { id:'i2', rawId:'r7', text:'语言：英语 CET-6（580）', dest:'inbox' },
+        { id:'i3', rawId:'r8', text:'自我评价：关注可维护性与细节。', dest:'inbox' }
+      ],
+      raw:[
+        { id:'r1', page:1, text:'林知远 · 前端工程师 · 175-0000-0000 · lin@example.com · 上海', dest:'基本信息' },
+        { id:'r2', page:2, text:'华中科技大学 · 软件工程 · 本科 · 2022.09 – 2026.06', dest:'教育经历' },
+        { id:'r3', page:2, text:'字节跳动 · 前端开发实习生 · 2025.06 – 2025.12 · 画布性能优化', dest:'实习经历' },
+        { id:'r4', page:3, text:'课程项目 · 独立开发 · 2022.09 – 2022.12 · 协作看板', dest:'项目经历' },
+        { id:'r5', page:3, text:'语言：TypeScript、JavaScript、SQL', dest:'技能' },
+        { id:'r6', page:2, text:'获奖：校级程序设计竞赛二等奖（2021.12）', dest:'待整理内容' },
+        { id:'r7', page:2, text:'语言：英语 CET-6（580）', dest:'待整理内容' },
+        { id:'r8', page:2, text:'自我评价：关注可维护性与细节。', dest:'待整理内容' },
+        { id:'r9', page:4, text:'', dest:'无文字', noText:true }
+      ]
+    };
+  }
+
+  function issuesCollapsed(d){
+    d.sections.forEach((s) => { if (['edu','proj','skills'].includes(s.id)) s.collapsed = true; });
+    return d;
+  }
+
+  let draft = cleanDraft();
+  let current = 'view-source';
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const inboxPending = () => draft.inbox.filter((b) => b.dest === 'inbox');
+  const overSections = () => draft.sections.filter((s) => s.entries.length > (LIMITS[s.type] || 999));
+  const noTextPages = () => draft.raw.filter((r) => r.noText);
+
+  function issueCount(){
+    let n = 0;
+    if (inboxPending().length) n++;
+    n += noTextPages().length;
+    return n;
+  }
+
+  function setRawDest(id, dest){
+    const r = draft.raw.find((x) => x.id === id);
+    if (r) r.dest = dest;
+  }
+
+  function show(id){
+    current = id;
+    viewIds.forEach((v) => { document.getElementById(v).hidden = v !== id; });
+    body.classList.toggle('flush', id === 'view-review');
+    const isSource = id === 'view-source';
+    steps[0].classList.toggle('on', isSource);
+    steps[1].classList.toggle('on', !isSource);
+    steps[0].classList.toggle('done', !isSource);
+    btnCancel.hidden = id === 'view-success' || id === 'view-library';
+    btnImport.hidden = id !== 'view-review';
+    document.getElementById('issues-next').hidden = id !== 'view-issues';
+    document.getElementById('issues-fast').hidden = id !== 'view-issues';
+    if (id === 'view-source') footNote.textContent = '解析在本机完成 · 支持 DOCX / PDF / 粘贴文本';
+    else if (id === 'view-review') footNote.textContent = '「待整理内容」会随简历一起导出；导入摘要列明去向';
+    else footNote.textContent = '解析在本机完成，文件不会上传';
+    setPressed(id);
+  }
+
+  function setPressed(id){
+    const map = { 'view-source':'pv-source','view-clean':'pv-clean','view-issues':'pv-issues','view-review':'pv-review','view-error':'pv-error','view-success':'pv-success' };
+    ['pv-source','pv-clean','pv-issues','pv-review','pv-error','pv-success'].forEach((b) => {
+      const el = document.getElementById(b);
+      if (el) el.setAttribute('aria-pressed', String(b === map[id]));
+    });
+  }
+
+  const ta = document.getElementById('paste-text');
+  const parseBtn = document.getElementById('parse-paste');
+  const pasteErr = document.getElementById('paste-err');
+  const pasteHelp = document.getElementById('paste-help');
+  document.getElementById('clean-title').addEventListener('input', (e) => { draft.title = e.target.value; });
+  document.getElementById('issues-title').addEventListener('input', (e) => { draft.title = e.target.value; });
+
+  function syncPaste(){
+    const ok = ta.value.trim().length > 0;
+    parseBtn.disabled = !ok;
+    pasteHelp.hidden = ok;
+    if (ok) pasteErr.hidden = true;
+  }
+  ta.addEventListener('input', syncPaste);
+  syncPaste();
+  document.getElementById('fill-sample').onclick = () => { ta.value = SAMPLE_TEXT; syncPaste(); ta.focus(); };
+  document.getElementById('parse-paste').onclick = () => {
+    if (!ta.value.trim()){ pasteErr.hidden = false; return; }
+    draft = parseText(ta.value);
+    goResult();
+  };
+  document.getElementById('drop').onclick = () => { draft = issuesDraft(); goResult(); };
+
   function parseText(text){
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const heads = { '教育经历':'education','教育背景':'education','实习经历':'experience','工作经历':'experience','项目经历':'project','项目经验':'project','技能':'skill','专业技能':'skill','基本信息':'basic' };
-    const d = { title:'导入的简历', name:'', sections:[], inbox:[], pdfWarning:false };
+    const d = { title:'导入的简历', name:'', pages:1, extractedPages:1, sections:[], inbox:[], raw:[] };
+    let rawN = 0;
+    const addRaw = (t, dest) => { d.raw.push({ id:'r'+rawN++, page:1, text:t, dest }); return d.raw[d.raw.length-1].id; };
     const profile = [];
     let cur = null;
     let pending = null;
     for (const line of lines){
+      if (heads[line]){
+        addRaw(line, line);
+        cur = { id:'s'+d.sections.length, title:line, type:heads[line], entries:[], fields:[] };
+        if (['education','project','skill'].includes(cur.type)) cur.collapsed = true;
+        d.sections.push(cur); pending = null; continue;
+      }
+      const rid = addRaw(line, cur ? cur.title : '基本信息');
       if (/^[•\-·◆]\s*/.test(line)){
         const txt = line.replace(/^[•\-·◆]\s*/, '');
         if (cur && pending){ pending.bullets.push(txt); continue; }
@@ -579,30 +603,16 @@
           if (!pending){ pending = { org:'', role:'', date:'', bullets:[] }; cur.entries.push(pending); }
           pending.bullets.push(txt); continue;
         }
-        if (cur) { cur.fields.push(['其他', txt]); continue; }
-        d.inbox.push({ id:'x'+d.inbox.length, text:txt, dest:'inbox' }); continue;
-      }
-      if (heads[line]){
-        cur = { id:'s'+d.sections.length, title:line, type:heads[line], entries:[], fields:[] };
-        d.sections.push(cur); pending = null; continue;
+        if (cur){ cur.fields.push(['其他', txt]); continue; }
+        d.inbox.push({ id:'x'+d.inbox.length, rawId:rid, text:txt, dest:'inbox' }); setRawDest(rid,'待整理内容'); continue;
       }
       if (cur){
-        if (cur.type === 'skill'){
+        if (cur.type === 'skill' || cur.type === 'basic'){
           const [k,v] = line.split(/[：:]/);
           cur.fields.push([k.trim(), (v||'').trim()]);
           continue;
         }
-        if (cur.type === 'basic'){
-          const [k,v] = line.split(/[：:]/);
-          cur.fields.push([k.trim(), (v||'').trim()]);
-          continue;
-        }
-        // 纯日期行 → 归到上一个条目
-        if (pending && /^(19|20)\d{2}/.test(line) && !line.includes(' · ')){
-          pending.date = line;
-          continue;
-        }
-        // 含日期 / 用 · 分隔 → 新条目标题
+        if (pending && /^(19|20)\d{2}/.test(line) && !line.includes(' · ')){ pending.date = line; continue; }
         if (/(19|20)\d{2}/.test(line) || line.includes(' · ')){
           const parts = line.split(' · ').map((x) => x.trim());
           const date = parts.find((x) => /(19|20)\d{2}/.test(x)) || '';
@@ -611,14 +621,12 @@
           const bm = rest.find((x) => x.startsWith('•'));
           if (bm) bullets.push(bm.replace(/^•\s*/, ''));
           pending = { org:(rest[0]||'').replace(/^•\s*/,''), role:rest[1]||'', date, bullets };
-          cur.entries.push(pending);
-          continue;
+          cur.entries.push(pending); continue;
         }
         if (pending){ pending.bullets.push(line); continue; }
-        d.inbox.push({ id:'x'+d.inbox.length, text:line, dest:'inbox' });
-      } else {
-        profile.push(line);
+        d.inbox.push({ id:'x'+d.inbox.length, rawId:rid, text:line, dest:'inbox' }); setRawDest(rid,'待整理内容'); continue;
       }
+      profile.push(line);
     }
     const recognized = d.sections.length;
     if (profile.length && recognized > 0){
@@ -626,48 +634,55 @@
       d.sections.unshift({ id:'basic', title:'基本信息', type:'basic', fields:[['姓名',profile[0]||''],['求职意向',profile[1]||''],['联系方式',profile[2]||'']], entries:[] });
       d.title = d.name || '导入的简历';
     }
-    // 没有识别出任何分区，或整段文字极短：全部进待整理内容（来源与草稿一致，不假装识别成功）
     if (recognized === 0){
       d.sections = [];
-      d.inbox = [{ id:'x0', text: lines.join(' '), dest:'inbox' }];
-      d.name = '';
-      d.title = '导入的简历';
+      d.inbox = [{ id:'x0', rawId:'r0', text: lines.join(' '), dest:'inbox' }];
+      d.raw = lines.map((l, i) => ({ id:'r'+i, page:1, text:l, dest:'待整理内容' }));
+      d.name = ''; d.title = '导入的简历';
     }
     return d;
   }
 
   function goResult(){
-    const issues = issueCount();
-    if (issues > 0){ renderIssues(); show('view-issues'); }
+    if (issueCount() > 0){ renderIssues(); show('view-issues'); }
     else { renderClean(); show('view-clean'); }
-  }
-
-  function issueCount(){
-    let n = 0;
-    if (inboxPending().length) n++;
-    if (hiddenList().length) n++;
-    if (draft.pdfWarning) n++;
-    return n;
   }
 
   function renderClean(){
     document.getElementById('clean-title').value = draft.title || draft.name || '导入的简历';
+    document.getElementById('clean-pages').textContent = `${draft.extractedPages}/${draft.pages}`;
     const entries = draft.sections.reduce((n,s)=>n+s.entries.length,0);
     const bullets = draft.sections.reduce((n,s)=>n+s.entries.reduce((m,e)=>m+e.bullets.length,0),0);
-    const card = document.querySelector('#view-clean .meta');
-    if (card){
-      card.innerHTML = `<span>模板</span><b>经典单栏（进入编辑器可切换）</b><span>分区</span><b>${draft.sections.length} 个</b><span>条目</span><b>${entries} 条</b><span>要点</span><b>${bullets} 条</b>`;
-    }
+    const meta = document.querySelector('#view-clean .meta');
+    if (meta) meta.innerHTML = `<span>模板</span><b>经典单栏（进入编辑器可切换）</b><span>分区</span><b>${draft.sections.length} 个</b><span>条目</span><b>${entries} 条</b><span>要点</span><b>${bullets} 条</b>`;
   }
 
   function renderIssues(){
-    const dest = document.getElementById('issues-dest');
-    dest.innerHTML = `<b>${inboxPending().length} 块</b>将放入「待整理内容」；<b>${hiddenList().length} 条</b>经历暂不显示${hiddenList()[0] ? '（' + esc(hiddenList()[0].name) + '）' : ''}。`;
+    const items = [];
+    if (inboxPending().length) items.push({ kind:'inbox', count:inboxPending().length });
+    noTextPages().forEach((r) => items.push({ kind:'notext', page:r.page }));
+    document.getElementById('issues-count').textContent = String(items.length);
+    document.getElementById('issues-sub').textContent = items.length
+      ? '文字已提取；正常分区不用逐条看，问题项已置顶。'
+      : '文字已提取；未发现需确认项，建议打开后快速检查。';
+    const list = document.getElementById('issues-list');
+    list.innerHTML = items.map((it) => it.kind === 'inbox'
+      ? `<div class="issue"><span class="t"><b>${it.count} 块无法确定属于哪个分区</b><br>会先放进「待整理内容」，<b>并随简历一起导出</b>，不会丢。</span><button class="btn small" data-jump="inbox">查看并处理</button></div>`
+      : `<div class="issue"><span class="t"><b>第 ${it.page} 页没有可提取文字</b><br>这一页可能是图片；图片中的文字不会导入。</span><button class="btn small" data-raw>对照原文</button></div>`
+    ).join('');
+    list.querySelectorAll('[data-jump]').forEach((b) => { b.onclick = () => openReviewAt(b.dataset.jump); });
+    list.querySelectorAll('[data-raw]').forEach((b) => { b.onclick = () => openReviewAt('raw'); });
+    const over = overSections();
+    document.getElementById('issues-note').textContent = over.length
+      ? `篇幅提示：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议上限 ${LIMITS[s.type]}）`).join('；')}——会正常分页，简历可能偏长，不会隐藏或截断。`
+      : '';
+    const pending = inboxPending().length;
+    document.getElementById('issues-dest').innerHTML = pending
+      ? `<b>${pending} 块</b>将放入「待整理内容」，<b>会随简历一起导出</b>${over.length ? `；篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}` : ''}。`
+      : (over.length ? `篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}。` : '没有待整理内容。');
   }
 
-  // 检查视图
   function buildReview(){
-    reviewBuilt = true;
     const side = document.getElementById('side');
     const main = document.getElementById('sections');
     const inbox = document.getElementById('inbox');
@@ -675,69 +690,59 @@
     const banner = document.getElementById('review-banner');
     const issues = issueCount();
 
-    sum.textContent = issues ? `有 ${issues} 处需要检查 · 其余分区可直接导入` : '无待处理内容';
+    sum.textContent = `有 ${issues} 处需要检查` + (inboxPending().length ? ` · ${inboxPending().length} 块待整理（会随简历导出）` : '');
     banner.innerHTML = issues
-      ? `<span>⚠</span><span>问题项已置顶并展开；其余分区收起，可点左侧定位。底部摘要会列明最终去向。</span>`
-      : `<span>✓</span><span>没有待处理内容；你可以直接导入，或逐区检查。</span>`;
+      ? `<span>⚠</span><span>问题项已置顶并展开；其余分区收起，可点左侧定位。待整理内容会随简历一起导出，不会被隐藏。</span>`
+      : `<span>✓</span><span>未发现需确认项，建议打开后快速检查。</span>`;
 
-    // 左侧导航
     let sideHtml = `<div class="cap">检查</div>`;
     if (inboxPending().length) sideHtml += `<button class="nav-item pool" data-jump="inbox"><span class="dot"></span>待整理内容<span class="cnt">${inboxPending().length}</span></button>`;
-    if (hiddenList().length) sideHtml += `<button class="nav-item" data-jump="hidden-sec"><span class="dot"></span>暂不显示<span class="cnt">${hiddenList().length}</span></button>`;
     sideHtml += `<div class="sep"></div><div class="cap">分区</div>`;
     for (const s of draft.sections){
-      const bad = s.entries.some((e)=>e.hidden) || (s.type==='basic' && !s.fields.length);
-      sideHtml += `<button class="nav-item" data-jump="sec-${s.id}">${bad ? '<span class="dot"></span>' : ''}${esc(s.title)}<span class="cnt">${s.entries.length || s.fields.length}</span></button>`;
+      const over = s.entries.length > (LIMITS[s.type] || 999);
+      sideHtml += `<button class="nav-item" data-jump="sec-${s.id}" title="${over ? `建议上限 ${LIMITS[s.type]} 条` : ''}">${over ? '<span class="dot"></span>' : ''}${esc(s.title)}<span class="cnt">${s.entries.length || (s.fields||[]).length}</span></button>`;
     }
     side.innerHTML = sideHtml;
 
-    // 分区卡
     main.innerHTML = draft.sections.map((s) => {
-      const isProblem = s.entries.some((e)=>e.hidden);
+      const over = s.entries.length > (LIMITS[s.type] || 999);
       const collapsed = s.collapsed === true;
-      const fields = (s.fields||[]).map(([k,v]) => `<div class="field"><span class="k">${esc(k)}</span><span class="v" contenteditable="true" data-field="${esc(k)}">${esc(v)}</span></div>`).join('');
-      const entries = s.entries.map((e, ei) => {
-        const lim = LIMITS[s.type] || 999;
-        const over = ei >= lim;
-        return `<div class="entry${e.hidden?' is-hidden':''}" data-entry="${ei}">
-          <div class="ehead"><span class="org">${esc(e.org || '未命名条目')}</span><span class="role">${esc(e.role||'')}</span><span class="date">${esc(e.date||'')}</span>
-            <label class="vis"><input type="checkbox" data-toggle="${ei}"${e.hidden?'':' checked'}> 显示</label>
-            ${e.hidden ? '<span class="badge" style="font-size:9.5px;color:var(--warn-ink);border:1px solid var(--warn);border-radius:3px;padding:0 4px;line-height:15px">暂不显示 · 超出模板上限</span>' : ''}
+      const fields = (s.fields||[]).map(([k,v]) => `<div class="field"><span class="k">${esc(k)}</span><span class="v" contenteditable="true" spellcheck="false" data-edit="field" data-k="${esc(k)}">${esc(v)}</span></div>`).join('');
+      const entries = s.entries.map((e, ei) => `<div class="entry" data-entry="${ei}">
+          <div class="ehead">
+            <span class="org" contenteditable="true" spellcheck="false" data-edit="org" data-ei="${ei}">${esc(e.org || '未命名条目')}</span>
+            <span class="role" contenteditable="true" spellcheck="false" data-edit="role" data-ei="${ei}">${esc(e.role||'')}</span>
+            <span class="date" contenteditable="true" spellcheck="false" data-edit="date" data-ei="${ei}">${esc(e.date||'')}</span>
           </div>
-          <ul>${e.bullets.map((b)=>`<li>${esc(b)}</li>`).join('')}</ul>
-        </div>`;
-      }).join('');
-      return `<div class="sec${isProblem?' problem':''}${collapsed?' collapsed':''}" id="sec-${s.id}">
+          <ul>${e.bullets.map((b,bi)=>`<li contenteditable="true" spellcheck="false" data-edit="bullet" data-ei="${ei}" data-bi="${bi}">${esc(b)}</li>`).join('')}</ul>
+        </div>`).join('');
+      return `<div class="sec${over?' problem':''}${collapsed?' collapsed':''}" id="sec-${s.id}">
         <div class="sec-head">
-          <span class="nm" data-title>${esc(s.title)}</span>
+          <span class="nm" contenteditable="true" spellcheck="false" data-edit="section-title" data-sid="${s.id}">${esc(s.title)}</span>
           <span class="cnt">${s.entries.length ? s.entries.length + ' 条' : (s.fields||[]).length + ' 字段'}</span>
+          ${over ? `<span class="over-note">建议上限 ${LIMITS[s.type]} 条 · 会分页</span>` : ''}
           <span class="spacer"></span>
-          <button class="mini" type="button" data-edit>编辑</button>
           <button class="mini" type="button" data-collapse>${collapsed?'展开':'收起'}</button>
         </div>
         <div class="sec-body">${fields}${entries}</div>
       </div>`;
     }).join('');
 
-    // 待整理内容
     if (draft.inbox.length){
-      inbox.innerHTML = `<div class="ib-head"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--warn)"></span>待整理内容 · ${inboxPending().length} 块</div>` +
-        draft.inbox.map((b) => `<div class="blk${b.dest!=='inbox'?' resolved':''}" data-block="${b.id}">
+      inbox.innerHTML = `<div class="ib-head"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--warn)"></span>待整理内容 · ${inboxPending().length} 块（会随简历导出）</div>` +
+        draft.inbox.map((b) => `<div class="blk" data-block="${b.id}">
           <span class="t">${esc(b.text)}</span>
           <select data-dest="${b.id}" aria-label="「${esc(b.text)}」的去向">
             <option value="inbox"${b.dest==='inbox'?' selected':''}>保留在待整理</option>
-            ${draft.sections.filter((s)=>s.type!=='basic').map((s)=>`<option value="${s.id}"${b.dest===s.id?' selected':''}>移到 ${esc(s.title)}</option>`).join('')}
-            <option value="discard"${b.dest==='discard'?' selected':''}>显式丢弃</option>
+            ${draft.sections.filter((s)=>s.type!=='basic').map((s)=>`<option value="${s.id}">移到 ${esc(s.title)}</option>`).join('')}
+            <option value="discard">显式丢弃</option>
           </select>
         </div>`).join('');
     } else {
       inbox.innerHTML = '';
     }
 
-    // 事件
-    side.querySelectorAll('[data-jump]').forEach((b) => {
-      b.onclick = () => jumpTo(b.dataset.jump);
-    });
+    side.querySelectorAll('[data-jump]').forEach((b) => { b.onclick = () => jumpTo(b.dataset.jump); });
     main.querySelectorAll('[data-collapse]').forEach((b) => {
       b.onclick = () => {
         const sec = b.closest('.sec');
@@ -747,141 +752,178 @@
         b.textContent = sec.classList.contains('collapsed') ? '展开' : '收起';
       };
     });
-    main.querySelectorAll('[data-edit]').forEach((b) => {
-      b.onclick = () => {
-        const sec = b.closest('.sec');
-        const nm = sec.querySelector('[data-title]');
-        const editing = nm.getAttribute('contenteditable') === 'true';
-        if (!editing){
-          nm.setAttribute('contenteditable','true'); nm.focus();
-          b.textContent = '完成';
-        } else {
-          nm.setAttribute('contenteditable','false');
-          const s = draft.sections.find((x)=>`sec-${x.id}`===sec.id);
-          if (s && nm.textContent.trim()) s.title = nm.textContent.trim();
-          buildReview();
-          toast('分区标题已更新');
-        }
-      };
-    });
-    main.querySelectorAll('input[data-toggle]').forEach((cb) => {
-      cb.onchange = () => {
-        const sec = cb.closest('.sec');
-        const idx = Number(cb.closest('.entry').dataset.entry);
-        const s = draft.sections.find((x)=>`sec-${x.id}`===sec.id);
-        if (!s) return;
-        s.entries[idx].hidden = !cb.checked;
-        buildReview();
-      };
-    });
-    inbox.querySelectorAll('select[data-dest]').forEach((sel) => {
-      sel.onchange = () => {
-        const b = draft.inbox.find((x)=>x.id===sel.dataset.dest);
-        if (!b) return;
-        b.dest = sel.value;
-        buildReview();
-        updateImportSummary();
-        toast(sel.value==='discard' ? '已显式丢弃该块' : sel.value==='inbox' ? '保留在「待整理内容」' : '将移动到所选分区');
-      };
-    });
-
     updateImportSummary();
   }
 
-  function jumpTo(key){
-    if (key === 'hidden-sec'){
-      const first = document.querySelector('.entry.is-hidden');
-      if (first) first.closest('.sec').scrollIntoView({block:'start', behavior:'smooth'});
+  document.getElementById('sections').addEventListener('input', (e) => {
+    const el = e.target.closest('[data-edit]');
+    if (!el) return;
+    const sec = el.closest('.sec');
+    const s = draft.sections.find((x) => `sec-${x.id}` === sec.id);
+    if (!s) return;
+    const kind = el.dataset.edit;
+    if (kind === 'section-title'){ s.title = el.textContent; return; }
+    if (kind === 'field'){
+      const f = (s.fields||[]).find(([k]) => k === el.dataset.k);
+      if (f) f[1] = el.textContent;
       return;
     }
+    const ei = Number(el.dataset.ei);
+    if (!Number.isInteger(ei) || !s.entries[ei]) return;
+    if (kind === 'bullet'){
+      const bi = Number(el.dataset.bi);
+      s.entries[ei].bullets[bi] = el.textContent;
+    } else {
+      s.entries[ei][kind] = el.textContent;
+    }
+  });
+  document.getElementById('sections').addEventListener('focusout', (e) => {
+    if (e.target.dataset && e.target.dataset.edit === 'section-title') buildReview();
+  });
+  document.getElementById('inbox').addEventListener('change', (e) => {
+    const sel = e.target.closest('select[data-dest]');
+    if (!sel) return;
+    const block = draft.inbox.find((b) => b.id === sel.dataset.dest);
+    if (!block) return;
+    if (sel.value === 'inbox'){ block.dest = 'inbox'; }
+    else if (sel.value === 'discard'){
+      draft.inbox = draft.inbox.filter((b) => b !== block);
+      setRawDest(block.rawId, '已丢弃');
+      toast('已显式丢弃该块');
+    } else {
+      const s = draft.sections.find((x) => x.id === sel.value);
+      if (!s) return;
+      s.collapsed = false;
+      if (s.type === 'skill') s.fields.push(['待整理', block.text]);
+      else s.entries.push({ org:'', role:'', date:'', bullets:[block.text] });
+      draft.inbox = draft.inbox.filter((b) => b !== block);
+      setRawDest(block.rawId, s.title);
+      toast(`已移入「${s.title}」`);
+    }
+    buildReview();
+  });
+
+  function jumpTo(key){
     const el = document.getElementById(key);
-    if (el) el.scrollIntoView({block:'start', behavior:'smooth'});
-    document.querySelectorAll('.side .nav-item').forEach((b)=>b.classList.toggle('on', b.dataset.jump===key));
+    if (el) el.scrollIntoView({ block:'start', behavior:'smooth' });
+    document.querySelectorAll('.side .nav-item').forEach((b) => b.classList.toggle('on', b.dataset.jump === key));
+  }
+
+  function openReviewAt(key){
+    buildReview(); show('view-review');
+    setTimeout(() => { if (key === 'raw') openDrawer(); else jumpTo(key); }, 0);
   }
 
   function updateImportSummary(){
-    const inbox = inboxPending().length;
-    const hid = hiddenList();
+    const pending = inboxPending().length;
+    const over = overSections();
     const parts = [];
-    if (inbox) parts.push(`${inbox} 块放入「待整理内容」`);
-    if (hid.length) parts.push(`${hid.length} 条暂不显示（${hid.map((h)=>h.name).join('、')}）`);
+    if (pending) parts.push(`${pending} 块待整理（会随简历导出）`);
+    if (over.length) parts.push(over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；'));
     const sum = document.getElementById('review-sum');
-    if (sum) sum.textContent = (issueCount() ? `有 ${issueCount()} 处需要检查` : '无待处理内容') + (parts.length ? ' · ' + parts.join(' · ') : ' · 全部内容都会显示');
+    if (sum) sum.textContent = `有 ${issueCount()} 处需要检查` + (parts.length ? ' · ' + parts.join(' · ') : ' · 全部内容都会随简历导出');
   }
 
-  // 原文抽屉
   function openDrawer(){
     const raw = document.getElementById('raw-body');
-    const blocks = [];
-    draft.sections.forEach((s) => {
-      s.entries.forEach((e) => blocks.push({ text:[e.org,e.role,e.date,...e.bullets].filter(Boolean).join(' · '), dest:s.title }));
-      (s.fields||[]).forEach(([k,v]) => blocks.push({ text:`${k}：${v}`, dest:s.title }));
-    });
-    draft.inbox.forEach((b) => blocks.push({ text:b.text, dest:'待整理内容', inbox:true }));
-    raw.innerHTML = blocks.map((b) => `<div class="raw">${esc(b.text)}<br><span class="dest${b.inbox?' inbox':''}">→ ${esc(b.dest)}</span></div>`).join('');
+    const pages = [...new Set(draft.raw.map((r) => r.page))].sort((a,b)=>a-b);
+    raw.innerHTML = pages.map((p) => {
+      const blocks = draft.raw.filter((r) => r.page === p);
+      return `<div class="raw-page">第 ${p} 页</div>` + blocks.map((r) => r.noText
+        ? `<div class="raw no-text">（本页没有可提取文字，可能是图片；图片中的文字不会导入）<br><span class="dest">无文字</span></div>`
+        : `<div class="raw">${esc(r.text)}<br><span class="dest${r.dest==='待整理内容'?' inbox':''}">→ ${esc(r.dest)}</span></div>`
+      ).join('');
+    }).join('');
     document.getElementById('drawer').hidden = false;
   }
   document.getElementById('raw-btn').onclick = openDrawer;
-  document.getElementById('open-raw').onclick = () => { if (!reviewBuilt) buildReview(); show('view-review'); openDrawer(); };
   document.getElementById('close-raw').onclick = () => { document.getElementById('drawer').hidden = true; };
 
-  // 导入动作
   function doImport(){
     const title = draft.title || draft.name || '导入的简历';
-    const hid = hiddenList();
-    const inbox = inboxPending().length;
+    const pending = inboxPending().length;
+    const over = overSections();
     document.getElementById('success-sub').textContent = `「${title}」已创建，正在进入编辑器。`;
     document.getElementById('success-card').innerHTML =
       `<b>模板：</b>经典单栏（进入编辑器可切换）<br>` +
-      `<b>分区：</b>${draft.sections.length} 个${inbox ? `（另有「待整理内容」${inbox} 块）` : ''}<br>` +
+      `<b>分区：</b>${draft.sections.length} 个${pending ? `（另有「待整理内容」${pending} 块）` : ''}<br>` +
       `<b>条目：</b>${draft.sections.reduce((n,s)=>n+s.entries.length,0)} 条` +
-      (hid.length ? `<br><b>暂不显示：</b>${hid.map((h)=>`${esc(h.sec)} · ${esc(h.name)}`).join('；')}<br><span style="color:var(--muted)">这些条目仍保存在数据里，可在编辑器里改回显示；PDF 导出前会再次提醒。</span>` : '');
+      (pending ? `<br><b>待整理内容：</b>${pending} 块会随简历一起导出；导出前会再次提醒。` : '') +
+      (over.length ? `<br><b>篇幅：</b>${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}——会正常分页，可能偏长。` : '');
     show('view-success');
   }
   document.getElementById('clean-import').onclick = doImport;
   document.getElementById('issues-fast').onclick = doImport;
   document.getElementById('review-import').onclick = doImport;
-  document.getElementById('issues-review').onclick = () => { buildReview(); show('view-review'); };
-  document.getElementById('clean-review').onclick = () => { buildReview(); show('view-review'); };
+  document.getElementById('issues-next').onclick = () => openReviewAt('inbox');
+  document.getElementById('clean-review').onclick = () => openReviewAt('inbox');
 
-  // 导出前守关
-  document.getElementById('mock-export').onclick = () => {
-    const hid = hiddenList();
-    const inbox = inboxPending().length;
-    showGuard(`<h3>导出前检查</h3>
-      <p>这份简历还有内容不会出现在 PDF 里：</p>
-      <ul>${hid.map((h)=>`<li>${esc(h.sec)} · ${esc(h.name)}（暂不显示）</li>`).join('')}${inbox?`<li>「待整理内容」还有 ${inbox} 块</li>`:''}</ul>
-      <p>可以先去处理，或确认仍然导出。</p>`);
-  };
-
-  function showGuard(html){
+  function openModal(html, mount){
+    const prev = document.activeElement;
     const wrap = document.createElement('div');
     wrap.className = 'modal';
-    wrap.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">${html}
-      <div class="acts"><button class="btn" data-x="cancel">取消</button><button class="btn primary" data-x="ok">仍然导出</button></div></div>`;
+    wrap.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">${html}</div>`;
     root.appendChild(wrap);
-    wrap.querySelector('[data-x="cancel"]').onclick = () => wrap.remove();
-    wrap.querySelector('[data-x="ok"]').onclick = () => { wrap.remove(); toast('已导出（演示）'); };
+    const focusables = () => Array.from(wrap.querySelectorAll('button, select, input, [tabindex]:not([tabindex="-1"])')).filter((el) => !el.disabled);
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      wrap.remove();
+      if (prev && prev.focus) prev.focus();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape'){ e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      const f = focusables();
+      if (!f.length) return;
+      const i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0){ e.preventDefault(); f[f.length-1].focus(); }
+      else if (!e.shiftKey && i === f.length-1){ e.preventDefault(); f[0].focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    const f = focusables();
+    if (f[0]) f[0].focus();
+    if (mount) mount(wrap, close);
+    return close;
   }
 
-  // 放弃草稿：真实弹层 + 库页状态
+  function showGuard(){
+    const pending = inboxPending().length;
+    if (!pending){ toast('没有待整理内容，导出结果与纸面一致'); return; }
+    openModal(`<h3>导出前检查</h3>
+      <p>这份简历还不可交付：PDF 会包含「待整理内容」${pending} 块，与你看到的纸面一致。</p>
+      <p>把它归入正式分区或删除后，会更适合投递。</p>
+      <div class="acts"><button class="btn" data-x="cancel">取消</button><button class="btn" data-x="fix">去处理</button><button class="btn primary" data-x="ok">仍然导出</button></div>`,
+      (wrap, close) => {
+        wrap.querySelector('[data-x="cancel"]').onclick = close;
+        wrap.querySelector('[data-x="fix"]').onclick = () => { close(); openReviewAt('inbox'); };
+        wrap.querySelector('[data-x="ok"]').onclick = () => { close(); toast('已导出（演示），PDF 包含待整理内容'); };
+      });
+  }
+  document.getElementById('mock-export').onclick = showGuard;
+
   function confirmDiscard(){
     if (current === 'view-library' || current === 'view-success') return;
-    const wrap = document.createElement('div');
-    wrap.className = 'modal';
-    wrap.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
-      <h3>放弃本次导入？</h3>
-      <p>已解析和修改的内容不会保存，也不会创建简历。</p>
-      <div class="acts"><button class="btn" data-x="stay">继续导入</button><button class="btn danger" data-x="leave">放弃并返回库</button></div>
-    </div>`;
-    root.appendChild(wrap);
-    wrap.querySelector('[data-x="stay"]').onclick = () => wrap.remove();
-    wrap.querySelector('[data-x="leave"]').onclick = () => { wrap.remove(); show('view-library'); };
+    openModal(`<h3>放弃本次导入？</h3><p>已解析和修改的内容不会保存，也不会创建简历。</p>
+      <div class="acts"><button class="btn" data-x="stay">继续导入</button><button class="btn danger" data-x="leave">放弃并返回库</button></div>`,
+      (wrap, close) => {
+        wrap.querySelector('[data-x="stay"]').onclick = close;
+        wrap.querySelector('[data-x="leave"]').onclick = () => { close(); show('view-library'); };
+      });
   }
   document.getElementById('back').onclick = confirmDiscard;
   document.getElementById('cancel').onclick = confirmDiscard;
 
-  // 预览控制
+  document.getElementById('pv-paste').onclick = () => {
+    openModal(`<h3>这段内容较长</h3><p>先选择这次粘贴的去向；内容还没有插入当前简历。</p>
+      <p style="color:var(--muted);font-size:11px">真实实现会在插入前拦截，避免先改原文档再跳转。</p>
+      <div class="acts"><button class="btn" data-x="paste">贴到当前简历</button><button class="btn primary" data-x="import">导入为新简历</button><button class="btn" data-x="cancel">取消</button></div>`,
+      (wrap, close) => {
+        wrap.querySelector('[data-x="paste"]').onclick = () => { close(); toast('已贴到当前简历（演示）'); };
+        wrap.querySelector('[data-x="import"]').onclick = () => { close(); ta.value = SAMPLE_TEXT; syncPaste(); show('view-source'); toast('已带入导入视图，当前文档未被修改'); };
+        wrap.querySelector('[data-x="cancel"]').onclick = close;
+      });
+  };
+
   document.getElementById('pv-source').onclick = () => show('view-source');
   document.getElementById('pv-clean').onclick = () => { draft = cleanDraft(); renderClean(); show('view-clean'); };
   document.getElementById('pv-issues').onclick = () => { draft = issuesCollapsed(issuesDraft()); renderIssues(); show('view-issues'); };
@@ -901,13 +943,13 @@
   function toast(msg){
     const el = document.getElementById('toast');
     el.textContent = msg; el.classList.add('show');
-    clearTimeout(t); t = setTimeout(() => el.classList.remove('show'), 2200);
+    clearTimeout(t); t = setTimeout(() => el.classList.remove('show'), 2400);
   }
 
-  // 初始
   renderClean();
   show('view-source');
 })();
+
 </script>
 </body>
 </html>
