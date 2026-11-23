@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ResumeMeta } from '@fairlens/core';
+import { sameDoc, type ResumeMeta } from '@fairlens/core';
 import { persistence } from '../lib/persistence/index.js';
 import { nanoid } from '../lib/nanoid.js';
 import { createBlankDoc } from '../features/editor-mockup/blank-doc.js';
@@ -38,37 +38,69 @@ interface LibraryState {
 
 export const useLibrary = create<LibraryState>((set, get) => {
   let initPromise: Promise<void> | null = null;
+  /** 新建串行链：连续点击也按顺序分配标题（「我的简历 / 我的简历 2」） */
+  let createChain: Promise<unknown> = Promise.resolve();
 
-  const loadSampleId = async () => {
+  const loadSampleId = async (): Promise<string | null> => {
     const raw = await persistence().getSettingRaw('sampleResumeId').catch(() => null);
-    set({ sampleResumeId: typeof raw === 'string' ? raw : null });
+    const id = typeof raw === 'string' ? raw : null;
+    set({ sampleResumeId: id });
+    return id;
   };
 
   const refreshInner = async () => {
     set({ loading: true });
     try {
       const metas = await persistence().listResumeMetas();
+      // 每次刷新都重读示例身份：编辑器“清空示例”会删键，库页返回时必须同步
+      await loadSampleId();
       set({ metas, error: null });
     } catch (err) {
+      // 不吞错：init 必须失败并给出重试入口，操作后刷新失败也不能报成功
       set({ error: String(err) });
+      throw err;
     } finally {
       set({ loading: false });
     }
   };
 
+  /**
+   * 旧库识别（仅迁移用）：唯一标题 + 文档仍与内置示例完全一致才认定为示例。
+   * 避免把用户自己改成同名的简历误认；若示例被编辑过则无法安全识别（不猜）。
+   */
+  const findLegacySample = async (metas: ResumeMeta[]): Promise<string | null> => {
+    const candidates = metas.filter((m) => m.title === SAMPLE_RESUME_TITLE);
+    if (candidates.length !== 1) return null;
+    const row = await persistence().getResume(candidates[0]!.id).catch(() => null);
+    if (!row) return null;
+    return sameDoc(row.doc, sampleDoc) ? row.id : null;
+  };
+
   const seedIfNeeded = async () => {
     const marker = (await persistence().getSettingRaw('sampleSeeded')) === true;
     const metas = await persistence().listResumeMetas();
+    const rawId = await persistence().getSettingRaw('sampleResumeId');
+    // 身份指向已删除的记录 → 清掉，避免把别的简历当示例
+    let storedId = typeof rawId === 'string' ? rawId : null;
+    if (storedId && !metas.some((m) => m.id === storedId)) {
+      await persistence().deleteSetting('sampleResumeId').catch(() => undefined);
+      storedId = null;
+    }
+
     const action = resolveSeedAction(marker, metas.length);
     if (action === 'none') {
+      // 上一版只写了 sampleSeeded、没写样本身份：补一次安全回填
+      if (!storedId) {
+        const legacy = await findLegacySample(metas);
+        if (legacy) await persistence().setSettingRaw('sampleResumeId', legacy);
+      }
       await loadSampleId();
       return;
     }
     if (action === 'mark-only') {
-      // 旧库迁移（仅此一次）：有示例但无稳定身份 → 按标题回填，之后不再依赖标题
-      if (!(await persistence().getSettingRaw('sampleResumeId'))) {
-        const legacy = metas.find((m) => m.title === SAMPLE_RESUME_TITLE);
-        if (legacy) await persistence().setSettingRaw('sampleResumeId', legacy.id);
+      if (!storedId) {
+        const legacy = await findLegacySample(metas);
+        if (legacy) await persistence().setSettingRaw('sampleResumeId', legacy);
       }
       await persistence().setSettingRaw('sampleSeeded', true);
       await loadSampleId();
@@ -117,28 +149,34 @@ export const useLibrary = create<LibraryState>((set, get) => {
       return refreshInner();
     },
 
-    async createFromTemplate(input) {
-      try {
-        await get().init();
-        const metas = get().metas.length ? get().metas : await persistence().listResumeMetas();
-        const title = nextResumeTitle(input.titleBase, metas.map((m) => m.title));
-        const now = new Date().toISOString();
-        const id = nanoid();
-        await persistence().upsertResume({
-          id,
-          title,
-          verticalId: 'general',
-          doc: createBlankDoc({ basicSection: input.basicSection }, input.templateId),
-          status: 'active',
-          createdAt: now,
-          updatedAt: now,
-        });
-        await get().refresh();
-        return id;
-      } catch (err) {
-        set({ error: String(err) });
-        return null;
-      }
+    createFromTemplate(input) {
+      const run = async (): Promise<string | null> => {
+        try {
+          await get().init();
+          // 串行链 + 每次读最新列表：连续点击也得到「我的简历 / 我的简历 2」
+          const metas = await persistence().listResumeMetas();
+          const title = nextResumeTitle(input.titleBase, metas.map((m) => m.title));
+          const now = new Date().toISOString();
+          const id = nanoid();
+          await persistence().upsertResume({
+            id,
+            title,
+            verticalId: 'general',
+            doc: createBlankDoc({ basicSection: input.basicSection }, input.templateId),
+            status: 'active',
+            createdAt: now,
+            updatedAt: now,
+          });
+          await get().refresh();
+          return id;
+        } catch (err) {
+          set({ error: String(err) });
+          return null;
+        }
+      };
+      const task = createChain.then(run, run);
+      createChain = task.then(() => undefined, () => undefined);
+      return task;
     },
 
     async rename(id, title) {

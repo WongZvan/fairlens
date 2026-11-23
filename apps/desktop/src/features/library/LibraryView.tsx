@@ -137,14 +137,18 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
   const error = useLibrary((s) => s.error);
   const sampleResumeId = useLibrary((s) => s.sampleResumeId);
   const [showArchived, setShowArchived] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<ResumeMeta | null>(null);
   const [deleting, setDeleting] = useState<ResumeMeta | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 单飞 init：播种判定完成前模板卡禁用，避免“新建抢在播种前”
-    void useLibrary.getState().init().catch(() => {});
+    // 单飞 init + 每次挂载刷新：编辑器“清空示例”会删 sampleResumeId，返回库页必须同步
+    void (async () => {
+      await useLibrary.getState().init();
+      await useLibrary.getState().refresh();
+    })().catch(() => {});
   }, []);
 
   const active = metas.filter((m) => m.status === 'active');
@@ -153,13 +157,19 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
   const isEmpty = metas.length === 0;
 
   const create = async (templateId: string) => {
-    const id = await useLibrary.getState().createFromTemplate({
-      templateId,
-      titleBase: t('library.newTitle'),
-      basicSection: t('editor.blankSectionTitle'),
-    });
-    if (!id) { toast(t('library.createFailed')); return; }
-    onOpen(id);
+    if (creating) return;
+    setCreating(true);
+    try {
+      const id = await useLibrary.getState().createFromTemplate({
+        templateId,
+        titleBase: t('library.newTitle'),
+        basicSection: t('editor.blankSectionTitle'),
+      });
+      if (!id) { toast(t('library.createFailed')); return; }
+      onOpen(id);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const archive = (meta: ResumeMeta) => {
@@ -212,7 +222,7 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
               type="button"
               className="lib-tpl"
               data-tpl={tpl.id}
-              disabled={!initialized}
+              disabled={!initialized || creating}
               title={initialized ? t('library.templateNew') : t('library.preparing')}
               onClick={() => void create(tpl.id)}
             >

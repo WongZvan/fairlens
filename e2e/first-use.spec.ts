@@ -46,6 +46,11 @@ test('首用：清空 → 添加基本信息字段 → 姓名未填时导出被�
   await page.getByRole('menuitem', { name: '另存为归档…' }).click();
   // 清空回执可能还没消失，按文案定位而不是取唯一 .toast
   await expect(page.locator('.toast', { hasText: '请先填写姓名再导出' })).toBeVisible();
+
+  // 清空 = 释放样本身份：返回库页后该卡不再有「示例」徽标
+  await page.getByRole('button', { name: '返回简历库' }).click();
+  await expect(page.getByRole('button', { name: '打开 我的简历' })).toBeVisible();
+  await expect(page.locator('.lib-badge')).toHaveCount(0);
 });
 
 test('首用：库页底栏不显示编辑器保存状态与字数', async ({ page }) => {
