@@ -95,7 +95,7 @@ export function EditorMockup() {
       }),
       commandRegistry.register({
         id: 'file.clear-sample', title: t('menu.fileClear'), keywords: ['清空', '空白', '示例'],
-        run: () => setClearConfirm(true),
+        run: () => openClearConfirm(),
       }),
       commandRegistry.register({
         id: 'structure.add-section', title: '新增分区…', keywords: ['分区', '标题', '经历', '自我评价', '证书'],
@@ -136,6 +136,13 @@ export function EditorMockup() {
   const [sectionConfirm, setSectionConfirm] = useState<string | null>(null);
   /** #127：清空示例确认 */
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [clearPending, setClearPending] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const openClearConfirm = () => {
+    setClearError(null);
+    setClearPending(false);
+    setClearConfirm(true);
+  };
   // #126：内联搜索（本次接入；Ctrl+F 不再吞键）
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchState, setSearchState] = useState({ current: -1, total: 0 });
@@ -213,7 +220,7 @@ export function EditorMockup() {
           setSnapOpen(true);
           return true;
         case 'file.clear-sample':
-          setClearConfirm(true);
+          openClearConfirm();
           return true;
         default:
           return false;
@@ -258,9 +265,10 @@ export function EditorMockup() {
     setSectionConfirm(null);
   };
 
-  /** #127：清空示例为空白简历（先自动存快照，可回滚） */
-  const clearToBlank = async () => {
-    setClearConfirm(false);
+  /** #127：清空示例为空白简历（先自动存快照，可回滚）。
+   *  2026-11-23：落盘完成前确认框保持打开（pending）——否则用户可在写入途中返回库并选“不保存”，
+   *  而已经发出的写入无法撤销，旧简历会被写成空白。 */
+  const clearToBlank = async (): Promise<boolean> => {
     try {
       const st = useEditorDoc.getState();
       if (st.doc) await st.createSnapshot(t('editor.clearSnapshotLabel'));
@@ -270,18 +278,20 @@ export function EditorMockup() {
       );
       // #128：落盘失败不再谎报成功（replaceDoc 返回真实结果）
       if (!result.ok) {
-        toast(t('editor.clearFailed'));
-        return;
+        setClearError(t('editor.clearFailed'));
+        return false;
       }
       // #129：文档已清空但示例身份键删除失败 → 清空入口会复活，必须如实提示
       if (!result.sampleCleared) {
-        toast(t('editor.clearPartial'));
-        return;
+        setClearError(t('editor.clearPartial'));
+        return false;
       }
       toast(t('editor.clearedToast'));
+      return true;
     } catch (err) {
       console.error('[editor] clear to blank failed', err);
-      toast(t('editor.clearFailed'));
+      setClearError(t('editor.clearFailed'));
+      return false;
     }
   };
   const canvasDoc = useEditorDoc((s) => s.doc);
@@ -451,7 +461,7 @@ export function EditorMockup() {
                 type="button"
                 className="sample-pill-clear"
                 title={t('editor.sampleClearTitle')}
-                onClick={() => setClearConfirm(true)}
+                onClick={() => openClearConfirm()}
               >
                 {t('editor.sampleClear')}
               </button>
@@ -494,8 +504,23 @@ export function EditorMockup() {
         title={t('editor.clearSampleTitle')}
         body={t('editor.clearSampleBody')}
         confirmLabel={t('editor.clearSample')}
-        onConfirm={() => void clearToBlank()}
-        onClose={() => setClearConfirm(false)}
+        pending={clearPending}
+        error={clearError}
+        onConfirm={() => {
+          if (clearPending) return;
+          setClearPending(true);
+          setClearError(null);
+          void clearToBlank().then((ok) => {
+            setClearPending(false);
+            if (ok) setClearConfirm(false);
+          });
+        }}
+        onClose={() => {
+          // 落盘中不允许关闭（Overlay 的 Esc/遮罩都会走这里）
+          if (clearPending) return;
+          setClearConfirm(false);
+          setClearError(null);
+        }}
       />
       {sectionDialogOpen && (
         <SectionDialog

@@ -14,6 +14,7 @@ const fake = vi.hoisted(() => {
   let settingDelay: Promise<void> | null = null;
   let failDeleteSetting = false;
   let failSampleSettingRead = false;
+  let upsertGate: Promise<void> | null = null;
   const settings = new Map<string, unknown>();
   return {
     rows,
@@ -26,6 +27,8 @@ const fake = vi.hoisted(() => {
     set failDeleteSetting(v: boolean) { failDeleteSetting = v; },
     get failSampleSettingRead() { return failSampleSettingRead; },
     set failSampleSettingRead(v: boolean) { failSampleSettingRead = v; },
+    get upsertGate() { return upsertGate; },
+    set upsertGate(v: Promise<void> | null) { upsertGate = v; },
   };
 });
 
@@ -36,6 +39,7 @@ vi.mock('../lib/persistence/index.js', () => ({
       return fake.rows.get(id) ?? null;
     },
     async upsertResume(row: ResumeRow) {
+      if (fake.upsertGate) await fake.upsertGate;
       fake.writes.push({ id: row.id, doc: structuredClone(row.doc) });
       fake.rows.set(row.id, structuredClone(row));
     },
@@ -88,6 +92,7 @@ describe('editor-doc 并发（#129）', () => {
     fake.settingDelay = null;
     fake.failDeleteSetting = false;
     fake.failSampleSettingRead = false;
+    fake.upsertGate = null;
     fake.settings.clear();
     useEditorDoc.setState({ ready: false, doc: null, dirty: false, lastError: null, isSample: false });
     fake.rows.set('ResumeAAAA01', row('ResumeAAAA01'));
@@ -163,5 +168,32 @@ describe('editor-doc 并发（#129）', () => {
     fake.failSampleSettingRead = false;
     expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
     expect(useEditorDoc.getState().isSample).toBe(true);
+  });
+
+  it('清空落盘中打开另一份：openResume 等待；旧简历写空白且身份清理，新简历不受影响', async () => {
+    fake.settings.set('sampleResumeId', 'ResumeAAAA01');
+    fake.settings.set('autosave', false); // 手动模式也走 replaceDoc → saveNow
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
+    expect(useEditorDoc.getState().isSample).toBe(true);
+
+    let release: () => void = () => {};
+    fake.upsertGate = new Promise<void>((resolve) => { release = resolve; });
+    const replaceP = useEditorDoc.getState().replaceDoc(doc('CLEARED'), '我的简历');
+    await Promise.resolve(); // 让 replace 进入保存
+
+    const openB = useEditorDoc.getState().openResume('ResumeBBBB02');
+    useEditorDoc.getState().discardPendingChanges(); // 落盘中不可撤销（UI 也保持确认框打开）
+    await Promise.resolve();
+    expect(useEditorDoc.getState().resumeId).toBe('ResumeAAAA01'); // 仍等旧写入
+
+    release();
+    expect(await replaceP).toEqual({ ok: true, sampleCleared: true });
+    expect(await openB).toBe('ok');
+
+    expect(fake.rows.get('ResumeAAAA01')?.doc.profile?.name).toBe('CLEARED');
+    expect(fake.rows.get('ResumeBBBB02')?.doc.profile?.name).toBe('ResumeBBBB02');
+    expect(fake.settings.has('sampleResumeId')).toBe(false);
+    expect(useEditorDoc.getState().resumeId).toBe('ResumeBBBB02');
+    expect(useEditorDoc.getState().isSample).toBe(false);
   });
 });

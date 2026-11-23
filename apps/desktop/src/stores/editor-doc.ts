@@ -28,6 +28,8 @@ interface EditorSession {
 
 let session: EditorSession | null = null;
 let openSeq = 0;
+/** 正在进行的整篇替换（清空示例）：新打开必须等它落盘，避免旧文档写入与新会话交错 */
+let replaceInFlight: Promise<unknown> | null = null;
 
 interface EditorDocState {
   ready: boolean;
@@ -107,6 +109,8 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     lastError: null,
 
     async openResume(id) {
+      // 清空示例正在落盘：先等它完成，再切换会话（否则旧文档的写会与新打开交错）
+      if (replaceInFlight) await replaceInFlight.catch(() => {});
       const seq = ++openSeq;
       const port = persistence();
       let row: ResumeRow | null = null;
@@ -193,6 +197,8 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     },
 
     discardPendingChanges() {
+      // 显式清空正在落盘：已经发出的写入无法撤销，丢弃在此刻没有真实语义（UI 也会保持确认框打开）
+      if (replaceInFlight) return;
       session?.controller.discardPending();
       // 丢弃 = 回到最后保存版本（原实现只清标记，视图里仍留着未保存内容——用户会以为已丢弃）
       const saved = get().savedDoc;
@@ -248,24 +254,35 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     async replaceDoc(doc, title) {
       const s = session;
       if (!s) return { ok: false, sampleCleared: true };
-      // 丢弃挂起的旧文档变更，避免防抖计时器把刚清空的文档又写回旧内容
-      s.controller.discardPending();
-      s.row = { ...s.row, title, doc, updatedAt: new Date().toISOString() };
-      set({ doc, resumeTitle: title, dirty: get().autosave ? false : true });
-      // #128：把落盘结果交给调用方——失败时不得 toast「已清空」
-      const result = await get().saveNow();
-      // #129：清空示例 = 不再是指样本身份；删除键失败要如实告知（否则清空入口会复活）
-      let sampleCleared = true;
-      if (result.ok && get().isSample) {
-        try {
-          await persistence().deleteSetting('sampleResumeId');
-          set({ isSample: false });
-        } catch (err) {
-          sampleCleared = false;
-          set({ lastError: String(err) });
+      // 身份判断必须在等待落盘前捕获：保存期间用户可能已打开别的简历，
+      // 用完成时的 get().isSample 会清错对象
+      const wasSample = get().isSample;
+      const run = (async (): Promise<{ ok: boolean; sampleCleared: boolean }> => {
+        // 丢弃挂起的旧文档变更，避免防抖计时器把刚清空的文档又写回旧内容
+        s.controller.discardPending();
+        s.row = { ...s.row, title, doc, updatedAt: new Date().toISOString() };
+        set({ doc, resumeTitle: title, dirty: get().autosave ? false : true });
+        // #128：把落盘结果交给调用方——失败时不得 toast「已清空」
+        const result = await get().saveNow();
+        // #129：清空示例 = 不再持有样本身份；删除键失败要如实告知（否则清空入口会复活）
+        let sampleCleared = true;
+        if (result.ok && wasSample) {
+          try {
+            await persistence().deleteSetting('sampleResumeId');
+            if (session === s) set({ isSample: false });
+          } catch (err) {
+            sampleCleared = false;
+            if (session === s) set({ lastError: String(err) });
+          }
         }
+        return { ok: result.ok, sampleCleared };
+      })();
+      replaceInFlight = run;
+      try {
+        return await run;
+      } finally {
+        if (replaceInFlight === run) replaceInFlight = null;
       }
-      return { ok: result.ok, sampleCleared };
     },
   };
 });
