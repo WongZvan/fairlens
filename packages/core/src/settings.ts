@@ -10,6 +10,7 @@ export const SETTING_DEFAULTS: Record<Key, unknown> = {
   bgFit: 'contain',
   license: null, // #113：未激活时无记忆
   sampleSeeded: false, // #129：未见标记 = 尚未判定过首启示例
+  sampleResumeId: null, // #129：未播种/已删除示例时无身份
 };
 
 export type SettingValueOf<K extends Key> = z.infer<(typeof SettingValueSchemas)[K]>;

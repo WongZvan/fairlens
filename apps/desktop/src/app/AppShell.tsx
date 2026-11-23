@@ -42,9 +42,10 @@ export function AppShell() {
   // m1.8（#129）：编辑器由库页显式打开；这里不再自动选“最近一份”，更不播种示例
   const openResume = (id: string) => {
     void (async () => {
-      const ok = await useEditorDoc.getState().openResume(id);
-      if (ok) setView('editor');
-      else toast(t('library.openFailed'));
+      const result = await useEditorDoc.getState().openResume(id);
+      if (result === 'ok') setView('editor');
+      else if (result === 'error') toast(t('library.openFailed'));
+      // superseded：已被更晚的打开请求超越，静默
     })();
   };
 

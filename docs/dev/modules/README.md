@@ -15,7 +15,7 @@
 | m1.5 | 树/快捷键/命令面板/Ctrl+F | 基础 | ✅ 92b4cad（收口回填；实现提交=5db0e3a；+2026-11-05 大纲折叠/雷达/模板工具栏与 #118 完整树；#126 Ctrl+F 内联查找已落地；#127 键盘契约与 `?` 速查表；四次打磨：模板按钮箭头随悬停） | [m1/m1.5-tree-shortcuts.md](m1/m1.5-tree-shortcuts.md) | feat/m1.5-tree-shortcuts |
 | m1.6 | 持久层+快照+关闭保护 | 基础 | ✅ deb5d6a（真机冒烟自动部分已过；人工验收项见 STATE 悬挂⑤） | [m1/m1.6-persist-snapshot.md](m1/m1.6-persist-snapshot.md) | feat/m1.6（已并入） |
 | m1.7 | 导入管线（LLM 接入点留 m3.5） | 基础 | ⏸ 暂缓（顺序后置到 m1.8 之后，#129） | [m1/m1.7-import.md](m1/m1.7-import.md) | 待切 |
-| m1.8 | 简历库首页 | 基础 | 🔄 feat/m1.8-library（业务闭环已实现；真窗待验 §14） | [m1/m1.8-library-home.md](m1/m1.8-library-home.md) | feat/m1.8-library |
+| m1.8 | 简历库首页 | 基础 | 🔄 已合入 dev（8e41823）；真窗待验 §14 | [m1/m1.8-library-home.md](m1/m1.8-library-home.md) | 已删（squash 8e41823） |
 | m2.1 | lease 端点（miniflare） | 共享 | ⬜ | [m2/m2.1-lease-endpoint.md](m2/m2.1-lease-endpoint.md) | 待切 |
 | m2.2 | 双证状态机（幂等恢复边） | 共享 | ⬜ | [m2/m2.2-license-statemachine.md](m2/m2.2-license-statemachine.md) | 待切 |
 | m2.3 | 激活向导+设置+角色门控 | 共享 | ⬜ | [m2/m2.3-activation-ui.md](m2/m2.3-activation-ui.md) | 待切 |

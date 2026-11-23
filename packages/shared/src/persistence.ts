@@ -32,9 +32,10 @@ export type ResumeRow = z.infer<typeof ResumeRow>;
 /**
  * settings 表 key：autosave=§5.7 双模式开关（默认 true）；bgMode/bgImage/bgOpacity/bgFit=#86 画布背景四键预留；
  * license=打样级激活记忆（#113，明确非真安全——M2 换真 License 验签+设备指纹）；
- * sampleSeeded=示例简历是否已播种（#129：旧库升级只补标记、不播种）
+ * sampleSeeded=示例简历是否已播种（#129：旧库升级只补标记、不播种）；
+ * sampleResumeId=系统示例的稳定身份（#129：重命名后仍能识别，删除时清除）
  */
-export const SettingKey = z.enum(['autosave', 'bgMode', 'bgImage', 'bgOpacity', 'bgFit', 'license', 'sampleSeeded']);
+export const SettingKey = z.enum(['autosave', 'bgMode', 'bgImage', 'bgOpacity', 'bgFit', 'license', 'sampleSeeded', 'sampleResumeId']);
 export type SettingKey = z.infer<typeof SettingKey>;
 
 export const BgMode = z.enum(['light', 'dark', 'theme', 'custom']);
@@ -59,4 +60,5 @@ export const SettingValueSchemas = {
   bgFit: BgFit,
   license: LicenseMemory,
   sampleSeeded: z.boolean(),
+  sampleResumeId: z.string().min(1),
 } as const;

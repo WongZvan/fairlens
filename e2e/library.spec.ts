@@ -45,6 +45,21 @@ test('重命名：空标题留在框内报错，保存后卡片更新', async ({
   await expect(page.getByRole('button', { name: '打开 求职版' })).toBeVisible();
 });
 
+test('示例身份稳定：重命名后徽标与清空入口仍在', async ({ page }) => {
+  await enterLibrary(page);
+  await page.getByRole('button', { name: '卡片操作：示例简历' }).click();
+  await page.getByRole('menuitem', { name: '重命名…' }).click();
+  await page.locator('.meta-win input').fill('改过的示例');
+  await page.getByRole('button', { name: '保存', exact: true }).click();
+
+  const card = page.getByRole('button', { name: '打开 改过的示例' });
+  await expect(card).toBeVisible();
+  await expect(card.locator('xpath=..').locator('.lib-badge')).toHaveText('示例');
+
+  await card.click();
+  await expect(page.locator('.sample-pill')).toBeVisible();
+});
+
 test('归档：默认隐藏、显示归档可见且置灰、可取消', async ({ page }) => {
   await enterLibrary(page);
   await createBlank(page);

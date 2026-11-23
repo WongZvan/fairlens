@@ -1,6 +1,9 @@
 /**
  * 简历库首页（m1.8 / #129）：模板卡新建、卡片打开/重命名/软归档/删除、空态与未开放能力。
  * 预览基线：docs/design-previews/fairlens-library-m18-preview.html（2026-11-23 定稿）。
+ *
+ * 并发/失败模型（2026-11-23，codex 复核）：初始化单飞且模板卡禁用；
+ * 重命名/删除失败保留弹窗并显示错误；归档失败 toast 提示，不再只报成功。
  */
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +15,6 @@ import { ConfirmDialog } from '../../app/ConfirmDialog.js';
 import { toast } from '../../app/Toast.js';
 import { useLibrary } from '../../stores/library.js';
 import { TEMPLATE_CHOICES } from '../templates/choices.js';
-import { SAMPLE_RESUME_TITLE } from '../editor-mockup/sample-data.js';
 import { archivedCount, formatUpdatedAt, visibleResumes } from './library-view-model.js';
 import './library.css';
 
@@ -27,14 +29,32 @@ function updatedLabel(t: TFunction, iso: string): string {
   return t('library.updatedDate', { date: at.date });
 }
 
-function RenameDialog({ meta, onClose, onSave }: {
+export function RenameDialog({ meta, onClose, onSave }: {
   meta: ResumeMeta;
   onClose: () => void;
-  onSave: (title: string) => void;
+  /** 返回是否落库成功；失败时弹窗保持打开 */
+  onSave: (title: string) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState(meta.title);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'empty' | 'failed' | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    const value = title.trim();
+    if (!value) { setError('empty'); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const ok = await onSave(value);
+      if (ok) onClose();
+      else setError('failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const errorText = error === 'empty' ? t('library.titleEmpty') : error === 'failed' ? t('library.renameFailed') : null;
 
   return (
     <Overlay open onClose={onClose} label={t('library.renameTitle')} overlayClassName="meta-overlay" boxClassName="meta-win">
@@ -46,29 +66,20 @@ function RenameDialog({ meta, onClose, onSave }: {
           value={title}
           aria-label={t('library.renameTitle')}
           maxLength={40}
-          onChange={(e) => { setTitle(e.target.value); setError(false); }}
+          disabled={saving}
+          onChange={(e) => { setTitle(e.target.value); setError(null); }}
           onKeyDown={(e) => {
             if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
             e.preventDefault();
-            if (!title.trim()) { setError(true); return; }
-            onSave(title.trim());
-            onClose();
+            void submit();
           }}
         />
       </label>
-      {error && <p className="lib-dialog-error">{t('library.titleEmpty')}</p>}
+      {errorText && <p className="lib-dialog-error">{errorText}</p>}
       <div className="meta-actions">
-        <button type="button" onClick={onClose}>{t('common.cancel')}</button>
-        <button
-          type="button"
-          className="primary"
-          onClick={() => {
-            if (!title.trim()) { setError(true); return; }
-            onSave(title.trim());
-            onClose();
-          }}
-        >
-          {t('common.save')}
+        <button type="button" disabled={saving} onClick={onClose}>{t('common.cancel')}</button>
+        <button type="button" className="primary" disabled={saving} onClick={() => void submit()}>
+          {saving ? t('saveStatus.saving') : t('common.save')}
         </button>
       </div>
     </Overlay>
@@ -122,15 +133,18 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
   const { t } = useTranslation();
   const metas = useLibrary((s) => s.metas);
   const loading = useLibrary((s) => s.loading);
+  const initialized = useLibrary((s) => s.initialized);
+  const error = useLibrary((s) => s.error);
+  const sampleResumeId = useLibrary((s) => s.sampleResumeId);
   const [showArchived, setShowArchived] = useState(false);
   const [renaming, setRenaming] = useState<ResumeMeta | null>(null);
   const [deleting, setDeleting] = useState<ResumeMeta | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    void (async () => {
-      await useLibrary.getState().ensureSeedSample();
-      await useLibrary.getState().refresh();
-    })();
+    // 单飞 init：播种判定完成前模板卡禁用，避免“新建抢在播种前”
+    void useLibrary.getState().init().catch(() => {});
   }, []);
 
   const active = metas.filter((m) => m.status === 'active');
@@ -148,8 +162,16 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
     onOpen(id);
   };
 
+  const archive = (meta: ResumeMeta) => {
+    const nextArchived = meta.status !== 'archived';
+    void useLibrary.getState().setArchived(meta.id, nextArchived).then((ok) => {
+      if (!ok) { toast(t('library.actionFailed')); return; }
+      toast(nextArchived ? t('library.archivedToast', { title: meta.title }) : t('library.unarchivedToast', { title: meta.title }));
+    });
+  };
+
   return (
-    <main className={`lib-home${isEmpty ? ' is-empty' : ''}`}>
+    <main className={`lib-home${isEmpty ? ' is-empty' : ''}`} aria-busy={!initialized}>
       <header className="lib-head">
         <h1>{t('library.title')}</h1>
         <span className="lib-sub">
@@ -173,6 +195,15 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
         </button>
       </header>
 
+      {!initialized && error ? (
+        <div className="lib-init-error">
+          <p>{t('library.initFailed')}</p>
+          <button type="button" className="lib-btn" onClick={() => void useLibrary.getState().init().catch(() => {})}>
+            {t('library.retry')}
+          </button>
+        </div>
+      ) : null}
+
       <div className="lib-create-row">
         <div className="lib-tpl-quick">
           {TEMPLATE_CHOICES.map((tpl) => (
@@ -181,12 +212,13 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
               type="button"
               className="lib-tpl"
               data-tpl={tpl.id}
-              title={t('library.templateNew')}
+              disabled={!initialized}
+              title={initialized ? t('library.templateNew') : t('library.preparing')}
               onClick={() => void create(tpl.id)}
             >
               <span className="lib-tpl-thumb" aria-hidden="true" />
               <span className="lib-tpl-name">{t(tpl.key)}</span>
-              <span className="lib-tpl-hint">{t('library.templateNew')}</span>
+              <span className="lib-tpl-hint">{initialized ? t('library.templateNew') : t('library.preparing')}</span>
             </button>
           ))}
         </div>
@@ -227,19 +259,18 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
                 {isArchived ? ` · ${t('library.archivedBadge')}` : ''}
               </p>
               <div className="lib-card-foot">
-                {meta.title === SAMPLE_RESUME_TITLE && <span className="lib-badge">{t('library.sampleBadge')}</span>}
+                {meta.id === sampleResumeId && <span className="lib-badge">{t('library.sampleBadge')}</span>}
                 {isArchived && <span className="lib-tag">{t('library.archivedBadge')}</span>}
               </div>
               <CardMenu
                 meta={meta}
                 onOpen={() => onOpen(meta.id)}
                 onRename={() => setRenaming(meta)}
-                onArchive={() => {
-                  void useLibrary.getState().setArchived(meta.id, !isArchived).then((ok) => {
-                    if (ok) toast(isArchived ? t('library.unarchivedToast', { title: meta.title }) : t('library.archivedToast', { title: meta.title }));
-                  });
+                onArchive={() => archive(meta)}
+                onDelete={() => {
+                  setDeleteError(null);
+                  setDeleting(meta);
                 }}
-                onDelete={() => setDeleting(meta)}
               />
             </article>
           );
@@ -250,7 +281,7 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
             {t('library.allArchivedHint')}
           </div>
         )}
-        {isEmpty && (
+        {isEmpty && initialized && (
           <div className="lib-empty-card">
             <b>{t('library.emptyTitle')}</b>
             {t('library.emptyHint')}
@@ -264,10 +295,10 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
         <RenameDialog
           meta={renaming}
           onClose={() => setRenaming(null)}
-          onSave={(title) => {
-            void useLibrary.getState().rename(renaming.id, title).then((ok) => {
-              if (ok) toast(t('library.renamedToast'));
-            });
+          onSave={async (title) => {
+            const ok = await useLibrary.getState().rename(renaming.id, title);
+            if (ok) toast(t('library.renamedToast'));
+            return ok;
           }}
         />
       )}
@@ -276,15 +307,24 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
         title={deleting ? t('library.deleteTitle', { title: deleting.title }) : ''}
         body={deleting ? t('library.deleteBody', { count: deleting.snapshotCount }) : ''}
         confirmLabel={t('library.delete')}
+        pending={deletePending}
+        error={deleteError}
         onConfirm={() => {
+          if (!deleting || deletePending) return;
           const target = deleting;
-          setDeleting(null);
-          if (!target) return;
+          setDeletePending(true);
+          setDeleteError(null);
           void useLibrary.getState().remove(target.id).then((ok) => {
-            if (ok) toast(t('library.deletedToast', { title: target.title }));
+            setDeletePending(false);
+            if (ok) {
+              setDeleting(null);
+              toast(t('library.deletedToast', { title: target.title }));
+            } else {
+              setDeleteError(t('library.deleteFailed'));
+            }
           });
         }}
-        onClose={() => setDeleting(null)}
+        onClose={() => { if (!deletePending) setDeleting(null); }}
       />
     </main>
   );

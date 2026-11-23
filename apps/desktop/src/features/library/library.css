@@ -46,7 +46,8 @@
   background: var(--ade-panel); padding: 9px 10px 8px;
   cursor: pointer; text-align: left; font: inherit; color: inherit;
 }
-.lib-tpl:hover { border-color: var(--ade-accent); }
+.lib-tpl:hover:not(:disabled) { border-color: var(--ade-accent); }
+.lib-tpl:disabled { opacity: 0.6; cursor: progress; }
 .lib-tpl:focus-visible { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
 .lib-tpl-thumb {
   display: block; height: 52px; border-radius: 4px; background: var(--ade-bench);
@@ -85,7 +86,13 @@
   position: relative; border: 1px solid var(--ade-line); border-radius: 9px;
   background: var(--ade-panel); padding: 13px 14px 11px;
 }
-.lib-card.is-archived { opacity: 0.55; background: color-mix(in srgb, var(--ade-panel) 55%, var(--ade-bench)); }
+/* 归档：不降低整卡 opacity（会拖垮文字对比度）——用底色 tint + 虚线边框 + 标签区分 */
+.lib-card.is-archived {
+  background: color-mix(in srgb, var(--ade-panel) 60%, var(--ade-bench));
+  border-style: dashed;
+}
+.lib-card.is-archived .lib-card-title,
+.lib-card.is-archived .lib-card-meta { color: var(--ade-ink); }
 .lib-card:has(.lib-card-open:focus-visible) { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
 .lib-card-open {
   position: absolute; inset: 0; width: 100%; border: 0; background: transparent;
@@ -122,3 +129,10 @@
 .lib-empty-card b { display: block; font-family: var(--ade-font-serif); font-size: 15px; color: var(--ade-ink); margin-bottom: 5px; }
 .lib-loading { margin-top: 10px; font-size: 11.5px; color: var(--ade-muted); }
 .lib-dialog-error { margin: -4px 0 8px; font-size: 11.5px; color: var(--ade-pen-red); }
+.lib-init-error {
+  border: 1px solid var(--ade-pen-red); border-radius: 8px;
+  padding: 10px 12px; margin: 0 0 14px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  color: var(--ade-pen-red); font-size: 12.5px;
+}
+.lib-init-error p { margin: 0; }

@@ -13,9 +13,13 @@ export interface ConfirmDialogProps {
   confirmLabel: string;
   onConfirm: () => void;
   onClose: () => void;
+  /** 操作进行中：禁用两个按钮（#129 删除失败要留在框内可重试） */
+  pending?: boolean;
+  /** 失败信息：显示在框内，按钮恢复可点 */
+  error?: string | null;
 }
 
-export function ConfirmDialog({ open, title, body, confirmLabel, onConfirm, onClose }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, title, body, confirmLabel, onConfirm, onClose, pending = false, error }: ConfirmDialogProps) {
   const { t } = useTranslation();
   return (
     <Overlay
@@ -28,9 +32,12 @@ export function ConfirmDialog({ open, title, body, confirmLabel, onConfirm, onCl
     >
       <h2>{title}</h2>
       <p className="muted">{body}</p>
+      {error && <p className="guard-error">{error}</p>}
       <div className="guard-actions">
-        <button type="button" className="m-btn primary" onClick={onConfirm}>{confirmLabel}</button>
-        <button type="button" className="m-btn" onClick={onClose}>{t('common.cancel')}</button>
+        <button type="button" className="m-btn primary" disabled={pending} onClick={onConfirm}>
+          {pending ? t('saveStatus.saving') : confirmLabel}
+        </button>
+        <button type="button" className="m-btn" disabled={pending} onClick={onClose}>{t('common.cancel')}</button>
       </div>
     </Overlay>
   );

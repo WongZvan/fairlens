@@ -18,7 +18,7 @@ const doc = (): ResumeDoc => ({
 });
 
 /** m1.8：库页显式打开；测试里“重开”=按第一份 meta 再开一次（空库先补一份夹具） */
-async function openDoc(): Promise<boolean> {
+async function openDoc(): Promise<'ok' | 'superseded' | 'error'> {
   const { persistence } = await import('../lib/persistence/index.js');
   const metas = await persistence().listResumeMetas();
   if (metas.length) return useEditorDoc.getState().openResume(metas[0]!.id);
@@ -44,10 +44,10 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   afterEach(() => vi.useRealTimers());
 
   it('openResume：打开已存在简历；不存在的 id 返回 false 且不播种替身', async () => {
-    expect(await useEditorDoc.getState().openResume('NoSuchResume1')).toBe(false);
+    expect(await useEditorDoc.getState().openResume('NoSuchResume1')).toBe('error');
     expect(useEditorDoc.getState().ready).toBe(false);
 
-    expect(await openDoc()).toBe(true);
+    expect(await openDoc()).toBe('ok');
     const s1 = useEditorDoc.getState();
     expect(s1.ready).toBe(true);
     expect(s1.resumeId).toBeTruthy();
@@ -55,7 +55,7 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
     expect(s1.autosave).toBe(true); // settings 默认（§5.7 默认开）
 
     const firstId = s1.resumeId;
-    expect(await openDoc()).toBe(true); // 重开=同一份
+    expect(await openDoc()).toBe('ok'); // 重开=同一份
     expect(useEditorDoc.getState().resumeId).toBe(firstId);
   });
 

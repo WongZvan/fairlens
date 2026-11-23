@@ -13,7 +13,6 @@ import { SearchBar } from '../editor/SearchBar.js';
 import { toast } from '../../app/Toast.js';
 import { ConfirmDialog } from '../../app/ConfirmDialog.js';
 import { createBlankDoc } from './blank-doc.js';
-import { SAMPLE_RESUME_TITLE } from './sample-data.js';
 import { resolveShortcut, shouldIgnoreShortcut } from '../editor/shortcuts.js';
 import { registerEditorActions } from '../editor/editor-action-bus.js';
 import { commandRegistry } from '../editor/command-registry.js';
@@ -281,8 +280,7 @@ export function EditorMockup() {
     }
   };
   const canvasDoc = useEditorDoc((s) => s.doc);
-  const resumeTitle = useEditorDoc((s) => s.resumeTitle);
-  const isSample = resumeTitle === SAMPLE_RESUME_TITLE;
+  const isSample = useEditorDoc((s) => s.isSample);
   const applyDoc = useEditorDoc((s) => s.applyDoc);
   const loadError = useEditorDoc((s) => s.lastError);
   const activeResumeId = useEditorDoc((s) => s.resumeId);

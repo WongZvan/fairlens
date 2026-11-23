@@ -178,6 +178,8 @@ html[data-maximized='true'] .shell { border-radius: 0; }
   padding: 18px;
 }
 .guard-box h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+/* #129：确认框内失败信息（删除失败保留弹窗可重试） */
+.guard-error { margin: -4px 0 8px; font-size: 11.5px; color: var(--ade-pen-red); }
 .guard-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
 /* #127 快捷键速查 */
 .shortcut-box { width: 560px; max-width: calc(100vw - 48px); max-height: calc(100vh - 80px); overflow: auto; }
