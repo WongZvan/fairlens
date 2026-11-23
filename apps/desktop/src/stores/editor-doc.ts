@@ -62,8 +62,9 @@ interface EditorDocState {
   restoreSnapshot(id: string): Promise<void>;
   /** 设置→通用「自动保存」开关（§5.7；写 settings 表，跨会话生效） */
   setAutosave(value: boolean): Promise<void>;
-  /** #127：整篇替换（清空为空白简历）+ 改记录标题；自动模式落盘、手动模式立即保存。返回是否真正写入成功（#128） */
-  replaceDoc(doc: ResumeDoc, title: string): Promise<{ ok: boolean }>;
+  /** #127：整篇替换（清空为空白简历）+ 改记录标题；自动模式落盘、手动模式立即保存。
+   *  `sampleCleared=false` = 文档已清空，但示例身份键删除失败（清空入口会复活，需重试） */
+  replaceDoc(doc: ResumeDoc, title: string): Promise<{ ok: boolean; sampleCleared: boolean }>;
 }
 
 export const useEditorDoc = create<EditorDocState>((set, get) => {
@@ -238,19 +239,25 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
 
     async replaceDoc(doc, title) {
       const s = session;
-      if (!s) return { ok: false };
+      if (!s) return { ok: false, sampleCleared: true };
       // 丢弃挂起的旧文档变更，避免防抖计时器把刚清空的文档又写回旧内容
       s.controller.discardPending();
       s.row = { ...s.row, title, doc, updatedAt: new Date().toISOString() };
       set({ doc, resumeTitle: title, dirty: get().autosave ? false : true });
       // #128：把落盘结果交给调用方——失败时不得 toast「已清空」
       const result = await get().saveNow();
-      // #129：清空示例 = 不再是指样本身份（标题/内容都已换掉）；成功后释放 sampleResumeId
+      // #129：清空示例 = 不再是指样本身份；删除键失败要如实告知（否则清空入口会复活）
+      let sampleCleared = true;
       if (result.ok && get().isSample) {
-        await persistence().deleteSetting('sampleResumeId').catch(() => undefined);
-        set({ isSample: false });
+        try {
+          await persistence().deleteSetting('sampleResumeId');
+          set({ isSample: false });
+        } catch (err) {
+          sampleCleared = false;
+          set({ lastError: String(err) });
+        }
       }
-      return result;
+      return { ok: result.ok, sampleCleared };
     },
   };
 });

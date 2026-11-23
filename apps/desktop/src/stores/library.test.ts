@@ -4,10 +4,11 @@ import type { ResumeRow } from '@fairlens/shared';
 import { sampleDoc } from '../features/editor-mockup/sample-data.js';
 
 /**
- * #129 简历库 store 回归（codex 复核）：
- *  - init 与新建串行：模板卡不会抢在示例播种前落库；
- *  - 写失败返回 false + error，供 UI 保留弹窗；
- *  - 示例身份用 settings.sampleResumeId，重命名不丢、删除即清。
+ * #129 简历库 store 回归（codex 两轮复核）：
+ *  - init 与新建串行；连续新建标题去重；
+ *  - 写入失败 vs 写入成功但刷新失败必须可区分；
+ *  - 列表刷新乱序不得覆盖新结果；刷新/setting 读取失败不静默；
+ *  - 示例身份 sampleResumeId：旧库一次性回填、清空同步、删除清除。
  */
 
 const fake = vi.hoisted(() => {
@@ -19,6 +20,9 @@ const fake = vi.hoisted(() => {
   let failUpsert = false;
   let failDelete = false;
   let failList = false;
+  let failSettingRead = false;
+  let failDeleteSetting = false;
+  let listImpl: (() => Promise<ResumeMeta[]>) | null = null;
   return {
     rows,
     settings,
@@ -33,6 +37,12 @@ const fake = vi.hoisted(() => {
     set failDelete(v: boolean) { failDelete = v; },
     get failList() { return failList; },
     set failList(v: boolean) { failList = v; },
+    get failSettingRead() { return failSettingRead; },
+    set failSettingRead(v: boolean) { failSettingRead = v; },
+    get failDeleteSetting() { return failDeleteSetting; },
+    set failDeleteSetting(v: boolean) { failDeleteSetting = v; },
+    get listImpl() { return listImpl; },
+    set listImpl(v: (() => Promise<ResumeMeta[]>) | null) { listImpl = v; },
   };
 });
 
@@ -40,6 +50,7 @@ vi.mock('../lib/persistence/index.js', () => ({
   persistence: () => ({
     async listResumeMetas(): Promise<ResumeMeta[]> {
       if (fake.failList) throw new Error('list failed');
+      if (fake.listImpl) return fake.listImpl();
       return [...fake.rows.values()]
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
         .map((r) => ({
@@ -60,10 +71,14 @@ vi.mock('../lib/persistence/index.js', () => ({
     },
     async getSettingRaw(key: string) {
       if (key === 'sampleSeeded' && fake.seedGate) await fake.seedGate;
+      if (key === 'sampleResumeId' && fake.failSettingRead) throw new Error('setting read failed');
       return fake.settings.get(key);
     },
     async setSettingRaw(key: string, value: unknown) { fake.settings.set(key, value); },
-    async deleteSetting(key: string) { fake.settings.delete(key); },
+    async deleteSetting(key: string) {
+      if (fake.failDeleteSetting) throw new Error('setting delete failed');
+      fake.settings.delete(key);
+    },
     async listSnapshots() { return []; },
     async insertSnapshot() {},
   }),
@@ -84,6 +99,11 @@ const rowOf = (id: string, title: string, doc = sampleDoc): ResumeRow => ({
   updatedAt: '2026-11-23T00:00:00.000Z',
 });
 
+const metaOf = (id: string, title: string, status: 'active' | 'archived' = 'active'): ResumeMeta => ({
+  id, title, verticalId: 'general', status,
+  updatedAt: '2026-11-23T00:00:00.000Z', templateId: 'tpl-classic', snapshotCount: 0,
+});
+
 describe('library store（#129）', () => {
   beforeEach(async () => {
     fake.rows.clear();
@@ -94,6 +114,9 @@ describe('library store（#129）', () => {
     fake.failUpsert = false;
     fake.failDelete = false;
     fake.failList = false;
+    fake.failSettingRead = false;
+    fake.failDeleteSetting = false;
+    fake.listImpl = null;
     vi.resetModules();
     ({ useLibrary } = await import('./library.js'));
   });
@@ -107,54 +130,115 @@ describe('library store（#129）', () => {
     releaseSeed();
 
     await initPromise;
-    const id = await created;
-    expect(id).toBeTruthy();
+    const result = await created;
+    expect(result.id).toBeTruthy();
+    expect(result.outcome).toBe('ok');
     expect(fake.writes.map((w) => w.title)).toEqual(['示例简历', '我的简历']);
     expect(fake.rows.size).toBe(2);
-    expect([...fake.rows.values()].some((r) => r.title === '示例简历')).toBe(true);
   });
 
-  it('重命名/归档/删除失败返回 false 并记录 error（UI 据此保留弹窗）', async () => {
-    fake.rows.set('ResumeLib001', {
-      id: 'ResumeLib001', title: '目标', verticalId: 'general',
-      doc: { templateId: 'tpl-classic', sections: [{ id: 'SectLib00001', type: 'basic', title: '基本信息', entries: [] }] },
-      status: 'active', createdAt: '2026-11-23T00:00:00.000Z', updatedAt: '2026-11-23T00:00:00.000Z',
-    });
+  it('写入失败与“写入成功但刷新失败”区分：create/rename/archive/remove', async () => {
     fake.settings.set('sampleSeeded', true);
-    await useLibrary.getState().init();
+    fake.rows.set('ResumeLib001', rowOf('ResumeLib001', '目标', sampleDoc));
 
+    // ① 写入失败
     fake.failUpsert = true;
-    expect(await useLibrary.getState().rename('ResumeLib001', '新名字')).toBe(false);
-    expect(useLibrary.getState().error).toBeTruthy();
-    expect(await useLibrary.getState().setArchived('ResumeLib001', true)).toBe(false);
-    expect(useLibrary.getState().error).toBeTruthy();
+    expect(await useLibrary.getState().init()).toBeUndefined();
+    const createFail = await useLibrary.getState().createFromTemplate(blankArgs);
+    expect(createFail).toEqual({ id: null, outcome: 'write-failed' });
+    expect(await useLibrary.getState().rename('ResumeLib001', '新名字')).toBe('write-failed');
+    expect(await useLibrary.getState().setArchived('ResumeLib001', true)).toBe('write-failed');
 
+    // ② 写入成功但刷新失败（列表预读成功、写入后刷新抛错）
+    fake.failUpsert = false;
+    let listCalls = 0;
+    fake.listImpl = async () => {
+      listCalls += 1;
+      if (listCalls >= 2) throw new Error('list failed');
+      return [...fake.rows.values()].map((r) => ({
+        id: r.id, title: r.title, verticalId: r.verticalId, status: r.status,
+        updatedAt: r.updatedAt, templateId: r.doc.templateId, snapshotCount: 0,
+      }));
+    };
+    const created = await useLibrary.getState().createFromTemplate(blankArgs);
+    expect(created.id).toBeTruthy();
+    expect(created.outcome).toBe('refresh-failed');
+    expect(fake.rows.has(created.id!)).toBe(true); // 行确实存在，不能提示“新建失败”
+    expect(await useLibrary.getState().rename('ResumeLib001', '新名字')).toBe('refresh-failed');
+    expect(fake.rows.get('ResumeLib001')?.title).toBe('新名字');
+    expect(await useLibrary.getState().setArchived('ResumeLib001', true)).toBe('refresh-failed');
+    expect(await useLibrary.getState().remove('ResumeLib001')).toBe('refresh-failed');
+    expect(fake.rows.has('ResumeLib001')).toBe(false);
+
+    // ③ 删除写入失败
+    fake.listImpl = null;
+    fake.failList = false;
     fake.failDelete = true;
-    expect(await useLibrary.getState().remove('ResumeLib001')).toBe(false);
-    expect(useLibrary.getState().error).toBeTruthy();
+    expect(await useLibrary.getState().remove(created.id!)).toBe('write-failed');
   });
 
-  it('示例身份用 sampleResumeId：重命名保留、删除清除', async () => {
+  it('列刷新乱序：旧请求晚到不覆盖新结果', async () => {
+    let releaseOld: () => void = () => {};
+    const oldGate = new Promise<void>((resolve) => { releaseOld = resolve; });
+    let call = 0;
+    fake.listImpl = async () => {
+      call += 1;
+      if (call === 1) {
+        await oldGate;
+        return [metaOf('ResumeOld001', '旧列表')];
+      }
+      return [metaOf('ResumeNew001', '新列表', 'archived')];
+    };
+
+    const oldRefresh = useLibrary.getState().refresh();
+    const newRefresh = useLibrary.getState().refresh();
+    releaseOld();
+    await oldRefresh;
+    await newRefresh;
+    expect(useLibrary.getState().metas.map((m) => m.title)).toEqual(['新列表']);
+    expect(useLibrary.getState().metas[0]!.status).toBe('archived');
+  });
+
+  it('示例身份读取失败：不当作“没有示例”，不清徽标', async () => {
+    await useLibrary.getState().init();
+    const before = useLibrary.getState().sampleResumeId;
+    expect(before).toBeTruthy();
+    fake.failSettingRead = true;
+    await expect(useLibrary.getState().refresh()).rejects.toThrow('setting read failed');
+    expect(useLibrary.getState().sampleResumeId).toBe(before);
+    expect(useLibrary.getState().syncError).toBeTruthy();
+  });
+
+  it('示例身份：重命名保留、删除清除', async () => {
     await useLibrary.getState().init();
     const sampleId = useLibrary.getState().sampleResumeId;
     expect(sampleId).toBeTruthy();
     expect(fake.settings.get('sampleResumeId')).toBe(sampleId);
 
-    expect(await useLibrary.getState().rename(sampleId!, '改过的示例')).toBe(true);
+    expect(await useLibrary.getState().rename(sampleId!, '改过的示例')).toBe('ok');
     expect(useLibrary.getState().sampleResumeId).toBe(sampleId);
     expect(useLibrary.getState().metas.find((m) => m.id === sampleId)?.title).toBe('改过的示例');
 
-    expect(await useLibrary.getState().remove(sampleId!)).toBe(true);
+    expect(await useLibrary.getState().remove(sampleId!)).toBe('ok');
     expect(useLibrary.getState().sampleResumeId).toBeNull();
     expect(fake.settings.has('sampleResumeId')).toBe(false);
   });
 
-  it('旧库升级：sampleSeeded=true 但无 sampleResumeId → 回填原示例身份', async () => {
-    fake.settings.set('sampleSeeded', true); // 上一版状态
+  it('旧库回填只做一次：清空/恢复后重启不得复活身份', async () => {
+    fake.settings.set('sampleSeeded', true);
     fake.rows.set('SampleLegacy1', rowOf('SampleLegacy1', '示例简历'));
+
     await useLibrary.getState().init();
     expect(useLibrary.getState().sampleResumeId).toBe('SampleLegacy1');
-    expect(fake.settings.get('sampleResumeId')).toBe('SampleLegacy1');
+    expect(fake.settings.get('sampleIdentityMigrated')).toBe(true);
+
+    // 模拟“清空示例”：身份键被删；内容/标题仍在旧库（极端：从快照恢复且改回同名）
+    fake.settings.delete('sampleResumeId');
+    vi.resetModules();
+    ({ useLibrary } = await import('./library.js'));
+    await useLibrary.getState().init();
+    expect(useLibrary.getState().sampleResumeId).toBeNull();
+    expect(fake.settings.has('sampleResumeId')).toBe(false);
   });
 
   it('旧库回填不误认：同名但文档不同 / 同名多条 → 不设置身份', async () => {
@@ -167,7 +251,6 @@ describe('library store（#129）', () => {
     expect(useLibrary.getState().sampleResumeId).toBeNull();
     expect(fake.settings.has('sampleResumeId')).toBe(false);
 
-    // 再补一条与原示例同名的记录 → 唯一性不成立，同样不猜
     fake.rows.set('SampleLegacy2', rowOf('SampleLegacy2', '示例简历'));
     vi.resetModules();
     ({ useLibrary } = await import('./library.js'));
@@ -178,7 +261,6 @@ describe('library store（#129）', () => {
   it('清空示例后返回库页：refresh 同步 sampleResumeId（徽标消失）', async () => {
     await useLibrary.getState().init();
     expect(useLibrary.getState().sampleResumeId).toBeTruthy();
-    // 模拟 editor-doc.replaceDoc 的清空行为：删键
     fake.settings.delete('sampleResumeId');
     await useLibrary.getState().refresh();
     expect(useLibrary.getState().sampleResumeId).toBeNull();
@@ -188,7 +270,7 @@ describe('library store（#129）', () => {
     fake.failList = true;
     await expect(useLibrary.getState().init()).rejects.toThrow('list failed');
     expect(useLibrary.getState().initialized).toBe(false);
-    expect(useLibrary.getState().error).toBeTruthy();
+    expect(useLibrary.getState().syncError).toBeTruthy();
 
     fake.failList = false;
     await useLibrary.getState().init();
@@ -196,14 +278,14 @@ describe('library store（#129）', () => {
 
     const sampleId = useLibrary.getState().sampleResumeId!;
     fake.failList = true;
-    expect(await useLibrary.getState().rename(sampleId, '改名')).toBe(false);
-    expect(useLibrary.getState().error).toBeTruthy();
-    expect(await useLibrary.getState().setArchived(sampleId, true)).toBe(false);
-    expect(await useLibrary.getState().remove(sampleId)).toBe(false);
+    expect(await useLibrary.getState().rename(sampleId, '改名')).toBe('refresh-failed');
+    expect(useLibrary.getState().syncError).toBeTruthy();
+    expect(await useLibrary.getState().setArchived(sampleId, true)).toBe('refresh-failed');
+    expect(await useLibrary.getState().remove(sampleId)).toBe('refresh-failed');
   });
 
   it('连续新建：串行分配标题，不产生重名', async () => {
-    fake.settings.set('sampleSeeded', true); // 跳过播种
+    fake.settings.set('sampleSeeded', true);
     await useLibrary.getState().init();
 
     let release: () => void = () => {};
@@ -212,9 +294,9 @@ describe('library store（#129）', () => {
     const p2 = useLibrary.getState().createFromTemplate(blankArgs);
     release();
 
-    const [id1, id2] = await Promise.all([p1, p2]);
-    expect(id1).toBeTruthy();
-    expect(id2).toBeTruthy();
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.id).toBeTruthy();
+    expect(r2.id).toBeTruthy();
     const titles = [...fake.rows.values()].map((r) => r.title).sort();
     expect(titles).toEqual(['我的简历', '我的简历 2']);
   });

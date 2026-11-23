@@ -134,7 +134,7 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
   const metas = useLibrary((s) => s.metas);
   const loading = useLibrary((s) => s.loading);
   const initialized = useLibrary((s) => s.initialized);
-  const error = useLibrary((s) => s.error);
+  const syncError = useLibrary((s) => s.syncError);
   const sampleResumeId = useLibrary((s) => s.sampleResumeId);
   const [showArchived, setShowArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -160,12 +160,13 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
     if (creating) return;
     setCreating(true);
     try {
-      const id = await useLibrary.getState().createFromTemplate({
+      const { id, outcome } = await useLibrary.getState().createFromTemplate({
         templateId,
         titleBase: t('library.newTitle'),
         basicSection: t('editor.blankSectionTitle'),
       });
-      if (!id) { toast(t('library.createFailed')); return; }
+      if (!id || outcome === 'write-failed') { toast(t('library.createFailed')); return; }
+      if (outcome === 'refresh-failed') toast(t('library.doneButRefreshFailed'));
       onOpen(id);
     } finally {
       setCreating(false);
@@ -174,8 +175,9 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
 
   const archive = (meta: ResumeMeta) => {
     const nextArchived = meta.status !== 'archived';
-    void useLibrary.getState().setArchived(meta.id, nextArchived).then((ok) => {
-      if (!ok) { toast(t('library.actionFailed')); return; }
+    void useLibrary.getState().setArchived(meta.id, nextArchived).then((outcome) => {
+      if (outcome === 'write-failed') { toast(t('library.actionFailed')); return; }
+      if (outcome === 'refresh-failed') { toast(t('library.doneButRefreshFailed')); return; }
       toast(nextArchived ? t('library.archivedToast', { title: meta.title }) : t('library.unarchivedToast', { title: meta.title }));
     });
   };
@@ -205,11 +207,18 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
         </button>
       </header>
 
-      {!initialized && error ? (
+      {syncError ? (
         <div className="lib-init-error">
-          <p>{t('library.initFailed')}</p>
-          <button type="button" className="lib-btn" onClick={() => void useLibrary.getState().init().catch(() => {})}>
-            {t('library.retry')}
+          <p>{initialized ? t('library.syncFailed') : t('library.initFailed')}</p>
+          <button
+            type="button"
+            className="lib-btn"
+            onClick={() => {
+              const store = useLibrary.getState();
+              void (store.initialized ? store.refresh() : store.init()).catch(() => {});
+            }}
+          >
+            {t('library.reload')}
           </button>
         </div>
       ) : null}
@@ -306,9 +315,10 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
           meta={renaming}
           onClose={() => setRenaming(null)}
           onSave={async (title) => {
-            const ok = await useLibrary.getState().rename(renaming.id, title);
-            if (ok) toast(t('library.renamedToast'));
-            return ok;
+            const outcome = await useLibrary.getState().rename(renaming.id, title);
+            if (outcome === 'write-failed') return false;
+            toast(outcome === 'ok' ? t('library.renamedToast') : t('library.doneButRefreshFailed'));
+            return true;
           }}
         />
       )}
@@ -324,14 +334,16 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
           const target = deleting;
           setDeletePending(true);
           setDeleteError(null);
-          void useLibrary.getState().remove(target.id).then((ok) => {
+          void useLibrary.getState().remove(target.id).then((outcome) => {
             setDeletePending(false);
-            if (ok) {
-              setDeleting(null);
-              toast(t('library.deletedToast', { title: target.title }));
-            } else {
+            if (outcome === 'write-failed') {
               setDeleteError(t('library.deleteFailed'));
+              return;
             }
+            setDeleting(null);
+            toast(outcome === 'ok'
+              ? t('library.deletedToast', { title: target.title })
+              : t('library.doneButRefreshFailed'));
           });
         }}
         onClose={() => { if (!deletePending) setDeleting(null); }}

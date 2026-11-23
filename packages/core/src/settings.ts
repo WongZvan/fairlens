@@ -11,6 +11,7 @@ export const SETTING_DEFAULTS: Record<Key, unknown> = {
   license: null, // #113：未激活时无记忆
   sampleSeeded: false, // #129：未见标记 = 尚未判定过首启示例
   sampleResumeId: null, // #129：未播种/已删除示例时无身份
+  sampleIdentityMigrated: false, // #129：旧库身份回填是否已尝试（一次性）
 };
 
 export type SettingValueOf<K extends Key> = z.infer<(typeof SettingValueSchemas)[K]>;

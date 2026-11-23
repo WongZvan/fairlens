@@ -12,6 +12,7 @@ const fake = vi.hoisted(() => {
   const writes: Array<{ id: string; doc: ResumeDoc }> = [];
   const getDelay = new Map<string, Promise<void>>();
   let settingDelay: Promise<void> | null = null;
+  let failDeleteSetting = false;
   const settings = new Map<string, unknown>();
   return {
     rows,
@@ -20,6 +21,8 @@ const fake = vi.hoisted(() => {
     settings,
     get settingDelay() { return settingDelay; },
     set settingDelay(v: Promise<void> | null) { settingDelay = v; },
+    get failDeleteSetting() { return failDeleteSetting; },
+    set failDeleteSetting(v: boolean) { failDeleteSetting = v; },
   };
 });
 
@@ -44,7 +47,10 @@ vi.mock('../lib/persistence/index.js', () => ({
       return fake.settings.get(key);
     },
     async setSettingRaw(key: string, value: unknown) { fake.settings.set(key, value); },
-    async deleteSetting(key: string) { fake.settings.delete(key); },
+    async deleteSetting(key: string) {
+      if (fake.failDeleteSetting) throw new Error('setting delete failed');
+      fake.settings.delete(key);
+    },
     async deleteResume(id: string) { fake.rows.delete(id); },
     async listSnapshots() { return []; },
     async insertSnapshot() {},
@@ -76,7 +82,9 @@ describe('editor-doc 并发（#129）', () => {
     fake.writes.length = 0;
     fake.getDelay.clear();
     fake.settingDelay = null;
+    fake.failDeleteSetting = false;
     fake.settings.clear();
+    useEditorDoc.setState({ ready: false, doc: null, dirty: false, lastError: null, isSample: false });
     fake.rows.set('ResumeAAAA01', row('ResumeAAAA01'));
     fake.rows.set('ResumeBBBB02', row('ResumeBBBB02'));
   });
@@ -119,5 +127,23 @@ describe('editor-doc 并发（#129）', () => {
     releaseSettings();
     expect(await bPromise).toBe('ok');
     expect(useEditorDoc.getState().resumeId).toBe('ResumeBBBB02');
+  });
+
+  it('清空示例：身份键删除失败不谎报成功，重试成功后才释放', async () => {
+    fake.settings.set('sampleResumeId', 'ResumeAAAA01');
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
+    expect(useEditorDoc.getState().isSample).toBe(true);
+
+    fake.failDeleteSetting = true;
+    const failed = await useEditorDoc.getState().replaceDoc(doc('CLEARED'), '我的简历');
+    expect(failed).toEqual({ ok: true, sampleCleared: false });
+    expect(useEditorDoc.getState().isSample).toBe(true);
+    expect(useEditorDoc.getState().lastError).toBeTruthy();
+
+    fake.failDeleteSetting = false;
+    const ok = await useEditorDoc.getState().replaceDoc(doc('CLEARED-2'), '我的简历');
+    expect(ok).toEqual({ ok: true, sampleCleared: true });
+    expect(useEditorDoc.getState().isSample).toBe(false);
+    expect(fake.settings.has('sampleResumeId')).toBe(false);
   });
 });

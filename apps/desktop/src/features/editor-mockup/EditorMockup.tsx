@@ -273,6 +273,11 @@ export function EditorMockup() {
         toast(t('editor.clearFailed'));
         return;
       }
+      // #129：文档已清空但示例身份键删除失败 → 清空入口会复活，必须如实提示
+      if (!result.sampleCleared) {
+        toast(t('editor.clearPartial'));
+        return;
+      }
       toast(t('editor.clearedToast'));
     } catch (err) {
       console.error('[editor] clear to blank failed', err);
