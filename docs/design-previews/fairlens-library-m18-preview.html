@@ -113,6 +113,7 @@
   #fl-lib .dialog p b{ color:var(--fg); }
   #fl-lib .dialog input{ width:100%; box-sizing:border-box; font:inherit; font-size:13px; padding:7px 10px; border-radius:5px; border:1px solid var(--line); background:var(--bench); color:var(--fg); }
   #fl-lib .dialog input:focus{ outline:none; border-color:var(--accent); }
+  #fl-lib .dlg-error{ margin:-4px 0 8px; font-size:11.5px; color:var(--pen-red); }
   #fl-lib .dialog .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
   #fl-lib .dialog .actions .danger{ border-color:var(--pen-red); color:var(--pen-red); }
 
@@ -272,9 +273,10 @@
     const list = visibleCards();
     if (!list.length) {
       const empty = el('div', 'empty-card');
-      empty.innerHTML = activeCards().length
-        ? '<b>没有可显示的简历</b>已归档的简历被隐藏了，打开右上「显示归档」查看。'
-        : '<b>还没有简历</b>从上方三套模板新建一份。';
+      // 真正空库 vs 全部归档：后者必须提示打开「显示归档」，不能说“还没有简历”
+      empty.innerHTML = state.cards.length === 0
+        ? '<b>还没有简历</b>从上方三套模板新建一份。'
+        : '<b>没有可显示的简历</b>已归档的简历被隐藏了，打开右上「显示归档」查看。';
       host.appendChild(empty);
     }
     for (const c of list) {
@@ -358,15 +360,25 @@
     m.querySelector('.it')?.focus();
   }
 
+  /** 卡片重绘后把焦点放回同一张卡的 ⋯；卡已不可见则退到下一张/模板卡 */
+  function focusCard(cardId) {
+    const card = state.cards.find((c) => c.id === cardId);
+    const visible = card && (state.showArchived || !card.archived);
+    const same = visible ? $('.rcard[data-id="' + cardId + '"] .more') : null;
+    const target = same || $('.rcard .more') || $('.tq');
+    target?.focus();
+  }
+
   function toggleArchive(c) {
     c.archived = !c.archived;
     render();
     toast(c.archived ? '已归档：' + c.title + '（可在「显示归档」中查看）' : '已取消归档：' + c.title);
+    focusCard(c.id);
   }
 
   // ---- 统一对话框：Esc 取消 / 焦点陷阱 / 关闭后焦点归还 / 遮罩策略 ----
   let dialogOpen = false;
-  function openDialog({ title, bodyHtml, actions, initialFocus, backdropClose }) {
+  function openDialog({ title, bodyHtml, actions, initialFocus, backdropClose, afterClose }) {
     if (dialogOpen) return;
     dialogOpen = true;
     const returnTo = document.activeElement;
@@ -385,12 +397,15 @@
 
     const close = (run) => {
       if (!dialogOpen) return;
+      // 动作返回 false = 校验不通过，框保持打开（例：空标题）
+      const keep = run ? run() : undefined;
+      if (keep === false) return;
       dialogOpen = false;
       document.removeEventListener('keydown', onKey, true);
-      // 先执行动作（此时 DOM 还在，可读取输入），再移除并归还焦点
-      if (run) run();
       mask.remove();
-      if (returnTo instanceof HTMLElement) returnTo.focus();
+      // 旧触发点可能已被重绘脱离文档（重命名/删除会 render），isConnected 守卫后交给 afterClose
+      if (returnTo instanceof HTMLElement && returnTo.isConnected) returnTo.focus();
+      if (afterClose) afterClose();
     };
 
     const onKey = (e) => {
@@ -420,12 +435,19 @@
     openDialog({
       title: '重命名简历',
       bodyHtml: '<p>标题只影响简历库显示，不改变画布内容。</p>' +
-        '<input id="rn" value="' + escapeAttr(c.title) + '" aria-label="简历标题" maxlength="40">',
+        '<input id="rn" value="' + escapeAttr(c.title) + '" aria-label="简历标题" maxlength="40">' +
+        '<p class="dlg-error" id="rn-error" hidden>标题不能为空</p>',
       actions: [
         { label: '取消' },
         { label: '保存', cls: 'primary', onClick: () => {
-          const v = ($('#rn')?.value ?? '').trim();
-          if (!v) return;
+          const input = $('#rn');
+          const v = (input?.value ?? '').trim();
+          if (!v) {
+            const err = $('#rn-error');
+            if (err) err.hidden = false;
+            input?.focus();
+            return false; // 校验不通过：框保持打开并说明原因
+          }
           c.title = v;
           render();
           toast('已重命名');
@@ -433,9 +455,11 @@
       ],
       initialFocus: '#rn',
       backdropClose: true,
+      afterClose: () => focusCard(c.id),
     });
     const input = $('#rn');
     if (input) {
+      input.addEventListener('input', () => { const err = $('#rn-error'); if (err) err.hidden = true; });
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); input.closest('.dialog').querySelector('[data-idx="1"]').click(); }
       });
@@ -456,6 +480,7 @@
         } },
       ],
       backdropClose: false,
+      afterClose: () => { ($('.rcard .more') || $('.tq'))?.focus(); },
     });
   }
 
@@ -477,7 +502,8 @@
 
   function render() {
     const active = activeCards().length;
-    $('#sub-count').textContent = active + ' 份简历 · 数据仅存本机';
+    const archived = state.cards.length - active;
+    $('#sub-count').textContent = active + ' 份简历' + (archived ? ' · ' + archived + ' 份已归档' : '') + ' · 数据仅存本机';
     home.classList.toggle('is-empty', state.cards.length === 0);
     $('#empty-note').hidden = state.cards.length !== 0;
     renderCards();
