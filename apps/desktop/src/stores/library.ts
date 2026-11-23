@@ -9,13 +9,14 @@ import { nextResumeTitle, resolveSeedAction } from '../features/library/library-
 /**
  * 简历库状态（m1.8 / #129）：记录列表 + 新建/重命名/软归档/删除 + 首启示例播种。
  *
- * 并发/失败模型（2026-11-23，codex 两轮复核）：
+ * 并发/失败模型（2026-11-23，codex 三轮复核）：
  *  - `init()` 单飞；写操作先 `await init()`；`initialized` 前模板卡禁用。
- *  - 写操作返回 `WriteOutcome`：写入失败与「写入成功但刷新失败」分开，UI 反馈才准确。
- *  - `refreshInner` 带请求序号：较早发起的旧列表查询不得覆盖较新的结果。
- *  - 示例身份 `sampleResumeId` 读取失败不当作“没有示例”；旧库回填只尝试一次（`sampleIdentityMigrated`）。
+ *  - 写操作返回 `WriteOutcome`：write-failed / refresh-failed / cleanup-failed 分开，UI 反馈才准确。
+ *  - `refreshInner` **串行执行**（按发起顺序）：旧查询不可能晚到覆盖新结果；写后刷新不会被“超越后静默返回”。
+ *  - 示例身份 `sampleResumeId` 读取失败不当作“没有示例”；旧库回填只尝试一次（`sampleIdentityMigrated`），
+ *    但候选文档**读取失败不写标记**（瞬时故障重启可重试）。
  */
-export type WriteOutcome = 'ok' | 'write-failed' | 'refresh-failed';
+export type WriteOutcome = 'ok' | 'write-failed' | 'refresh-failed' | 'cleanup-failed';
 export interface CreateOutcome {
   id: string | null;
   outcome: WriteOutcome;
@@ -32,6 +33,8 @@ interface LibraryState {
   syncError: string | null;
   /** 系统示例的稳定身份（settings.sampleResumeId） */
   sampleResumeId: string | null;
+  /** 删除示例后身份键清理失败：需要用户显式重试（普通刷新不会重试） */
+  cleanupPending: boolean;
   /** 启动初始化：播种判定 → 拉列表；单飞、失败可重试 */
   init(): Promise<void>;
   refresh(): Promise<void>;
@@ -45,14 +48,16 @@ interface LibraryState {
   rename(id: string, title: string): Promise<WriteOutcome>;
   setArchived(id: string, archived: boolean): Promise<WriteOutcome>;
   remove(id: string): Promise<WriteOutcome>;
+  /** 清理残留的示例身份键（删除示例后写键失败的恢复动作） */
+  retrySampleCleanup(): Promise<boolean>;
 }
 
 export const useLibrary = create<LibraryState>((set, get) => {
   let initPromise: Promise<void> | null = null;
   /** 新建串行链：连续点击也按顺序分配标题（「我的简历 / 我的简历 2」） */
   let createChain: Promise<unknown> = Promise.resolve();
-  /** 列表刷新序号：旧请求晚到不得覆盖新结果 */
-  let refreshSeq = 0;
+  /** 刷新串行链：按发起顺序执行，旧结果不会晚到覆盖新结果 */
+  let refreshChain: Promise<unknown> = Promise.resolve();
 
   /** 读取示例身份：失败抛出（不能误判为“没有示例”而清掉徽标） */
   const readSampleId = async (): Promise<string | null> => {
@@ -66,33 +71,34 @@ export const useLibrary = create<LibraryState>((set, get) => {
     return id;
   };
 
-  const refreshInner = async () => {
-    const seq = ++refreshSeq;
-    set({ loading: true });
-    try {
-      const metas = await persistence().listResumeMetas();
-      if (seq !== refreshSeq) return; // 被更新的刷新超越
-      const id = await readSampleId();
-      if (seq !== refreshSeq) return;
-      set({ metas, sampleResumeId: id, error: null, syncError: null });
-    } catch (err) {
-      // 旧请求失败不影响新请求；只有最新请求把错误暴露给 UI
-      if (seq !== refreshSeq) return;
-      set({ error: String(err), syncError: String(err) });
-      throw err;
-    } finally {
-      if (seq === refreshSeq) set({ loading: false });
-    }
+  const refreshInner = (): Promise<void> => {
+    const run = async () => {
+      set({ loading: true });
+      try {
+        const metas = await persistence().listResumeMetas();
+        const id = await readSampleId();
+        set({ metas, sampleResumeId: id, error: null, syncError: null });
+      } catch (err) {
+        set({ error: String(err), syncError: String(err) });
+        throw err;
+      } finally {
+        set({ loading: false });
+      }
+    };
+    const task = refreshChain.then(run, run);
+    refreshChain = task.then(() => undefined, () => undefined);
+    return task;
   };
 
   /**
    * 旧库识别（仅迁移一次）：唯一标题 + 文档仍与内置示例完全一致才认定为示例。
    * 避免把用户自己改成同名的简历误认；示例被编辑/重命名过则无法安全识别（不猜）。
+   * 注意：getResume 读取失败会向上抛（不写迁移标记），瞬时故障下次启动可重试。
    */
   const findLegacySample = async (metas: ResumeMeta[]): Promise<string | null> => {
     const candidates = metas.filter((m) => m.title === SAMPLE_RESUME_TITLE);
     if (candidates.length !== 1) return null;
-    const row = await persistence().getResume(candidates[0]!.id).catch(() => null);
+    const row = await persistence().getResume(candidates[0]!.id);
     if (!row) return null;
     return sameDoc(row.doc, sampleDoc) ? row.id : null;
   };
@@ -108,11 +114,12 @@ export const useLibrary = create<LibraryState>((set, get) => {
     if (storedId && !metas.some((m) => m.id === storedId)) {
       await persistence().deleteSetting('sampleResumeId');
       storedId = null;
+      set({ cleanupPending: false });
     }
 
     const action = resolveSeedAction(marker, metas.length);
     if (action === 'none' || action === 'mark-only') {
-      // 上一版只写过 sampleSeeded：身份回填只尝试一次
+      // 上一版只写过 sampleSeeded：身份回填只尝试一次（读取失败不落标记）
       if (!storedId && !migrated) {
         const legacy = await findLegacySample(metas);
         if (legacy) await persistence().setSettingRaw('sampleResumeId', legacy);
@@ -139,7 +146,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
     await persistence().setSettingRaw('sampleResumeId', id);
     await persistence().setSettingRaw('sampleSeeded', true);
     await persistence().setSettingRaw('sampleIdentityMigrated', true);
-    set({ sampleResumeId: id });
+    set({ sampleResumeId: id, cleanupPending: false });
     await refreshInner();
   };
 
@@ -160,6 +167,7 @@ export const useLibrary = create<LibraryState>((set, get) => {
     error: null,
     syncError: null,
     sampleResumeId: null,
+    cleanupPending: false,
 
     init() {
       initPromise ??= (async () => {
@@ -273,19 +281,31 @@ export const useLibrary = create<LibraryState>((set, get) => {
         set({ error: String(err) });
         return 'write-failed';
       }
-      // 示例被删：清掉稳定身份；失败要可见（仍返回 refresh-failed 让 UI 提示重新加载）
+      // 示例被删：清掉稳定身份。失败要单独暴露（普通刷新不会重试这一步）
       let identityCleanupFailed = false;
       if (get().sampleResumeId === id) {
         try {
           await persistence().deleteSetting('sampleResumeId');
-          set({ sampleResumeId: null });
+          set({ sampleResumeId: null, cleanupPending: false });
         } catch (err) {
           identityCleanupFailed = true;
-          set({ error: String(err) });
+          set({ error: String(err), cleanupPending: true });
         }
       }
       const outcome = await refreshAfterWrite();
-      return outcome === 'ok' && identityCleanupFailed ? 'refresh-failed' : outcome;
+      // cleanup-failed 优先：UI 需要给出「重试清除示例标识」这一可执行动作
+      return identityCleanupFailed ? 'cleanup-failed' : outcome;
+    },
+
+    async retrySampleCleanup() {
+      try {
+        await persistence().deleteSetting('sampleResumeId');
+        set({ sampleResumeId: null, cleanupPending: false, error: null });
+        return true;
+      } catch (err) {
+        set({ error: String(err), cleanupPending: true });
+        return false;
+      }
     },
   };
 });

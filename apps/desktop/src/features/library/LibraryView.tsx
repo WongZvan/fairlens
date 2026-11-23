@@ -135,6 +135,7 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
   const loading = useLibrary((s) => s.loading);
   const initialized = useLibrary((s) => s.initialized);
   const syncError = useLibrary((s) => s.syncError);
+  const cleanupPending = useLibrary((s) => s.cleanupPending);
   const sampleResumeId = useLibrary((s) => s.sampleResumeId);
   const [showArchived, setShowArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -219,6 +220,22 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
             }}
           >
             {t('library.reload')}
+          </button>
+        </div>
+      ) : null}
+      {cleanupPending ? (
+        <div className="lib-init-error">
+          <p>{t('library.cleanupPending')}</p>
+          <button
+            type="button"
+            className="lib-btn"
+            onClick={() => {
+              void useLibrary.getState().retrySampleCleanup().then((ok) => {
+                toast(ok ? t('library.cleanupDone') : t('library.actionFailed'));
+              });
+            }}
+          >
+            {t('library.retryCleanup')}
           </button>
         </div>
       ) : null}
@@ -341,6 +358,10 @@ export function LibraryView({ onOpen }: LibraryViewProps) {
               return;
             }
             setDeleting(null);
+            if (outcome === 'cleanup-failed') {
+              toast(t('library.deletedButCleanupFailed'));
+              return;
+            }
             toast(outcome === 'ok'
               ? t('library.deletedToast', { title: target.title })
               : t('library.doneButRefreshFailed'));

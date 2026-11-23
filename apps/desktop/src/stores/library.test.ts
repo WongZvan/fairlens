@@ -22,6 +22,7 @@ const fake = vi.hoisted(() => {
   let failList = false;
   let failSettingRead = false;
   let failDeleteSetting = false;
+  let failGetResumeOnce = false;
   let listImpl: (() => Promise<ResumeMeta[]>) | null = null;
   return {
     rows,
@@ -41,6 +42,8 @@ const fake = vi.hoisted(() => {
     set failSettingRead(v: boolean) { failSettingRead = v; },
     get failDeleteSetting() { return failDeleteSetting; },
     set failDeleteSetting(v: boolean) { failDeleteSetting = v; },
+    get failGetResumeOnce() { return failGetResumeOnce; },
+    set failGetResumeOnce(v: boolean) { failGetResumeOnce = v; },
     get listImpl() { return listImpl; },
     set listImpl(v: (() => Promise<ResumeMeta[]>) | null) { listImpl = v; },
   };
@@ -58,7 +61,13 @@ vi.mock('../lib/persistence/index.js', () => ({
           updatedAt: r.updatedAt, templateId: r.doc.templateId, snapshotCount: 0,
         }));
     },
-    async getResume(id: string) { return fake.rows.get(id) ?? null; },
+    async getResume(id: string) {
+      if (fake.failGetResumeOnce) {
+        fake.failGetResumeOnce = false;
+        throw new Error('resume read failed');
+      }
+      return fake.rows.get(id) ?? null;
+    },
     async upsertResume(row: ResumeRow) {
       if (fake.failUpsert) throw new Error('upsert failed');
       if (fake.upsertGate && fake.writes.length === 0) await fake.upsertGate;
@@ -104,6 +113,12 @@ const metaOf = (id: string, title: string, status: 'active' | 'archived' = 'acti
   updatedAt: '2026-11-23T00:00:00.000Z', templateId: 'tpl-classic', snapshotCount: 0,
 });
 
+const metasFromRows = (): ResumeMeta[] =>
+  [...fake.rows.values()].map((r) => ({
+    id: r.id, title: r.title, verticalId: r.verticalId, status: r.status,
+    updatedAt: r.updatedAt, templateId: r.doc.templateId, snapshotCount: 0,
+  }));
+
 describe('library store（#129）', () => {
   beforeEach(async () => {
     fake.rows.clear();
@@ -116,6 +131,7 @@ describe('library store（#129）', () => {
     fake.failList = false;
     fake.failSettingRead = false;
     fake.failDeleteSetting = false;
+    fake.failGetResumeOnce = false;
     fake.listImpl = null;
     vi.resetModules();
     ({ useLibrary } = await import('./library.js'));
@@ -299,5 +315,62 @@ describe('library store（#129）', () => {
     expect(r2.id).toBeTruthy();
     const titles = [...fake.rows.values()].map((r) => r.title).sort();
     expect(titles).toEqual(['我的简历', '我的简历 2']);
+  });
+
+  it('旧库回填遇读取故障：不写迁移标记，重试后可回填', async () => {
+    fake.settings.set('sampleSeeded', true);
+    fake.rows.set('SampleLegacy1', rowOf('SampleLegacy1', '示例简历'));
+    fake.failGetResumeOnce = true;
+
+    await expect(useLibrary.getState().init()).rejects.toThrow('resume read failed');
+    expect(fake.settings.has('sampleIdentityMigrated')).toBe(false);
+    expect(useLibrary.getState().sampleResumeId).toBeNull();
+
+    await useLibrary.getState().init(); // 重试
+    expect(useLibrary.getState().sampleResumeId).toBe('SampleLegacy1');
+    expect(fake.settings.get('sampleIdentityMigrated')).toBe(true);
+  });
+
+  it('删除示例后身份清理失败：返回 cleanup-failed，可显式重试', async () => {
+    await useLibrary.getState().init();
+    const sampleId = useLibrary.getState().sampleResumeId!;
+    fake.failDeleteSetting = true;
+
+    expect(await useLibrary.getState().remove(sampleId)).toBe('cleanup-failed');
+    expect(useLibrary.getState().cleanupPending).toBe(true);
+    expect(fake.settings.has('sampleResumeId')).toBe(true);
+    expect(fake.rows.has(sampleId)).toBe(false); // 简历确实已删除
+
+    fake.failDeleteSetting = false;
+    expect(await useLibrary.getState().retrySampleCleanup()).toBe(true);
+    expect(useLibrary.getState().cleanupPending).toBe(false);
+    expect(fake.settings.has('sampleResumeId')).toBe(false);
+  });
+
+  it('刷新串行：写后刷新先完成并更新列表，后发刷新失败只报同步错误', async () => {
+    fake.settings.set('sampleSeeded', true);
+    fake.rows.set('ResumeSerial1', rowOf('ResumeSerial1', '旧名'));
+    await useLibrary.getState().init();
+
+    let release: () => void = () => {};
+    let markFirstStarted: () => void = () => {};
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const firstStarted = new Promise<void>((resolve) => { markFirstStarted = resolve; });
+    let call = 0;
+    fake.listImpl = async () => {
+      call += 1;
+      if (call === 1) { markFirstStarted(); await gate; return metasFromRows(); }
+      throw new Error('later refresh failed');
+    };
+
+    const renameP = useLibrary.getState().rename('ResumeSerial1', '新名');
+    await firstStarted; // 等写后刷新先入队并开始
+    const later = useLibrary.getState().refresh();
+    release();
+
+    expect(await renameP).toBe('ok'); // 写后刷新已成功，列表已更新
+    await expect(later).rejects.toThrow('later refresh failed');
+    expect(useLibrary.getState().metas.find((m) => m.id === 'ResumeSerial1')?.title).toBe('新名');
+    expect(useLibrary.getState().syncError).toBeTruthy();
   });
 });

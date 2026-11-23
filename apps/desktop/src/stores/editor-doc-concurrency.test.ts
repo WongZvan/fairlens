@@ -13,6 +13,7 @@ const fake = vi.hoisted(() => {
   const getDelay = new Map<string, Promise<void>>();
   let settingDelay: Promise<void> | null = null;
   let failDeleteSetting = false;
+  let failSampleSettingRead = false;
   const settings = new Map<string, unknown>();
   return {
     rows,
@@ -23,6 +24,8 @@ const fake = vi.hoisted(() => {
     set settingDelay(v: Promise<void> | null) { settingDelay = v; },
     get failDeleteSetting() { return failDeleteSetting; },
     set failDeleteSetting(v: boolean) { failDeleteSetting = v; },
+    get failSampleSettingRead() { return failSampleSettingRead; },
+    set failSampleSettingRead(v: boolean) { failSampleSettingRead = v; },
   };
 });
 
@@ -44,6 +47,7 @@ vi.mock('../lib/persistence/index.js', () => ({
     },
     async getSettingRaw(key: string) {
       if (fake.settingDelay) await fake.settingDelay;
+      if (key === 'sampleResumeId' && fake.failSampleSettingRead) throw new Error('sample setting read failed');
       return fake.settings.get(key);
     },
     async setSettingRaw(key: string, value: unknown) { fake.settings.set(key, value); },
@@ -83,6 +87,7 @@ describe('editor-doc 并发（#129）', () => {
     fake.getDelay.clear();
     fake.settingDelay = null;
     fake.failDeleteSetting = false;
+    fake.failSampleSettingRead = false;
     fake.settings.clear();
     useEditorDoc.setState({ ready: false, doc: null, dirty: false, lastError: null, isSample: false });
     fake.rows.set('ResumeAAAA01', row('ResumeAAAA01'));
@@ -145,5 +150,18 @@ describe('editor-doc 并发（#129）', () => {
     expect(ok).toEqual({ ok: true, sampleCleared: true });
     expect(useEditorDoc.getState().isSample).toBe(false);
     expect(fake.settings.has('sampleResumeId')).toBe(false);
+  });
+
+  it('打开简历时示例身份读取失败：返回 error，不带着错误身份进入编辑器', async () => {
+    fake.settings.set('sampleResumeId', 'ResumeAAAA01');
+    fake.failSampleSettingRead = true;
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('error');
+    expect(useEditorDoc.getState().ready).toBe(false);
+    expect(useEditorDoc.getState().isSample).toBe(false);
+    expect(useEditorDoc.getState().lastError).toBeTruthy();
+
+    fake.failSampleSettingRead = false;
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
+    expect(useEditorDoc.getState().isSample).toBe(true);
   });
 });

@@ -124,10 +124,18 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
         return 'error';
       }
 
-      const [rawAutosave, rawSampleId] = await Promise.all([
-        port.getSettingRaw('autosave').catch(() => undefined),
-        port.getSettingRaw('sampleResumeId').catch(() => null),
-      ]);
+      const rawAutosave = await port.getSettingRaw('autosave').catch(() => undefined);
+      if (seq !== openSeq) return 'superseded';
+      // #129：示例身份读取失败不能当作“不是示例”（否则清空入口会消失）；
+      // 打开失败让用户重试，而不是带错误身份进入编辑器
+      let rawSampleId: unknown;
+      try {
+        rawSampleId = await port.getSettingRaw('sampleResumeId');
+      } catch (err) {
+        if (seq !== openSeq) return 'superseded';
+        set({ lastError: String(err) });
+        return 'error';
+      }
       // 关键：这个 await 窗口里可能已有更晚的打开请求；旧 controller 仍存活，但保存已绑定旧 session
       if (seq !== openSeq) return 'superseded';
 
