@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FairLens · 导入向导预览（m1.7）</title>
+<title>FairLens · 导入预览（m1.7 修订版）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
@@ -11,234 +11,535 @@
   :root{ color-scheme: dark light; }
   body{ margin:0; padding:28px; background:#17181B; font-family:'IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif; }
   @media (prefers-color-scheme: light){ body{ background:#E9E7E1; } }
-  #fl-import{
+  #fl-imp{
     --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23; --card:#2A2B30; --raised:#303138;
-    --fg:#E8E6E1; --muted:#9B998F; --line:#3A3B40; --hover:#33343A;
+    --fg:#E8E6E1; --muted:#A3A198; --line:#3A3B40; --hover:#33343A;
     --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
-    --ok:#7FB89A; --warn:#D6A831; --warn-tint:rgba(214,168,49,.13); --pen-red:#D96A5F;
+    --ok:#7FB89A; --warn:#D6A831; --warn-ink:#E3C06A; --warn-tint:rgba(214,168,49,.13); --pen-red:#D96A5F;
     font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
     font-size:14px; line-height:1.5; color:var(--fg); max-width:1180px; margin:0 auto;
   }
-  #fl-import.light{
+  #fl-imp.light{
     --bench:#F2F1ED; --panel:#F7F6F2; --chrome:#ECEAE4; --card:#FFFFFF; --raised:#FFFFFF;
-    --fg:#1C1D1B; --muted:#8B8983; --line:#E4E2DC; --hover:#ECEAE4;
+    --fg:#1C1D1B; --muted:#66645E; --line:#DCD9D2; --hover:#ECEAE4;
     --accent:#33518E; --accent-solid:#33518E; --accent-tint:rgba(51,81,142,.08);
-    --ok:#2E6E4E; --warn:#A37F18; --warn-tint:rgba(163,127,24,.10); --pen-red:#C4372B;
+    --ok:#2E6E4E; --warn:#7A5E0E; --warn-ink:#6B520C; --warn-tint:rgba(163,127,24,.10); --pen-red:#B02A1F;
   }
-  #fl-import .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; }
-  #fl-import .preview-bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 10px; }
-  #fl-import .preview-bar .caption{ font-size:11px; color:#9B998F; margin:0 auto 0 0; }
-  #fl-import .pbtn{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; }
-  #fl-import .pbtn:hover{ border-color:var(--accent); }
-  #fl-import .pbtn[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-tint); }
+  #fl-imp .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; }
+  #fl-imp .preview-bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 10px; }
+  #fl-imp .preview-bar .caption{ font-size:11px; color:#9B998F; margin:0 auto 0 0; }
+  #fl-imp .pbtn{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; }
+  #fl-imp .pbtn:hover{ border-color:var(--accent); }
+  #fl-imp .pbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  #fl-imp .pbtn[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-tint); }
 
-  #fl-import .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; position:relative; min-height:660px; }
-  #fl-import.light .win{ border-color:#D9D6CF; }
-  #fl-import .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
-  #fl-import .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
-  #fl-import .crumb{ font-size:12px; color:var(--muted); }
-  #fl-import .wbtns{ margin-left:auto; display:flex; gap:2px; }
-  #fl-import .wbtn{ width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; font-size:13px; }
-  #fl-import .wbtn:hover{ background:var(--hover); color:var(--fg); }
-  #fl-import .wbtn.close:hover{ background:#C4372B; color:#fff; }
+  #fl-imp .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; position:relative; height:780px; max-height:calc(100vh - 110px); min-height:560px; }
+  #fl-imp.light .win{ border-color:#D9D6CF; }
+  #fl-imp .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
+  #fl-imp .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
+  #fl-imp .crumb{ font-size:12px; color:var(--muted); }
+  #fl-imp .wbtns{ margin-left:auto; display:flex; gap:2px; }
+  #fl-imp .wbtn{ width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; font-size:13px; }
+  #fl-imp .wbtn:hover{ background:var(--hover); color:var(--fg); }
 
-  #fl-import .wizard{ display:flex; flex-direction:column; flex:1; min-height:0; }
-  #fl-import .wiz-head{ flex:none; display:flex; align-items:center; gap:16px; padding:14px 22px 12px; border-bottom:1px solid var(--line); }
-  #fl-import .back{ font:inherit; font-size:12px; color:var(--muted); background:none; border:0; cursor:pointer; padding:4px 2px; }
-  #fl-import .back:hover{ color:var(--fg); }
-  #fl-import .wiz-title h1{ font-family:'Noto Serif SC',serif; font-size:18px; font-weight:600; margin:0; letter-spacing:.05em; }
-  #fl-import .wiz-title .sub{ font-size:11px; color:var(--muted); margin-top:2px; }
-  #fl-import .steps{ margin-left:auto; display:flex; align-items:center; gap:0; list-style:none; padding:0; }
-  #fl-import .steps li{ display:flex; align-items:center; font-size:11.5px; color:var(--muted); }
-  #fl-import .steps li .n{ width:18px; height:18px; border-radius:50%; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:10px; margin-right:6px; }
-  #fl-import .steps li.on{ color:var(--fg); }
-  #fl-import .steps li.on .n{ border-color:var(--accent); color:var(--accent); }
-  #fl-import .steps li.done .n{ background:var(--accent-solid); border-color:var(--accent-solid); color:#fff; }
-  #fl-import .steps .bar{ width:26px; height:1px; background:var(--line); margin:0 8px; }
+  #fl-imp .wizard{ display:flex; flex-direction:column; flex:1; min-height:0; }
+  #fl-imp .wiz-head{ flex:none; display:flex; align-items:center; gap:16px; padding:14px 22px 12px; border-bottom:1px solid var(--line); }
+  #fl-imp .back{ font:inherit; font-size:12px; color:var(--muted); background:none; border:0; cursor:pointer; padding:4px 2px; border-radius:4px; }
+  #fl-imp .back:hover{ color:var(--fg); }
+  #fl-imp .back:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  #fl-imp .wiz-title h1{ font-family:'Noto Serif SC',serif; font-size:18px; font-weight:600; margin:0; letter-spacing:.05em; }
+  #fl-imp .wiz-title .sub{ font-size:11px; color:var(--muted); margin-top:2px; }
+  #fl-imp .steps{ margin-left:auto; display:flex; align-items:center; list-style:none; padding:0; }
+  #fl-imp .steps li{ display:flex; align-items:center; font-size:11.5px; color:var(--muted); }
+  #fl-imp .steps li .n{ width:18px; height:18px; border-radius:50%; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:10px; margin-right:6px; }
+  #fl-imp .steps li.on{ color:var(--fg); }
+  #fl-imp .steps li.on .n{ border-color:var(--accent); color:var(--accent); }
+  #fl-imp .steps li.done .n{ background:var(--accent-solid); border-color:var(--accent-solid); color:#fff; }
+  #fl-imp .steps .bar{ width:26px; height:1px; background:var(--line); margin:0 8px; }
 
-  #fl-import .wiz-body{ flex:1; min-height:0; overflow:auto; padding:22px; }
-  #fl-import .wiz-body.no-pad{ padding:0; }
-  #fl-import .wiz-foot{ flex:none; display:flex; align-items:center; gap:10px; padding:11px 22px; border-top:1px solid var(--line); background:var(--chrome); }
-  #fl-import .wiz-foot .note{ font-size:11px; color:var(--muted); }
-  #fl-import .wiz-foot .spacer{ flex:1; }
+  #fl-imp .wiz-body{ flex:1; min-height:0; overflow:auto; padding:22px; }
+  #fl-imp .wiz-body.flush{ padding:0; overflow:hidden; display:flex; flex-direction:column; }
+  #fl-imp #view-review{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  #fl-imp .wiz-foot{ flex:none; display:flex; align-items:center; gap:10px; padding:11px 22px; border-top:1px solid var(--line); background:var(--chrome); }
+  #fl-imp .wiz-foot .note{ font-size:11px; color:var(--muted); }
+  #fl-imp .wiz-foot .spacer{ flex:1; }
 
-  #fl-import .btn{ font:inherit; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:6px; padding:7px 14px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg); }
-  #fl-import .btn:hover:not(:disabled){ border-color:var(--accent); }
-  #fl-import .btn.primary{ background:var(--accent-solid); border-color:var(--accent-solid); color:#fff; }
-  #fl-import .btn.primary:hover{ filter:brightness(1.06); }
-  #fl-import .btn.ghost{ background:none; }
-  #fl-import .btn:disabled{ opacity:.55; cursor:not-allowed; }
+  #fl-imp .btn{ font:inherit; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:6px; padding:7px 14px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg); }
+  #fl-imp .btn:hover:not(:disabled){ border-color:var(--accent); }
+  #fl-imp .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  #fl-imp .btn.primary{ background:var(--accent-solid); border-color:var(--accent-solid); color:#fff; }
+  #fl-imp .btn.primary:hover:not(:disabled){ filter:brightness(1.06); }
+  #fl-imp .btn.ghost{ background:none; }
+  #fl-imp .btn:disabled{ opacity:.55; cursor:not-allowed; }
+  #fl-imp .btn.small{ font-size:11.5px; padding:4px 9px; }
 
-  /* Step 1 */
-  #fl-import .source{ max-width:680px; margin:10px auto 0; display:flex; flex-direction:column; gap:14px; }
-  #fl-import .drop{ border:1.5px dashed var(--line); border-radius:10px; background:var(--panel); padding:34px 28px; text-align:center; cursor:pointer; transition:border-color 140ms, background 140ms; }
-  #fl-import .drop:hover, #fl-import .drop.drag{ border-color:var(--accent); background:var(--accent-tint); }
-  #fl-import .drop .ico{ width:40px; height:40px; margin:0 auto 10px; border:1px solid var(--line); border-radius:9px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
-  #fl-import .drop b{ display:block; font-size:14px; font-weight:500; }
-  #fl-import .drop .hint{ font-size:11.5px; color:var(--muted); margin-top:5px; }
-  #fl-import .drop .formats{ margin-top:12px; display:flex; gap:6px; justify-content:center; }
-  #fl-import .chip{ font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:1px 5px; }
-  #fl-import .or{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:11px; }
-  #fl-import .or::before, #fl-import .or::after{ content:""; flex:1; height:1px; background:var(--line); }
-  #fl-import .paste{ border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:14px 15px; }
-  #fl-import .paste label{ font-size:12.5px; font-weight:500; display:block; margin-bottom:7px; }
-  #fl-import .paste textarea{ width:100%; box-sizing:border-box; min-height:96px; resize:vertical; font:inherit; font-size:12.5px; line-height:1.7; color:var(--fg); background:var(--bench); border:1px solid var(--line); border-radius:6px; padding:9px 11px; }
-  #fl-import .paste textarea:focus{ outline:none; border-color:var(--accent); }
-  #fl-import .paste .row{ display:flex; align-items:center; gap:8px; margin-top:8px; }
-  #fl-import .paste .row .hint{ font-size:11px; color:var(--muted); margin-right:auto; }
-  #fl-import .error-demo{ text-align:center; font-size:11.5px; }
-  #fl-import .error-demo button{ font:inherit; font-size:11.5px; color:var(--muted); background:none; border:0; border-bottom:1px dotted var(--line); cursor:pointer; padding:0; }
-  #fl-import .error-demo button:hover{ color:var(--pen-red); border-color:var(--pen-red); }
+  /* 来源 */
+  #fl-imp .source{ max-width:680px; margin:8px auto 0; display:flex; flex-direction:column; gap:14px; }
+  #fl-imp .drop{ width:100%; border:1.5px dashed var(--line); border-radius:10px; background:var(--panel); padding:32px 28px; text-align:center; cursor:pointer; color:inherit; font:inherit; transition:border-color 140ms, background 140ms; }
+  #fl-imp .drop:hover, #fl-imp .drop.drag{ border-color:var(--accent); background:var(--accent-tint); }
+  #fl-imp .drop:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  #fl-imp .drop .ico{ width:40px; height:40px; margin:0 auto 10px; border:1px solid var(--line); border-radius:9px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  #fl-imp .drop b{ display:block; font-size:14px; font-weight:500; }
+  #fl-imp .drop .hint{ font-size:11.5px; color:var(--muted); margin-top:5px; }
+  #fl-imp .drop .formats{ margin-top:12px; display:flex; gap:6px; justify-content:center; }
+  #fl-imp .chip{ font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:1px 5px; }
+  #fl-imp .or{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:11px; }
+  #fl-imp .or::before, #fl-imp .or::after{ content:""; flex:1; height:1px; background:var(--line); }
+  #fl-imp .paste{ border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:14px 15px; }
+  #fl-imp .paste label{ font-size:12.5px; font-weight:500; display:block; margin-bottom:7px; }
+  #fl-imp .paste textarea{ width:100%; box-sizing:border-box; min-height:110px; resize:vertical; font:inherit; font-size:12.5px; line-height:1.7; color:var(--fg); background:var(--bench); border:1px solid var(--line); border-radius:6px; padding:9px 11px; }
+  #fl-imp .paste textarea:focus{ outline:none; border-color:var(--accent); }
+  #fl-imp .paste .row{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  #fl-imp .paste .hint{ font-size:11px; color:var(--muted); margin-right:auto; }
+  #fl-imp .inline-err{ font-size:11.5px; color:var(--pen-red); margin:6px 0 0; }
+  #fl-imp .sample-link{ font-size:11px; color:var(--muted); background:none; border:0; border-bottom:1px dotted var(--line); cursor:pointer; padding:0; }
+  #fl-imp .sample-link:hover{ color:var(--fg); }
 
-  /* Parsing */
-  #fl-import .parsing{ max-width:420px; margin:70px auto 0; text-align:center; }
-  #fl-import .parsing h2{ font-family:'Noto Serif SC',serif; font-size:16px; margin:0 0 6px; }
-  #fl-import .parsing p{ font-size:12px; color:var(--muted); margin:0 0 20px; }
-  #fl-import .prog{ height:4px; border-radius:99px; background:var(--line); overflow:hidden; }
-  #fl-import .prog i{ display:block; height:100%; width:0; background:var(--accent); transition:width 380ms ease; }
-  #fl-import .psteps{ list-style:none; padding:0; margin:16px 0 0; display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
-  #fl-import .psteps li.on{ color:var(--accent); }
+  /* 结果摘要 */
+  #fl-imp .result{ max-width:640px; margin:12px auto 0; }
+  #fl-imp .result .head{ display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; }
+  #fl-imp .result .head .mark{ width:32px; height:32px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; }
+  #fl-imp .result.clean .mark{ background:var(--ok); }
+  #fl-imp .result.issues .mark{ background:var(--warn); color:#1C1D1B; }
+  #fl-imp .result h2{ font-family:'Noto Serif SC',serif; font-size:17px; margin:0; }
+  #fl-imp .result .sub{ font-size:11.5px; color:var(--muted); margin-top:3px; line-height:1.6; }
+  #fl-imp .result .card{ border:1px solid var(--line); border-radius:9px; background:var(--panel); padding:15px 16px; }
+  #fl-imp .result label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; }
+  #fl-imp .result input{ width:100%; box-sizing:border-box; font:inherit; font-size:13.5px; color:var(--fg); background:var(--bench); border:1px solid var(--line); border-radius:5px; padding:8px 10px; }
+  #fl-imp .result input:focus{ outline:none; border-color:var(--accent); }
+  #fl-imp .result .meta{ margin-top:13px; display:grid; grid-template-columns:1fr 1fr; gap:7px 16px; font-size:11.5px; color:var(--muted); }
+  #fl-imp .result .meta b{ color:var(--fg); font-weight:500; }
+  #fl-imp .result .dest{ margin-top:12px; border-top:1px dashed var(--line); padding-top:10px; font-size:11.5px; color:var(--muted); line-height:1.7; }
+  #fl-imp .result .dest b{ color:var(--warn-ink); font-weight:500; }
+  #fl-imp .issues-list{ display:flex; flex-direction:column; gap:8px; margin:0 0 14px; }
+  #fl-imp .issue{ display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-left:3px solid var(--warn); border-radius:6px; background:var(--warn-tint); padding:9px 11px; font-size:12px; }
+  #fl-imp .issue .t{ flex:1; line-height:1.6; }
+  #fl-imp .issue .t b{ font-weight:500; }
+  #fl-imp .result .actions{ display:flex; gap:8px; margin-top:14px; align-items:center; }
+  #fl-imp .result .actions .spacer{ flex:1; }
 
-  /* Error */
-  #fl-import .parse-error{ max-width:520px; margin:44px auto 0; border:1px solid var(--line); border-left:3px solid var(--pen-red); border-radius:8px; background:var(--panel); padding:18px 20px; }
-  #fl-import .parse-error h2{ font-family:'Noto Serif SC',serif; font-size:16px; margin:0 0 7px; color:var(--pen-red); }
-  #fl-import .parse-error p{ font-size:12.5px; color:var(--muted); margin:0 0 6px; line-height:1.7; }
-  #fl-import .parse-error ul{ margin:6px 0 14px; padding-left:18px; font-size:12px; color:var(--fg); line-height:1.8; }
-  #fl-import .parse-error .acts{ display:flex; gap:8px; }
+  /* 检查视图 */
+  #fl-imp .review{ flex:1; min-height:0; display:grid; grid-template-columns:220px 1fr; }
+  #fl-imp .side{ border-right:1px solid var(--line); padding:12px 9px; background:var(--chrome); overflow:auto; }
+  #fl-imp .side .cap{ font-size:10px; letter-spacing:.08em; color:var(--muted); padding:0 8px 7px; }
+  #fl-imp .nav-item{ width:100%; display:flex; align-items:center; gap:7px; border:0; background:none; color:var(--fg); font:inherit; font-size:12px; text-align:left; padding:7px 8px; border-radius:6px; cursor:pointer; }
+  #fl-imp .nav-item:hover{ background:var(--hover); }
+  #fl-imp .nav-item:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; }
+  #fl-imp .nav-item.on{ background:var(--accent-tint); color:var(--accent); }
+  #fl-imp .nav-item .cnt{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
+  #fl-imp .nav-item .dot{ width:6px; height:6px; border-radius:50%; background:var(--warn); flex:none; }
+  #fl-imp .side .sep{ height:1px; background:var(--line); margin:8px 6px; }
+  #fl-imp .side .pool{ color:var(--warn-ink); }
 
-  /* Step 2 */
-  #fl-import .confirm{ display:grid; grid-template-columns:216px 1fr; height:100%; min-height:0; }
-  #fl-import .side{ border-right:1px solid var(--line); padding:14px 10px; background:var(--chrome); overflow:auto; }
-  #fl-import .side .cap{ font-size:10px; letter-spacing:.08em; color:var(--muted); padding:0 8px 7px; }
-  #fl-import .nav-item{ width:100%; display:flex; align-items:center; gap:8px; border:0; background:none; color:var(--fg); font:inherit; font-size:12.5px; text-align:left; padding:7px 8px; border-radius:6px; cursor:pointer; }
-  #fl-import .nav-item:hover{ background:var(--hover); }
-  #fl-import .nav-item.on{ background:var(--accent-tint); color:var(--accent); }
-  #fl-import .nav-item .cnt{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
-  #fl-import .nav-item .dot{ width:6px; height:6px; border-radius:50%; background:var(--warn); flex:none; }
-  #fl-import .side .sep{ height:1px; background:var(--line); margin:8px 6px; }
-  #fl-import .side .pool{ color:var(--warn); }
+  #fl-imp .review > *{ min-height:0; }
+  #fl-imp .review .main{ padding:14px 18px 26px; overflow:auto; min-height:0; scroll-behavior:smooth; }
+  #fl-imp .review-head{ display:flex; align-items:center; gap:9px; margin-bottom:11px; }
+  #fl-imp .review-head .sum{ font-size:11.5px; color:var(--muted); }
+  #fl-imp .review-head .spacer{ flex:1; }
+  #fl-imp .banner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.6; border:1px solid var(--line); border-left:3px solid var(--warn); background:var(--warn-tint); border-radius:6px; padding:8px 10px; margin-bottom:12px; }
+  #fl-imp .banner b{ font-weight:500; color:var(--warn-ink); }
 
-  #fl-import .main{ padding:14px 18px 22px; overflow:auto; }
-  #fl-import .conf-head{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-  #fl-import .conf-head .sum{ font-size:11.5px; color:var(--muted); }
-  #fl-import .conf-head .spacer{ flex:1; }
-  #fl-import .tpl-pick{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); }
-  #fl-import .tpl-pick select{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:4px 6px; }
-  #fl-import .banner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.6; border:1px solid var(--line); border-left:3px solid var(--warn); background:var(--warn-tint); border-radius:6px; padding:8px 10px; margin-bottom:12px; }
-  #fl-import .banner b{ font-weight:500; }
-  #fl-import .banner.quiet{ border-left-color:var(--accent); background:var(--accent-tint); }
+  #fl-imp .sec{ border:1px solid var(--line); border-radius:9px; background:var(--card); margin-bottom:12px; scroll-margin-top:10px; }
+  #fl-imp .sec.problem{ border-left:3px solid var(--warn); }
+  #fl-imp .sec-head{ display:flex; align-items:center; gap:8px; padding:9px 13px; background:var(--panel); border-bottom:1px solid var(--line); }
+  #fl-imp .sec-head .nm{ font-family:'Noto Serif SC',serif; font-size:14px; font-weight:600; border-bottom:1px dashed transparent; }
+  #fl-imp .sec-head .nm[contenteditable="true"]{ outline:none; border-bottom-color:var(--accent); }
+  #fl-imp .sec-head .cnt{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
+  #fl-imp .sec-head .spacer{ flex:1; }
+  #fl-imp .sec-head .mini{ font:inherit; font-size:11px; color:var(--muted); background:none; border:0; cursor:pointer; padding:2px 4px; border-radius:4px; }
+  #fl-imp .sec-head .mini:hover{ color:var(--fg); }
+  #fl-imp .sec-head .mini:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  #fl-imp .sec-head select{ font:inherit; font-size:11px; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:4px; padding:2px 4px; }
+  #fl-imp .sec-body{ padding:6px 13px 10px; }
+  #fl-imp .sec.collapsed .sec-body{ display:none; }
+  #fl-imp .field{ display:flex; gap:8px; align-items:baseline; padding:3px 0; font-size:12.5px; }
+  #fl-imp .field .k{ width:66px; flex:none; color:var(--muted); font-size:11px; }
+  #fl-imp .field .v{ border-bottom:1px dashed transparent; }
+  #fl-imp .field .v[contenteditable="true"]{ outline:none; border-bottom-color:var(--accent); }
 
-  #fl-import .sec{ border:1px solid var(--line); border-radius:9px; background:var(--card); margin-bottom:12px; overflow:hidden; }
-  #fl-import .sec-head{ display:flex; align-items:center; gap:8px; padding:10px 13px; background:var(--panel); border-bottom:1px solid var(--line); }
-  #fl-import .sec-head .nm{ font-family:'Noto Serif SC',serif; font-size:14px; font-weight:600; }
-  #fl-import .sec-head .type{ font-size:9.5px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 4px; line-height:15px; }
-  #fl-import .sec-head .cnt{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
-  #fl-import .sec-head .spacer{ flex:1; }
-  #fl-import .sec-head .mini{ font:inherit; font-size:11px; color:var(--muted); background:none; border:0; cursor:pointer; padding:2px 4px; }
-  #fl-import .sec-head .mini:hover{ color:var(--fg); }
-  #fl-import .sec-body{ padding:6px 13px 10px; }
-  #fl-import .field{ display:flex; gap:8px; align-items:baseline; padding:3px 0; font-size:12.5px; }
-  #fl-import .field .k{ width:66px; flex:none; color:var(--muted); font-size:11px; }
-  #fl-import .field .v{ border-bottom:1px dashed transparent; cursor:text; }
-  #fl-import .field .v:hover{ border-color:var(--line); }
+  #fl-imp .entry{ border-top:1px dashed var(--line); padding:9px 0 7px; }
+  #fl-imp .entry:first-child{ border-top:0; }
+  #fl-imp .entry .ehead{ display:flex; align-items:baseline; gap:8px; }
+  #fl-imp .entry .org{ font-weight:500; font-size:12.5px; }
+  #fl-imp .entry .role{ color:var(--muted); font-size:11.5px; }
+  #fl-imp .entry .date{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
+  #fl-imp .entry ul{ margin:5px 0 0; padding-left:16px; }
+  #fl-imp .entry li{ font-size:12px; line-height:1.75; }
+  #fl-imp .entry li[data-depth="1"]{ margin-left:14px; }
+  #fl-imp .entry.is-hidden{ background:var(--warn-tint); border-left:2px solid var(--warn); margin-left:-13px; padding-left:11px; }
+  #fl-imp .entry .vis{ margin-left:10px; display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--muted); cursor:pointer; }
+  #fl-imp .entry .vis input{ accent-color:var(--accent); }
+  #fl-imp .entry.is-hidden .vis{ color:var(--warn-ink); }
 
-  #fl-import .entry{ border-top:1px dashed var(--line); padding:9px 0 7px; }
-  #fl-import .entry:first-child{ border-top:0; }
-  #fl-import .entry .ehead{ display:flex; align-items:baseline; gap:8px; }
-  #fl-import .entry .org{ font-weight:500; font-size:12.5px; }
-  #fl-import .entry .role{ color:var(--muted); font-size:11.5px; }
-  #fl-import .entry .date{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); }
-  #fl-import .entry ul{ margin:5px 0 0; padding-left:16px; }
-  #fl-import .entry li{ font-size:12px; line-height:1.75; color:var(--fg); }
-  #fl-import .entry li[data-depth="1"]{ margin-left:14px; }
-  #fl-import .entry li[data-depth="2"]{ margin-left:28px; }
-  #fl-import .entry.over{ background:var(--warn-tint); border-left:2px solid var(--warn); margin-left:-13px; padding-left:11px; }
-  #fl-import .entry .pick{ display:none; align-items:center; gap:5px; font-size:10.5px; color:var(--warn); margin-top:5px; }
-  #fl-import .entry.over .pick, #fl-import .entry.is-prio .pick{ display:flex; }
-  #fl-import .entry .pick input{ accent-color:var(--accent); }
-  #fl-import .badge-over{ font-size:9.5px; color:var(--warn); border:1px solid var(--warn); border-radius:3px; padding:0 4px; line-height:15px; }
+  #fl-imp .inbox{ border:1px solid var(--warn); border-radius:9px; background:var(--card); padding:10px 13px; margin-bottom:12px; scroll-margin-top:10px; }
+  #fl-imp .inbox .ib-head{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:500; color:var(--warn-ink); margin-bottom:5px; }
+  #fl-imp .inbox .blk{ display:flex; align-items:center; gap:8px; border-top:1px dashed var(--line); padding:7px 0; font-size:11.5px; }
+  #fl-imp .inbox .blk:first-of-type{ border-top:0; }
+  #fl-imp .inbox .blk .t{ flex:1; line-height:1.55; }
+  #fl-imp .inbox select{ font:inherit; font-size:11px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:2px 4px; }
+  #fl-imp .inbox .blk.resolved{ opacity:.55; }
 
-  #fl-import .poolcard{ border:1px solid var(--warn); border-radius:9px; background:var(--card); padding:11px 13px; margin-bottom:12px; }
-  #fl-import .poolcard .pc-head{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:500; color:var(--warn); margin-bottom:6px; }
-  #fl-import .poolcard .blk{ display:flex; align-items:center; gap:8px; border-top:1px dashed var(--line); padding:7px 0; font-size:11.5px; }
-  #fl-import .poolcard .blk:first-of-type{ border-top:0; }
-  #fl-import .poolcard .blk .t{ flex:1; color:var(--fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #fl-import .poolcard select{ font:inherit; font-size:11px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:2px 4px; }
+  /* 原文抽屉 */
+  #fl-imp .drawer{ position:absolute; inset:44px 0 0 0; background:rgba(0,0,0,.34); z-index:30; display:flex; justify-content:flex-end; }
+  #fl-imp .drawer .panel{ width:430px; max-width:86%; height:100%; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; }
+  #fl-imp .drawer .d-head{ display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); }
+  #fl-imp .drawer .d-head b{ font-size:13px; }
+  #fl-imp .drawer .d-head .spacer{ flex:1; }
+  #fl-imp .drawer .d-body{ overflow:auto; padding:10px 14px 18px; }
+  #fl-imp .drawer .raw{ border-bottom:1px dashed var(--line); padding:8px 0; font-size:11.5px; line-height:1.65; }
+  #fl-imp .drawer .raw .dest{ display:inline-block; font-size:9.5px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 4px; margin-top:3px; }
+  #fl-imp .drawer .raw .dest.inbox{ color:var(--warn-ink); border-color:var(--warn); }
 
-  /* Step 3 */
-  #fl-import .done{ max-width:560px; margin:26px auto 0; }
-  #fl-import .done .ok{ display:flex; align-items:center; gap:10px; margin-bottom:18px; }
-  #fl-import .done .ok .mark{ width:30px; height:30px; border-radius:50%; background:var(--accent-solid); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; }
-  #fl-import .done .ok h2{ font-family:'Noto Serif SC',serif; font-size:17px; margin:0; }
-  #fl-import .done .ok p{ margin:2px 0 0; font-size:11.5px; color:var(--muted); }
-  #fl-import .done .panel{ border:1px solid var(--line); border-radius:9px; background:var(--panel); padding:16px; }
-  #fl-import .done label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; }
-  #fl-import .done input{ width:100%; box-sizing:border-box; font:inherit; font-size:13.5px; color:var(--fg); background:var(--bench); border:1px solid var(--line); border-radius:5px; padding:8px 10px; }
-  #fl-import .done input:focus{ outline:none; border-color:var(--accent); }
-  #fl-import .done .meta{ margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; font-size:11.5px; color:var(--muted); }
-  #fl-import .done .meta b{ color:var(--fg); font-weight:500; }
-  #fl-import .done .note{ margin:12px 0 0; font-size:11px; color:var(--muted); line-height:1.7; }
+  /* 错误 */
+  #fl-imp .parse-error{ max-width:520px; margin:40px auto 0; border:1px solid var(--line); border-left:3px solid var(--pen-red); border-radius:8px; background:var(--panel); padding:18px 20px; }
+  #fl-imp .parse-error h2{ font-family:'Noto Serif SC',serif; font-size:16px; margin:0 0 7px; color:var(--pen-red); }
+  #fl-imp .parse-error p{ font-size:12.5px; color:var(--muted); margin:0 0 6px; line-height:1.7; }
+  #fl-imp .parse-error ul{ margin:6px 0 14px; padding-left:18px; font-size:12px; line-height:1.8; }
+  #fl-imp .parse-error .acts{ display:flex; gap:8px; }
 
-  #fl-import .toast{ position:absolute; left:50%; bottom:58px; transform:translateX(-50%); background:var(--raised); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font-size:11.5px; box-shadow:0 10px 28px rgba(0,0,0,.3); opacity:0; pointer-events:none; transition:opacity 160ms; }
-  #fl-import .toast.show{ opacity:1; }
+  /* 成功 */
+  #fl-imp .success{ max-width:560px; margin:24px auto 0; }
+  #fl-imp .success .ok{ display:flex; align-items:center; gap:10px; margin-bottom:15px; }
+  #fl-imp .success .mark{ width:30px; height:30px; border-radius:50%; background:var(--ok); color:#fff; display:flex; align-items:center; justify-content:center; }
+  #fl-imp .success h2{ font-family:'Noto Serif SC',serif; font-size:17px; margin:0; }
+  #fl-imp .success .sub{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  #fl-imp .success .card{ border:1px solid var(--line); border-radius:9px; background:var(--panel); padding:14px 16px; font-size:12px; line-height:1.8; }
+  #fl-imp .success .card b{ font-weight:500; }
+  #fl-imp .success .actions{ display:flex; gap:8px; margin-top:13px; }
+
+  /* 库页（放弃后） */
+  #fl-imp .lib{ max-width:640px; margin:34px auto 0; text-align:center; }
+  #fl-imp .lib h2{ font-family:'Noto Serif SC',serif; font-size:17px; margin:0 0 6px; }
+  #fl-imp .lib p{ font-size:12px; color:var(--muted); margin:0 0 16px; }
+  #fl-imp .lib .entry-box{ border:1.5px dashed var(--line); border-radius:9px; padding:18px; margin:0 auto 14px; max-width:420px; color:var(--muted); font-size:12px; }
+
+  /* 弹层 */
+  #fl-imp .modal{ position:absolute; inset:0; background:rgba(0,0,0,.38); display:flex; align-items:center; justify-content:center; z-index:40; }
+  #fl-imp .dialog{ width:430px; max-width:calc(100% - 40px); background:var(--panel); border:1px solid var(--line); border-radius:9px; box-shadow:0 18px 48px rgba(0,0,0,.4); padding:17px 18px; }
+  #fl-imp .dialog h3{ margin:0 0 7px; font-size:15px; }
+  #fl-imp .dialog p{ margin:0 0 10px; font-size:12px; color:var(--muted); line-height:1.7; }
+  #fl-imp .dialog ul{ margin:0 0 12px; padding-left:18px; font-size:11.5px; line-height:1.8; }
+  #fl-imp .dialog .acts{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  #fl-imp .dialog .acts .danger{ color:var(--pen-red); border-color:var(--pen-red); }
+
+  #fl-imp .toast{ position:absolute; left:50%; bottom:58px; transform:translateX(-50%); background:var(--raised); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font-size:11.5px; box-shadow:0 10px 28px rgba(0,0,0,.3); opacity:0; pointer-events:none; transition:opacity 160ms; z-index:50; }
+  #fl-imp .toast.show{ opacity:1; }
   [hidden]{ display:none !important; }
 </style>
 </head>
 <body>
-<div id="fl-import" class="dark">
+<div id="fl-imp" class="dark">
   <div class="preview-bar">
-    <span class="caption">FairLens · m1.7 导入向导预览 · 点击可交互（三步 / 模板 / 溢出 / 错误态）</span>
-    <button class="pbtn" id="demo-1" aria-pressed="true">1 来源</button>
-    <button class="pbtn" id="demo-2">2 确认</button>
-    <button class="pbtn" id="demo-3">3 完成</button>
-    <button class="pbtn" id="demo-parse">解析中</button>
-    <button class="pbtn" id="demo-error">无文本 PDF</button>
-    <button class="pbtn" id="theme">浅色</button>
+    <span class="caption">FairLens · m1.7 导入预览（修订版）· 来源/结果/检查/成功/错误可点</span>
+    <button class="pbtn" id="pv-source" aria-pressed="true">来源</button>
+    <button class="pbtn" id="pv-clean">结果·干净</button>
+    <button class="pbtn" id="pv-issues">结果·有疑点</button>
+    <button class="pbtn" id="pv-review">检查视图</button>
+    <button class="pbtn" id="pv-error">无文本</button>
+    <button class="pbtn" id="pv-success">已导入</button>
+    <button class="pbtn" id="pv-theme">浅色</button>
   </div>
 
   <div class="win">
     <div class="titlebar">
       <span class="app">FAIRLENS</span>
       <span class="crumb">导入简历</span>
-      <div class="wbtns">
-        <button class="wbtn" title="最小化">─</button>
-        <button class="wbtn" title="最大化">□</button>
-        <button class="wbtn close" title="关闭">✕</button>
-      </div>
+      <div class="wbtns"><button class="wbtn" title="最小化">─</button><button class="wbtn" title="最大化">□</button><button class="wbtn" title="关闭">✕</button></div>
     </div>
 
     <div class="wizard">
       <header class="wiz-head">
         <button class="back" id="back">‹ 返回简历库</button>
-        <div class="wiz-title">
-          <h1>导入简历</h1>
-          <div class="sub">解析在本机完成，文件不会上传</div>
-        </div>
+        <div class="wiz-title"><h1>导入简历</h1><div class="sub">解析在本机完成，文件不会上传</div></div>
         <ol class="steps" id="steps">
-          <li class="on" data-s="1"><span class="n">1</span>来源</li>
-          <i class="bar"></i>
-          <li data-s="2"><span class="n">2</span>确认</li>
-          <i class="bar"></i>
-          <li data-s="3"><span class="n">3</span>完成</li>
+          <li class="on" data-s="1"><span class="n">1</span>来源</li><i class="bar"></i><li data-s="2"><span class="n">2</span>检查</li>
         </ol>
       </header>
 
       <div class="wiz-body" id="body">
-        <!-- STEP 1 -->
-        <section data-step="1">
+        <!-- 来源 -->
+        <section id="view-source">
           <div class="source">
-            <div class="drop" id="drop">
-              <div class="ico">
+            <button class="drop" id="drop" type="button" aria-label="选择 DOCX 或 PDF 文件（演示载入一份有疑点的 PDF）">
+              <span class="ico" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-              </div>
-              <b>把 DOCX 或 PDF 拖到这里</b>
-              <div class="hint">也可以 <u>浏览文件</u> 选择；单个文件不超过 20MB</div>
-              <div class="formats"><span class="chip">.docx</span><span class="chip">.pdf</span><span class="chip">≤ 20MB</span></div>
-            </div>
+              </span>
+              <b>把 DOCX 或 PDF 拖到这里，或点击选择</b>
+              <span class="hint">单个文件不超过 20MB · 扫描件 PDF 无法读取文字</span>
+              <span class="formats"><span class="chip">.docx</span><span class="chip">.pdf</span><span class="chip">≤ 20MB</span></span>
+            </button>
             <div class="or">或者粘贴文本</div>
             <div class="paste">
               <label for="paste-text">粘贴简历内容</label>
-              <textarea id="paste-text">林知远
+              <textarea id="paste-text" placeholder="把旧简历的文字粘贴到这里"></textarea>
+              <p class="inline-err" id="paste-err" hidden>先粘贴简历内容，或选择文件。</p>
+              <p class="hint" id="paste-help" style="font-size:11px;color:var(--muted);margin:6px 0 0">先粘贴简历内容，或选择上方文件。</p>
+              <div class="row">
+                <span class="hint">只识别结构，不保留原字体与字号</span>
+                <button class="sample-link" type="button" id="fill-sample">填入示例文本</button>
+                <button class="btn primary" type="button" id="parse-paste" disabled>解析这段文本</button>
+              </div>
+            </div>
+            <p class="hint" style="text-align:center;color:var(--muted);font-size:11px;margin:0">识别清楚会直接得到摘要；有疑点才展开对应内容让你检查。</p>
+          </div>
+        </section>
+
+        <!-- 结果：干净 -->
+        <section id="view-clean" hidden>
+          <div class="result clean">
+            <div class="head"><div class="mark" aria-hidden="true">✓</div><div><h2>识别到 5 个分区，无待处理内容</h2><div class="sub">教育、实习、项目、技能和基本信息都已归位。</div></div></div>
+            <div class="card">
+              <label for="clean-title">简历标题</label>
+              <input id="clean-title" value="林知远">
+              <div class="meta">
+                <span>模板</span><b>经典单栏（进入编辑器可切换）</b>
+                <span>分区</span><b>5 个</b>
+                <span>条目</span><b>6 条</b>
+                <span>要点</span><b>12 条</b>
+              </div>
+              <div class="dest">没有待整理内容，也没有超出模板上限的条目。导入后会直接打开草稿。</div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" id="clean-import">导入并打开</button>
+              <button class="btn" id="clean-review">先检查内容</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 结果：有疑点 -->
+        <section id="view-issues" hidden>
+          <div class="result issues">
+            <div class="head"><div class="mark" aria-hidden="true">!</div><div><h2>有 3 处需要检查</h2><div class="sub">文字已经提取出来了；只有下面这些地方不确定，正常分区不用逐条看。</div></div></div>
+            <div class="issues-list">
+              <div class="issue"><span class="t"><b>3 块无法确定属于哪个分区</b><br>会先放进「待整理内容」，不会丢。</span><button class="btn small" data-jump="inbox">查看并处理</button></div>
+              <div class="issue"><span class="t"><b>实习经历有 1 条超出模板上限（8 条）</b><br>「竞赛」默认暂不显示，仍保存在数据里。</span><button class="btn small" data-jump="sec-exp">调整显示</button></div>
+              <div class="issue"><span class="t"><b>第 2 页有 3 段分栏顺序不确定</b><br>可以对照提取原文确认。</span><button class="btn small" id="open-raw">对照原文</button></div>
+            </div>
+            <div class="card">
+              <label for="issues-title">简历标题</label>
+              <input id="issues-title" value="林知远">
+              <div class="dest" id="issues-dest"><b>3 块</b>将放入「待整理内容」；<b>1 条</b>经历暂不显示（竞赛）。</div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" id="issues-review">检查并导入</button>
+              <button class="btn" id="issues-fast">全部保留并导入</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 检查视图 -->
+        <section id="view-review" hidden class="flush">
+          <div class="review">
+            <aside class="side" id="side"></aside>
+            <div class="main" id="review-main">
+              <div class="review-head">
+                <span class="sum" id="review-sum"></span><span class="spacer"></span>
+                <button class="btn small" id="raw-btn">查看提取原文</button>
+              </div>
+              <div class="banner" id="review-banner"></div>
+              <div id="sections"></div>
+              <div class="inbox" id="inbox"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 错误 -->
+        <section id="view-error" hidden>
+          <div class="parse-error">
+            <h2>这份 PDF 没有可提取的文字</h2>
+            <p>它很可能是扫描件或图片导出的 PDF。FairLens 只读取文本层，不会做 OCR。</p>
+            <ul><li>换成原始 DOCX 文件再导入</li><li>或从原文档复制文字，用「粘贴文本」导入</li></ul>
+            <div class="acts"><button class="btn primary" id="err-back">换一个文件</button><button class="btn" id="err-paste">改用粘贴文本</button></div>
+          </div>
+        </section>
+
+        <!-- 成功 -->
+        <section id="view-success" hidden>
+          <div class="success">
+            <div class="ok"><div class="mark" aria-hidden="true">✓</div><div><h2>已导入并打开草稿</h2><div class="sub" id="success-sub">「林知远」已创建，正在进入编辑器。</div></div></div>
+            <div class="card" id="success-card"></div>
+            <div class="actions">
+              <button class="btn" id="mock-export">模拟导出前检查</button>
+              <button class="btn ghost" id="back-preview">返回预览起点</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 放弃后库页 -->
+        <section id="view-library" hidden>
+          <div class="lib">
+            <h2>已返回简历库</h2>
+            <p>本次导入已放弃，没有创建任何记录。</p>
+            <div class="entry-box">拖入 DOCX / PDF · 浏览文件 · 粘贴文本</div>
+            <button class="btn primary" id="restart">重新开始导入</button>
+          </div>
+        </section>
+      </div>
+
+      <footer class="wiz-foot">
+        <span class="note" id="foot-note">解析在本机完成 · 支持 DOCX / PDF / 粘贴文本</span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="cancel">取消</button>
+        <button class="btn primary" id="review-import" hidden>导入并打开</button>
+      </footer>
+    </div>
+
+    <!-- 原文抽屉 -->
+    <div class="drawer" id="drawer" hidden>
+      <div class="panel">
+        <div class="d-head"><b>提取原文</b><span class="spacer"></span><button class="btn small" id="close-raw">关闭</button></div>
+        <div class="d-body" id="raw-body"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('fl-imp');
+  const body = document.getElementById('body');
+  const steps = Array.from(document.querySelectorAll('#steps li'));
+  const footNote = document.getElementById('foot-note');
+  const btnCancel = document.getElementById('cancel');
+  const btnImport = document.getElementById('review-import');
+  const viewIds = ['view-source','view-clean','view-issues','view-review','view-error','view-success','view-library'];
+
+  const TYPES = [
+    ['basic','基本信息'],['education','教育经历'],['experience','实习/工作经历'],
+    ['project','项目经历'],['skill','技能'],['custom','自定义'],['inbox','待整理内容']
+  ];
+  const LIMITS = { basic:1, education:4, experience:8, project:6, skill:1 };
+
+  /** 演示草稿：干净 */
+  function cleanDraft(){
+    return {
+      title:'林知远', name:'林知远',
+      sections:[
+        { id:'basic', title:'基本信息', type:'basic', fields:[['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海']], entries:[] },
+        { id:'edu', title:'教育经历', type:'education', entries:[
+          { org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:['GPA 3.6/4.0，主修交互设计与数据分析','校级奖学金两次'] }
+        ]},
+        { id:'exp', title:'实习经历', type:'experience', entries:[
+          { org:'字节跳动', role:'前端开发实习生', date:'2025.06 – 2025.12', bullets:['负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms','搭建组件快照测试，回归缺陷下降 35%'] },
+          { org:'美团', role:'前端开发实习生', date:'2024.07 – 2024.10', bullets:['重构商户后台表单，重复代码减少 40%'] }
+        ]},
+        { id:'proj', title:'项目经历', type:'project', entries:[
+          { org:'课程项目', role:'独立开发', date:'2022.09 – 2022.12', bullets:['实现课程作业协作看板'] }
+        ]},
+        { id:'skills', title:'技能', type:'skill', fields:[['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']], entries:[] }
+      ],
+      inbox:[], pdfWarning:false
+    };
+  }
+
+  /** 演示草稿：有疑点（PDF 场景） */
+  function issuesDraft(){
+    const exp = [
+      ['字节跳动','前端开发实习生','2025.06 – 2025.12',['负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms','搭建组件快照测试，回归缺陷下降 35%']],
+      ['美团','前端开发实习生','2024.07 – 2024.10',['重构商户后台表单，重复代码减少 40%']],
+      ['学校实验室','前端负责人','2023.09 – 2024.05',['维护可视化实验平台，服务 6 个课题组']],
+      ['开源社区','贡献者','2023.03 – 2023.08',['为编辑器库修复中文输入法组合态问题']],
+      ['校园工作室','前端开发','2022.10 – 2023.02',['交付社团招新页，累计访问 1.2 万']],
+      ['课程项目','独立开发','2022.09 – 2022.12',['实现课程作业协作看板']],
+      ['技术博客','作者','2022.05 – 至今',['持续输出前端工程化笔记 30 篇']],
+      ['暑期实践','成员','2022.07 – 2022.08',['完成乡村学校信息化调研']],
+      ['竞赛','前端开发','2021.11 – 2021.12',['校级程序设计竞赛二等奖']]
+    ].map(([org,role,date,bullets]) => ({ org, role, date, bullets, hidden:false }));
+    exp[8].hidden = true; // 第 9 条超出 8
+    return {
+      title:'林知远', name:'林知远',
+      sections:[
+        { id:'basic', title:'基本信息', type:'basic', fields:[['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海']], entries:[] },
+        { id:'edu', title:'教育经历', type:'education', entries:[
+          { org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:['GPA 3.6/4.0，主修交互设计与数据分析','校级奖学金两次'] }
+        ]},
+        { id:'exp', title:'实习经历', type:'experience', entries:exp },
+        { id:'proj', title:'项目经历', type:'project', collapsed:true, entries:[
+          { org:'课程项目', role:'独立开发', date:'2022.09 – 2022.12', bullets:['实现课程作业协作看板'] },
+          { org:'竞赛作品', role:'前端开发', date:'2021.11 – 2021.12', bullets:['可视化数据看板，获校级二等奖'] }
+        ]},
+        { id:'skills', title:'技能', type:'skill', collapsed:true, fields:[['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']], entries:[] }
+      ],
+      inbox:[
+        { id:'i1', text:'获奖：校级程序设计竞赛二等奖（2021.12）', dest:'inbox' },
+        { id:'i2', text:'语言：英语 CET-6（580）', dest:'inbox' },
+        { id:'i3', text:'自我评价：关注可维护性与细节。', dest:'inbox' }
+      ],
+      pdfWarning:true
+    };
+  }
+
+  function issuesCollapsed(d){
+    d.sections.forEach((s) => { if (['edu','proj','skills'].includes(s.id)) s.collapsed = true; });
+    return d;
+  }
+
+  let draft = cleanDraft();
+  let current = 'view-source';
+  let reviewBuilt = false;
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const typeLabel = (t) => (TYPES.find((x) => x[0] === t) || ['','自定义'])[1];
+  const sectionsOf = () => draft.sections;
+  const visibleEntries = (s) => s.entries.length;
+  const hiddenList = () => draft.sections.flatMap((s) => s.entries.filter((e) => e.hidden).map((e) => ({ sec:s.title, name:e.org })));
+  const inboxPending = () => draft.inbox.filter((b) => b.dest === 'inbox');
+  const inboxAssigned = () => draft.inbox.filter((b) => b.dest !== 'inbox' && b.dest !== 'discard');
+
+  function show(id){
+    current = id;
+    viewIds.forEach((v) => { document.getElementById(v).hidden = v !== id; });
+    body.classList.toggle('flush', id === 'view-review');
+    const isSource = id === 'view-source';
+    steps[0].classList.toggle('on', isSource);
+    steps[1].classList.toggle('on', !isSource);
+    steps[0].classList.toggle('done', !isSource);
+    btnCancel.hidden = id === 'view-success' || id === 'view-library';
+    btnImport.hidden = id !== 'view-review';
+    if (id === 'view-source') footNote.textContent = '解析在本机完成 · 支持 DOCX / PDF / 粘贴文本';
+    else if (id === 'view-review') footNote.textContent = '导入摘要会列明「待整理内容」和「暂不显示」的去向';
+    else footNote.textContent = '解析在本机完成，文件不会上传';
+    setPressed(id);
+  }
+
+  function setPressed(id){
+    const map = { 'view-source':'pv-source','view-clean':'pv-clean','view-issues':'pv-issues','view-review':'pv-review','view-error':'pv-error','view-success':'pv-success' };
+    ['pv-source','pv-clean','pv-issues','pv-review','pv-error','pv-success'].forEach((b) => {
+      const el = document.getElementById(b);
+      if (el) el.setAttribute('aria-pressed', String(b === map[id]));
+    });
+  }
+
+  // 来源：空内容校验（唯一主路径）
+  const ta = document.getElementById('paste-text');
+  const parseBtn = document.getElementById('parse-paste');
+  const pasteErr = document.getElementById('paste-err');
+  const pasteHelp = document.getElementById('paste-help');
+  document.getElementById('clean-title').addEventListener('input', (e) => { draft.title = e.target.value; });
+  document.getElementById('issues-title').addEventListener('input', (e) => { draft.title = e.target.value; });
+  function syncPaste(){
+    const ok = ta.value.trim().length > 0;
+    parseBtn.disabled = !ok;
+    pasteHelp.hidden = ok;
+    if (ok) pasteErr.hidden = true;
+  }
+  ta.addEventListener('input', syncPaste);
+  syncPaste();
+  document.getElementById('fill-sample').onclick = () => { ta.value = SAMPLE_TEXT; syncPaste(); ta.focus(); };
+  document.getElementById('parse-paste').onclick = () => {
+    if (!ta.value.trim()){ pasteErr.hidden = false; return; }
+    draft = parseText(ta.value);
+    goResult();
+  };
+  document.getElementById('drop').onclick = () => {
+    draft = issuesCollapsed(issuesDraft());
+    goResult();
+  };
+
+  // 粘贴文本的演示解析：来源与草稿一致
+  const SAMPLE_TEXT = `林知远
 前端工程师 · 3 年经验
 175-0000-0000 · lin@example.com · 上海
 
@@ -254,388 +555,358 @@
 • 负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms
 • 搭建组件快照测试，回归缺陷下降 35%
 
+项目经历
+课程项目 · 独立开发
+2022.09 – 2022.12
+• 实现课程作业协作看板
+
 技能
-TypeScript、React、Tiptap、SQLite</textarea>
-              <div class="row">
-                <span class="hint">只识别结构，不保留原字体与字号</span>
-                <button class="btn ghost" id="paste-clear">清空</button>
-                <button class="btn primary" id="paste-go">使用这段文本</button>
-              </div>
-            </div>
-            <div class="error-demo"><button id="err-link">查看「扫描件 PDF 无文本层」的错误形态</button></div>
-          </div>
-        </section>
+语言：TypeScript、JavaScript、SQL
+框架：React、Tiptap、Vite`;
 
-        <!-- STEP 2 -->
-        <section data-step="2" hidden class="no-pad">
-          <div class="confirm">
-            <aside class="side">
-              <div class="cap">识别到的分区</div>
-              <button class="nav-item on">基本信息 <span class="cnt">3</span></button>
-              <button class="nav-item">教育经历 <span class="cnt">1</span></button>
-              <button class="nav-item">实习经历 <span class="dot"></span><span class="cnt">9</span></button>
-              <button class="nav-item">项目经历 <span class="cnt">2</span></button>
-              <button class="nav-item">技能 <span class="cnt">3</span></button>
-              <div class="sep"></div>
-              <button class="nav-item pool">未归类 <span class="cnt">3</span></button>
-            </aside>
-
-            <div class="main">
-              <div class="conf-head">
-                <span class="sum">识别到 5 个分区 · 18 条要点 · 2 张图片已忽略</span>
-                <span class="spacer"></span>
-                <label class="tpl-pick">目标模板
-                  <select id="tpl">
-                    <option value="classic" selected>经典单栏</option>
-                    <option value="duo">侧栏双栏</option>
-                    <option value="sidebar">强调色侧边</option>
-                  </select>
-                </label>
-              </div>
-
-              <div class="banner" id="over-banner">
-                <span>⚠</span>
-                <span><b id="over-count">1 条超出「经典单栏」实习经历上限（8）</b>——会保存在数据里，当前模板不显示、不进入导出；勾选「优先显示」可调整哪些条目排在前面。</span>
-              </div>
-
-              <div class="sec">
-                <div class="sec-head">
-                  <span class="nm">基本信息</span><span class="type">basic</span><span class="cnt">3 字段</span>
-                  <span class="spacer"></span><button class="mini">编辑</button>
-                </div>
-                <div class="sec-body">
-                  <div class="field"><span class="k">姓名</span><span class="v">林知远</span></div>
-                  <div class="field"><span class="k">求职意向</span><span class="v">前端工程师</span></div>
-                  <div class="field"><span class="k">联系方式</span><span class="v">175-0000-0000 · lin@example.com · 上海</span></div>
-                </div>
-              </div>
-
-              <div class="sec">
-                <div class="sec-head">
-                  <span class="nm">教育经历</span><span class="type">education</span><span class="cnt">1 条</span>
-                  <span class="spacer"></span><button class="mini">编辑</button>
-                </div>
-                <div class="sec-body">
-                  <div class="entry">
-                    <div class="ehead"><span class="org">华中科技大学</span><span class="role">软件工程 · 本科</span><span class="date">2022.09 – 2026.06</span></div>
-                    <ul><li>GPA 3.6/4.0，主修交互设计与数据分析</li><li>校级奖学金两次</li></ul>
-                  </div>
-                </div>
-              </div>
-
-              <div class="sec">
-                <div class="sec-head">
-                  <span class="nm">实习经历</span><span class="type">experience</span><span class="cnt">9 条</span>
-                  <span class="spacer"></span><span class="badge-over" id="over-badge">1 条超出上限</span><button class="mini">编辑</button>
-                </div>
-                <div class="sec-body" id="exp-body">
-                  <div class="entry">
-                    <div class="ehead"><span class="org">字节跳动</span><span class="role">前端开发实习生</span><span class="date">2025.06 – 2025.12</span></div>
-                    <ul><li>负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms</li><li>搭建组件快照测试，回归缺陷下降 35%</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">美团</span><span class="role">前端开发实习生</span><span class="date">2024.07 – 2024.10</span></div>
-                    <ul><li>重构商户后台表单，重复代码减少 40%</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">学校实验室</span><span class="role">前端负责人</span><span class="date">2023.09 – 2024.05</span></div>
-                    <ul><li>维护可视化实验平台，服务 6 个课题组</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">开源社区</span><span class="role">贡献者</span><span class="date">2023.03 – 2023.08</span></div>
-                    <ul><li>为编辑器库修复中文输入法组合态问题</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">校园工作室</span><span class="role">前端开发</span><span class="date">2022.10 – 2023.02</span></div>
-                    <ul><li>交付社团招新页，累计访问 1.2 万</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">课程项目</span><span class="role">独立开发</span><span class="date">2022.09 – 2022.12</span></div>
-                    <ul><li>实现课程作业协作看板</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">技术博客</span><span class="role">作者</span><span class="date">2022.05 – 至今</span></div>
-                    <ul><li>持续输出前端工程化笔记 30 篇</li></ul>
-                  </div>
-                  <div class="entry">
-                    <div class="ehead"><span class="org">暑期实践</span><span class="role">成员</span><span class="date">2022.07 – 2022.08</span></div>
-                    <ul><li>完成乡村学校信息化调研</li></ul>
-                  </div>
-                  <div class="entry over">
-                    <div class="ehead"><span class="org">竞赛</span><span class="role">前端开发</span><span class="date">2021.11 – 2021.12</span></div>
-                    <ul><li>校级程序设计竞赛二等奖</li></ul>
-                    <label class="pick"><input type="checkbox" class="prio"> 优先显示（当前模板上限 8 条）</label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="sec">
-                <div class="sec-head">
-                  <span class="nm">技能</span><span class="type">skill</span><span class="cnt">3 组</span>
-                  <span class="spacer"></span><button class="mini">编辑</button>
-                </div>
-                <div class="sec-body">
-                  <div class="field"><span class="k">语言</span><span class="v">TypeScript、JavaScript、SQL</span></div>
-                  <div class="field"><span class="k">框架</span><span class="v">React、Tiptap、Vite</span></div>
-                  <div class="field"><span class="k">工具</span><span class="v">Playwright、SQLite</span></div>
-                </div>
-              </div>
-
-              <div class="poolcard">
-                <div class="pc-head">未归类 · 3 块</div>
-                <div class="blk"><span class="t">获奖：校级程序设计竞赛二等奖（2021.12）</span><select><option>指派到…</option><option>教育经历</option><option>项目经历</option><option>新建分区</option></select></div>
-                <div class="blk"><span class="t">语言：英语 CET-6（580）</span><select><option>指派到…</option><option>技能</option><option>基本信息</option></select></div>
-                <div class="blk"><span class="t">自我评价：关注可维护性与细节。</span><select><option>指派到…</option><option>新建分区</option><option>丢弃</option></select></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- STEP 3 -->
-        <section data-step="3" hidden>
-          <div class="done">
-            <div class="ok">
-              <div class="mark">✓</div>
-              <div><h2>准备创建简历</h2><p>确认稿不会覆盖任何已有简历</p></div>
-            </div>
-            <div class="panel">
-              <label for="title">简历标题</label>
-              <input id="title" value="林知远">
-              <div class="meta">
-                <span>模板</span><b id="done-tpl">经典单栏</b>
-                <span>分区</span><b id="done-sections">5 个（另 3 块未归类）</b>
-                <span>条目</span><b id="done-entries">12 条（1 条超上限）</b>
-                <span>要点</span><b>18 条</b>
-              </div>
-              <p class="note">创建后会直接打开这份简历；导入内容仍可在编辑器中修改。超出模板上限的条目保存在数据里，当前模板不显示、不进入导出。</p>
-            </div>
-          </div>
-        </section>
-
-        <!-- Parsing -->
-        <section data-step="parse" hidden>
-          <div class="parsing">
-            <h2>正在解析</h2>
-            <p>文件只在本机读取，不会上传到任何服务器</p>
-            <div class="prog"><i id="prog-bar"></i></div>
-            <ul class="psteps" id="psteps">
-              <li class="on">读取文件</li><li>提取文本</li><li>识别结构</li>
-            </ul>
-          </div>
-        </section>
-
-        <!-- Error -->
-        <section data-step="error" hidden>
-          <div class="parse-error">
-            <h2>这份 PDF 没有可提取的文字</h2>
-            <p>它很可能是扫描件或图片导出的 PDF。FairLens 只读取文本层，不会做 OCR。</p>
-            <ul>
-              <li>换成原始 DOCX 文件再导入</li>
-              <li>或从原文档复制文字，用「粘贴文本」导入</li>
-            </ul>
-            <div class="acts">
-              <button class="btn primary" id="err-back">换一个文件</button>
-              <button class="btn" id="err-paste">改用粘贴文本</button>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer class="wiz-foot">
-        <span class="note" id="foot-note">支持 DOCX / PDF / 粘贴文本 · 解析在本机完成</span>
-        <span class="spacer"></span>
-        <button class="btn ghost" id="cancel">取消</button>
-        <button class="btn" id="prev" hidden>上一步</button>
-        <button class="btn primary" id="next">下一步</button>
-        <button class="btn primary" id="create" hidden>创建并打开</button>
-      </footer>
-    </div>
-    <div class="toast" id="toast"></div>
-  </div>
-</div>
-
-<script>
-(function(){
-  const root = document.getElementById('fl-import');
-  const body = document.getElementById('body');
-  const stepEls = Array.from(document.querySelectorAll('#steps li'));
-  const footNote = document.getElementById('foot-note');
-  const btnPrev = document.getElementById('prev');
-  const btnNext = document.getElementById('next');
-  const btnCreate = document.getElementById('create');
-  let step = 1;
-  let mode = 'paste'; // paste | docx | pdf
-
-  function show(which){
-    body.classList.toggle('no-pad', which === 2);
-    document.querySelectorAll('[data-step]').forEach((s) => {
-      s.hidden = s.dataset.step !== String(which);
-    });
-    stepEls.forEach((li) => {
-      const n = Number(li.dataset.s);
-      li.classList.toggle('on', n === which);
-      li.classList.toggle('done', n < which);
-    });
-    const isStep = typeof which === 'number';
-    btnPrev.hidden = !(isStep && (which === 2 || which === 3));
-    btnNext.hidden = !(isStep && (which === 1 || which === 2));
-    btnCreate.hidden = !(isStep && which === 3);
-    if (which === 1) footNote.textContent = '支持 DOCX / PDF / 粘贴文本 · 解析在本机完成';
-    else if (which === 2) footNote.textContent = '确认稿只影响本次新建，不会修改已有简历';
-    else if (which === 3) footNote.textContent = '创建后可随时在编辑器中修改';
-    else footNote.textContent = '解析在本机完成，文件不会上传';
-    if (!isStep){ btnPrev.hidden = true; btnNext.hidden = true; btnCreate.hidden = true; }
+  function parseText(text){
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const heads = { '教育经历':'education','教育背景':'education','实习经历':'experience','工作经历':'experience','项目经历':'project','项目经验':'project','技能':'skill','专业技能':'skill','基本信息':'basic' };
+    const d = { title:'导入的简历', name:'', sections:[], inbox:[], pdfWarning:false };
+    const profile = [];
+    let cur = null;
+    let pending = null;
+    for (const line of lines){
+      if (/^[•\-·◆]\s*/.test(line)){
+        const txt = line.replace(/^[•\-·◆]\s*/, '');
+        if (cur && pending){ pending.bullets.push(txt); continue; }
+        if (cur && cur.type !== 'basic' && cur.type !== 'skill'){
+          if (!pending){ pending = { org:'', role:'', date:'', bullets:[] }; cur.entries.push(pending); }
+          pending.bullets.push(txt); continue;
+        }
+        if (cur) { cur.fields.push(['其他', txt]); continue; }
+        d.inbox.push({ id:'x'+d.inbox.length, text:txt, dest:'inbox' }); continue;
+      }
+      if (heads[line]){
+        cur = { id:'s'+d.sections.length, title:line, type:heads[line], entries:[], fields:[] };
+        d.sections.push(cur); pending = null; continue;
+      }
+      if (cur){
+        if (cur.type === 'skill'){
+          const [k,v] = line.split(/[：:]/);
+          cur.fields.push([k.trim(), (v||'').trim()]);
+          continue;
+        }
+        if (cur.type === 'basic'){
+          const [k,v] = line.split(/[：:]/);
+          cur.fields.push([k.trim(), (v||'').trim()]);
+          continue;
+        }
+        // 纯日期行 → 归到上一个条目
+        if (pending && /^(19|20)\d{2}/.test(line) && !line.includes(' · ')){
+          pending.date = line;
+          continue;
+        }
+        // 含日期 / 用 · 分隔 → 新条目标题
+        if (/(19|20)\d{2}/.test(line) || line.includes(' · ')){
+          const parts = line.split(' · ').map((x) => x.trim());
+          const date = parts.find((x) => /(19|20)\d{2}/.test(x)) || '';
+          const rest = parts.filter((x) => x !== date);
+          const bullets = [];
+          const bm = rest.find((x) => x.startsWith('•'));
+          if (bm) bullets.push(bm.replace(/^•\s*/, ''));
+          pending = { org:(rest[0]||'').replace(/^•\s*/,''), role:rest[1]||'', date, bullets };
+          cur.entries.push(pending);
+          continue;
+        }
+        if (pending){ pending.bullets.push(line); continue; }
+        d.inbox.push({ id:'x'+d.inbox.length, text:line, dest:'inbox' });
+      } else {
+        profile.push(line);
+      }
+    }
+    const recognized = d.sections.length;
+    if (profile.length && recognized > 0){
+      d.name = profile[0] || '';
+      d.sections.unshift({ id:'basic', title:'基本信息', type:'basic', fields:[['姓名',profile[0]||''],['求职意向',profile[1]||''],['联系方式',profile[2]||'']], entries:[] });
+      d.title = d.name || '导入的简历';
+    }
+    // 没有识别出任何分区，或整段文字极短：全部进待整理内容（来源与草稿一致，不假装识别成功）
+    if (recognized === 0){
+      d.sections = [];
+      d.inbox = [{ id:'x0', text: lines.join(' '), dest:'inbox' }];
+      d.name = '';
+      d.title = '导入的简历';
+    }
+    return d;
   }
 
-  function jump(n){ step = n; show(n); }
+  function goResult(){
+    const issues = issueCount();
+    if (issues > 0){ renderIssues(); show('view-issues'); }
+    else { renderClean(); show('view-clean'); }
+  }
 
-  // 预览控制条
-  document.getElementById('demo-1').onclick = () => { setPressed('demo-1'); jump(1); };
-  document.getElementById('demo-2').onclick = () => { setPressed('demo-2'); jump(2); };
-  document.getElementById('demo-3').onclick = () => { setPressed('demo-3'); jump(3); };
-  document.getElementById('demo-parse').onclick = () => {
-    setPressed('demo-parse'); show('parse'); runParse();
+  function issueCount(){
+    let n = 0;
+    if (inboxPending().length) n++;
+    if (hiddenList().length) n++;
+    if (draft.pdfWarning) n++;
+    return n;
+  }
+
+  function renderClean(){
+    document.getElementById('clean-title').value = draft.title || draft.name || '导入的简历';
+    const entries = draft.sections.reduce((n,s)=>n+s.entries.length,0);
+    const bullets = draft.sections.reduce((n,s)=>n+s.entries.reduce((m,e)=>m+e.bullets.length,0),0);
+    const card = document.querySelector('#view-clean .meta');
+    if (card){
+      card.innerHTML = `<span>模板</span><b>经典单栏（进入编辑器可切换）</b><span>分区</span><b>${draft.sections.length} 个</b><span>条目</span><b>${entries} 条</b><span>要点</span><b>${bullets} 条</b>`;
+    }
+  }
+
+  function renderIssues(){
+    const dest = document.getElementById('issues-dest');
+    dest.innerHTML = `<b>${inboxPending().length} 块</b>将放入「待整理内容」；<b>${hiddenList().length} 条</b>经历暂不显示${hiddenList()[0] ? '（' + esc(hiddenList()[0].name) + '）' : ''}。`;
+  }
+
+  // 检查视图
+  function buildReview(){
+    reviewBuilt = true;
+    const side = document.getElementById('side');
+    const main = document.getElementById('sections');
+    const inbox = document.getElementById('inbox');
+    const sum = document.getElementById('review-sum');
+    const banner = document.getElementById('review-banner');
+    const issues = issueCount();
+
+    sum.textContent = issues ? `有 ${issues} 处需要检查 · 其余分区可直接导入` : '无待处理内容';
+    banner.innerHTML = issues
+      ? `<span>⚠</span><span>问题项已置顶并展开；其余分区收起，可点左侧定位。底部摘要会列明最终去向。</span>`
+      : `<span>✓</span><span>没有待处理内容；你可以直接导入，或逐区检查。</span>`;
+
+    // 左侧导航
+    let sideHtml = `<div class="cap">检查</div>`;
+    if (inboxPending().length) sideHtml += `<button class="nav-item pool" data-jump="inbox"><span class="dot"></span>待整理内容<span class="cnt">${inboxPending().length}</span></button>`;
+    if (hiddenList().length) sideHtml += `<button class="nav-item" data-jump="hidden-sec"><span class="dot"></span>暂不显示<span class="cnt">${hiddenList().length}</span></button>`;
+    sideHtml += `<div class="sep"></div><div class="cap">分区</div>`;
+    for (const s of draft.sections){
+      const bad = s.entries.some((e)=>e.hidden) || (s.type==='basic' && !s.fields.length);
+      sideHtml += `<button class="nav-item" data-jump="sec-${s.id}">${bad ? '<span class="dot"></span>' : ''}${esc(s.title)}<span class="cnt">${s.entries.length || s.fields.length}</span></button>`;
+    }
+    side.innerHTML = sideHtml;
+
+    // 分区卡
+    main.innerHTML = draft.sections.map((s) => {
+      const isProblem = s.entries.some((e)=>e.hidden);
+      const collapsed = s.collapsed === true;
+      const fields = (s.fields||[]).map(([k,v]) => `<div class="field"><span class="k">${esc(k)}</span><span class="v" contenteditable="true" data-field="${esc(k)}">${esc(v)}</span></div>`).join('');
+      const entries = s.entries.map((e, ei) => {
+        const lim = LIMITS[s.type] || 999;
+        const over = ei >= lim;
+        return `<div class="entry${e.hidden?' is-hidden':''}" data-entry="${ei}">
+          <div class="ehead"><span class="org">${esc(e.org || '未命名条目')}</span><span class="role">${esc(e.role||'')}</span><span class="date">${esc(e.date||'')}</span>
+            <label class="vis"><input type="checkbox" data-toggle="${ei}"${e.hidden?'':' checked'}> 显示</label>
+            ${e.hidden ? '<span class="badge" style="font-size:9.5px;color:var(--warn-ink);border:1px solid var(--warn);border-radius:3px;padding:0 4px;line-height:15px">暂不显示 · 超出模板上限</span>' : ''}
+          </div>
+          <ul>${e.bullets.map((b)=>`<li>${esc(b)}</li>`).join('')}</ul>
+        </div>`;
+      }).join('');
+      return `<div class="sec${isProblem?' problem':''}${collapsed?' collapsed':''}" id="sec-${s.id}">
+        <div class="sec-head">
+          <span class="nm" data-title>${esc(s.title)}</span>
+          <span class="cnt">${s.entries.length ? s.entries.length + ' 条' : (s.fields||[]).length + ' 字段'}</span>
+          <span class="spacer"></span>
+          <button class="mini" type="button" data-edit>编辑</button>
+          <button class="mini" type="button" data-collapse>${collapsed?'展开':'收起'}</button>
+        </div>
+        <div class="sec-body">${fields}${entries}</div>
+      </div>`;
+    }).join('');
+
+    // 待整理内容
+    if (draft.inbox.length){
+      inbox.innerHTML = `<div class="ib-head"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--warn)"></span>待整理内容 · ${inboxPending().length} 块</div>` +
+        draft.inbox.map((b) => `<div class="blk${b.dest!=='inbox'?' resolved':''}" data-block="${b.id}">
+          <span class="t">${esc(b.text)}</span>
+          <select data-dest="${b.id}" aria-label="「${esc(b.text)}」的去向">
+            <option value="inbox"${b.dest==='inbox'?' selected':''}>保留在待整理</option>
+            ${draft.sections.filter((s)=>s.type!=='basic').map((s)=>`<option value="${s.id}"${b.dest===s.id?' selected':''}>移到 ${esc(s.title)}</option>`).join('')}
+            <option value="discard"${b.dest==='discard'?' selected':''}>显式丢弃</option>
+          </select>
+        </div>`).join('');
+    } else {
+      inbox.innerHTML = '';
+    }
+
+    // 事件
+    side.querySelectorAll('[data-jump]').forEach((b) => {
+      b.onclick = () => jumpTo(b.dataset.jump);
+    });
+    main.querySelectorAll('[data-collapse]').forEach((b) => {
+      b.onclick = () => {
+        const sec = b.closest('.sec');
+        const s = draft.sections.find((x)=>`sec-${x.id}`===sec.id);
+        if (s) s.collapsed = !s.collapsed;
+        sec.classList.toggle('collapsed');
+        b.textContent = sec.classList.contains('collapsed') ? '展开' : '收起';
+      };
+    });
+    main.querySelectorAll('[data-edit]').forEach((b) => {
+      b.onclick = () => {
+        const sec = b.closest('.sec');
+        const nm = sec.querySelector('[data-title]');
+        const editing = nm.getAttribute('contenteditable') === 'true';
+        if (!editing){
+          nm.setAttribute('contenteditable','true'); nm.focus();
+          b.textContent = '完成';
+        } else {
+          nm.setAttribute('contenteditable','false');
+          const s = draft.sections.find((x)=>`sec-${x.id}`===sec.id);
+          if (s && nm.textContent.trim()) s.title = nm.textContent.trim();
+          buildReview();
+          toast('分区标题已更新');
+        }
+      };
+    });
+    main.querySelectorAll('input[data-toggle]').forEach((cb) => {
+      cb.onchange = () => {
+        const sec = cb.closest('.sec');
+        const idx = Number(cb.closest('.entry').dataset.entry);
+        const s = draft.sections.find((x)=>`sec-${x.id}`===sec.id);
+        if (!s) return;
+        s.entries[idx].hidden = !cb.checked;
+        buildReview();
+      };
+    });
+    inbox.querySelectorAll('select[data-dest]').forEach((sel) => {
+      sel.onchange = () => {
+        const b = draft.inbox.find((x)=>x.id===sel.dataset.dest);
+        if (!b) return;
+        b.dest = sel.value;
+        buildReview();
+        updateImportSummary();
+        toast(sel.value==='discard' ? '已显式丢弃该块' : sel.value==='inbox' ? '保留在「待整理内容」' : '将移动到所选分区');
+      };
+    });
+
+    updateImportSummary();
+  }
+
+  function jumpTo(key){
+    if (key === 'hidden-sec'){
+      const first = document.querySelector('.entry.is-hidden');
+      if (first) first.closest('.sec').scrollIntoView({block:'start', behavior:'smooth'});
+      return;
+    }
+    const el = document.getElementById(key);
+    if (el) el.scrollIntoView({block:'start', behavior:'smooth'});
+    document.querySelectorAll('.side .nav-item').forEach((b)=>b.classList.toggle('on', b.dataset.jump===key));
+  }
+
+  function updateImportSummary(){
+    const inbox = inboxPending().length;
+    const hid = hiddenList();
+    const parts = [];
+    if (inbox) parts.push(`${inbox} 块放入「待整理内容」`);
+    if (hid.length) parts.push(`${hid.length} 条暂不显示（${hid.map((h)=>h.name).join('、')}）`);
+    const sum = document.getElementById('review-sum');
+    if (sum) sum.textContent = (issueCount() ? `有 ${issueCount()} 处需要检查` : '无待处理内容') + (parts.length ? ' · ' + parts.join(' · ') : ' · 全部内容都会显示');
+  }
+
+  // 原文抽屉
+  function openDrawer(){
+    const raw = document.getElementById('raw-body');
+    const blocks = [];
+    draft.sections.forEach((s) => {
+      s.entries.forEach((e) => blocks.push({ text:[e.org,e.role,e.date,...e.bullets].filter(Boolean).join(' · '), dest:s.title }));
+      (s.fields||[]).forEach(([k,v]) => blocks.push({ text:`${k}：${v}`, dest:s.title }));
+    });
+    draft.inbox.forEach((b) => blocks.push({ text:b.text, dest:'待整理内容', inbox:true }));
+    raw.innerHTML = blocks.map((b) => `<div class="raw">${esc(b.text)}<br><span class="dest${b.inbox?' inbox':''}">→ ${esc(b.dest)}</span></div>`).join('');
+    document.getElementById('drawer').hidden = false;
+  }
+  document.getElementById('raw-btn').onclick = openDrawer;
+  document.getElementById('open-raw').onclick = () => { if (!reviewBuilt) buildReview(); show('view-review'); openDrawer(); };
+  document.getElementById('close-raw').onclick = () => { document.getElementById('drawer').hidden = true; };
+
+  // 导入动作
+  function doImport(){
+    const title = draft.title || draft.name || '导入的简历';
+    const hid = hiddenList();
+    const inbox = inboxPending().length;
+    document.getElementById('success-sub').textContent = `「${title}」已创建，正在进入编辑器。`;
+    document.getElementById('success-card').innerHTML =
+      `<b>模板：</b>经典单栏（进入编辑器可切换）<br>` +
+      `<b>分区：</b>${draft.sections.length} 个${inbox ? `（另有「待整理内容」${inbox} 块）` : ''}<br>` +
+      `<b>条目：</b>${draft.sections.reduce((n,s)=>n+s.entries.length,0)} 条` +
+      (hid.length ? `<br><b>暂不显示：</b>${hid.map((h)=>`${esc(h.sec)} · ${esc(h.name)}`).join('；')}<br><span style="color:var(--muted)">这些条目仍保存在数据里，可在编辑器里改回显示；PDF 导出前会再次提醒。</span>` : '');
+    show('view-success');
+  }
+  document.getElementById('clean-import').onclick = doImport;
+  document.getElementById('issues-fast').onclick = doImport;
+  document.getElementById('review-import').onclick = doImport;
+  document.getElementById('issues-review').onclick = () => { buildReview(); show('view-review'); };
+  document.getElementById('clean-review').onclick = () => { buildReview(); show('view-review'); };
+
+  // 导出前守关
+  document.getElementById('mock-export').onclick = () => {
+    const hid = hiddenList();
+    const inbox = inboxPending().length;
+    showGuard(`<h3>导出前检查</h3>
+      <p>这份简历还有内容不会出现在 PDF 里：</p>
+      <ul>${hid.map((h)=>`<li>${esc(h.sec)} · ${esc(h.name)}（暂不显示）</li>`).join('')}${inbox?`<li>「待整理内容」还有 ${inbox} 块</li>`:''}</ul>
+      <p>可以先去处理，或确认仍然导出。</p>`);
   };
-  document.getElementById('demo-error').onclick = () => { setPressed('demo-error'); show('error'); };
-  function setPressed(id){
-    ['demo-1','demo-2','demo-3','demo-parse','demo-error'].forEach((x) => {
-      document.getElementById(x).setAttribute('aria-pressed', String(x === id));
-    });
+
+  function showGuard(html){
+    const wrap = document.createElement('div');
+    wrap.className = 'modal';
+    wrap.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">${html}
+      <div class="acts"><button class="btn" data-x="cancel">取消</button><button class="btn primary" data-x="ok">仍然导出</button></div></div>`;
+    root.appendChild(wrap);
+    wrap.querySelector('[data-x="cancel"]').onclick = () => wrap.remove();
+    wrap.querySelector('[data-x="ok"]').onclick = () => { wrap.remove(); toast('已导出（演示）'); };
   }
 
-  document.getElementById('theme').onclick = (e) => {
+  // 放弃草稿：真实弹层 + 库页状态
+  function confirmDiscard(){
+    if (current === 'view-library' || current === 'view-success') return;
+    const wrap = document.createElement('div');
+    wrap.className = 'modal';
+    wrap.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+      <h3>放弃本次导入？</h3>
+      <p>已解析和修改的内容不会保存，也不会创建简历。</p>
+      <div class="acts"><button class="btn" data-x="stay">继续导入</button><button class="btn danger" data-x="leave">放弃并返回库</button></div>
+    </div>`;
+    root.appendChild(wrap);
+    wrap.querySelector('[data-x="stay"]').onclick = () => wrap.remove();
+    wrap.querySelector('[data-x="leave"]').onclick = () => { wrap.remove(); show('view-library'); };
+  }
+  document.getElementById('back').onclick = confirmDiscard;
+  document.getElementById('cancel').onclick = confirmDiscard;
+
+  // 预览控制
+  document.getElementById('pv-source').onclick = () => show('view-source');
+  document.getElementById('pv-clean').onclick = () => { draft = cleanDraft(); renderClean(); show('view-clean'); };
+  document.getElementById('pv-issues').onclick = () => { draft = issuesCollapsed(issuesDraft()); renderIssues(); show('view-issues'); };
+  document.getElementById('pv-review').onclick = () => { draft = issuesCollapsed(issuesDraft()); buildReview(); show('view-review'); };
+  document.getElementById('pv-error').onclick = () => show('view-error');
+  document.getElementById('pv-success').onclick = () => { draft = issuesCollapsed(issuesDraft()); doImport(); };
+  document.getElementById('pv-theme').onclick = (e) => {
     root.classList.toggle('light');
     e.currentTarget.textContent = root.classList.contains('light') ? '深色' : '浅色';
   };
-
-  document.getElementById('back').onclick = () => toast('返回简历库：真实实现会先确认是否丢弃本稿');
-  document.getElementById('cancel').onclick = () => toast('取消导入：真实实现会确认丢弃本稿');
-  document.getElementById('prev').onclick = () => jump(step - 1);
-  document.getElementById('next').onclick = () => jump(step + 1);
-  document.getElementById('create').onclick = () => toast('创建并打开：真实实现会写入新简历并进入编辑器');
-  document.querySelectorAll('.sec-head .mini').forEach((b) => {
-    b.onclick = () => toast('编辑分区：真实实现支持改标题/类型、增删条目与要点');
-  });
-
-  // 来源步
-  document.getElementById('drop').onclick = () => {
-    mode = 'docx';
-    show('parse'); runParse();
-  };
-  document.getElementById('paste-go').onclick = () => { mode = 'paste'; jump(2); };
-  document.getElementById('paste-clear').onclick = () => { document.getElementById('paste-text').value = ''; };
-  document.getElementById('err-link').onclick = () => show('error');
-  document.getElementById('err-back').onclick = () => jump(1);
-  document.getElementById('err-paste').onclick = () => jump(1);
-
-  // 解析进度（演示）
-  let timer = null;
-  function runParse(){
-    clearInterval(timer);
-    const bar = document.getElementById('prog-bar');
-    const lis = Array.from(document.querySelectorAll('#psteps li'));
-    let p = 0; bar.style.width = '4%';
-    lis.forEach((l, i) => l.classList.toggle('on', i === 0));
-    timer = setInterval(() => {
-      p += 12;
-      bar.style.width = Math.min(p, 100) + '%';
-      const idx = p < 38 ? 0 : p < 76 ? 1 : 2;
-      lis.forEach((l, i) => l.classList.toggle('on', i === idx));
-      if (p >= 100){
-        clearInterval(timer);
-        setTimeout(() => { jump(2); setPressed('demo-2'); }, 320);
-      }
-    }, 170);
-  }
-
-  // 模板与溢出
-  const LIMITS = { classic: 8, duo: 8, sidebar: 6 };
-  const TPL_NAMES = { classic: '经典单栏', duo: '侧栏双栏', sidebar: '强调色侧边' };
-  const expBody = document.getElementById('exp-body');
-  function recalcOver(){
-    const key = document.getElementById('tpl').value;
-    const max = LIMITS[key];
-    const entries = Array.from(expBody.querySelectorAll('.entry'));
-    let over = 0;
-    entries.forEach((el, i) => {
-      const isOver = i >= max;
-      el.classList.toggle('over', isOver);
-      if (isOver) over += 1;
-      const input = el.querySelector('.prio');
-      if (input) el.classList.toggle('is-prio', input.checked);
-    });
-    const banner = document.getElementById('over-banner');
-    const badge = document.getElementById('over-badge');
-    if (over > 0){
-      banner.hidden = false;
-      document.getElementById('over-count').textContent = over + ' 条超出「' + TPL_NAMES[key] + '」实习经历上限（' + max + '）';
-      badge.hidden = false;
-      badge.textContent = over + ' 条超出上限';
-    } else {
-      banner.hidden = true;
-      badge.hidden = true;
-    }
-    document.getElementById('done-tpl').textContent = TPL_NAMES[key];
-    document.getElementById('done-entries').textContent = '12 条' + (over ? '（' + over + ' 条超上限）' : '');
-    entries.forEach((el) => {
-      const lab = el.querySelector('.pick');
-      if (lab) lab.lastChild.textContent = ' 优先显示（当前模板上限 ' + max + ' 条）';
-    });
-    return over;
-  }
-  function applyTemplate(){
-    reorderByPriority();
-  }
-  /** 勾选条目整体排前（组内保持原顺序），未勾选在后；前 max 条 = 当前模板可见 */
-  function reorderByPriority(){
-    const rows = Array.from(expBody.querySelectorAll('.entry'));
-    const picked = rows.filter((r) => r.querySelector('.prio')?.checked);
-    const rest = rows.filter((r) => !picked.includes(r));
-    [...picked, ...rest].forEach((r) => expBody.appendChild(r));
-    recalcOver();
-  }
-  document.getElementById('tpl').onchange = applyTemplate;
-  applyTemplate();
-
-  // 溢出勾选：勾选后整体排前，前 max 条进入可见区
-  expBody.addEventListener('change', (e) => {
-    if (!e.target.classList.contains('prio')) return;
-    reorderByPriority();
-    toast(e.target.checked ? '已设为优先显示，排到分区前部' : '已取消优先显示');
-  });
-
-  // 未归类指派演示
-  let poolLeft = 3;
-  function updatePool(){
-    const cnt = document.querySelector('.nav-item.pool .cnt');
-    if (cnt) cnt.textContent = String(poolLeft);
-    document.getElementById('done-sections').textContent = '5 个' + (poolLeft ? '（另 ' + poolLeft + ' 块未归类）' : '');
-  }
-  document.querySelectorAll('.poolcard select').forEach((sel) => {
-    sel.onchange = () => {
-      if (!sel.value) return;
-      const row = sel.closest('.blk');
-      if (sel.value === '丢弃'){
-        row.remove();
-      } else {
-        row.style.opacity = '.45';
-        row.querySelector('.t').textContent = row.querySelector('.t').textContent + ' — 已指派到「' + sel.value + '」';
-      }
-      sel.disabled = true;
-      poolLeft = Math.max(0, poolLeft - 1);
-      updatePool();
-      toast(sel.value === '丢弃' ? '已丢弃该块' : '已指派到「' + sel.value + '」；左侧分区计数会在真实实现中更新');
-    };
-  });
+  document.getElementById('err-back').onclick = () => show('view-source');
+  document.getElementById('err-paste').onclick = () => show('view-source');
+  document.getElementById('restart').onclick = () => { ta.value=''; syncPaste(); show('view-source'); };
+  document.getElementById('back-preview').onclick = () => { draft = cleanDraft(); show('view-source'); };
 
   let t = null;
   function toast(msg){
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(t);
-    t = setTimeout(() => el.classList.remove('show'), 2200);
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(t); t = setTimeout(() => el.classList.remove('show'), 2200);
   }
+
+  // 初始
+  renderClean();
+  show('view-source');
 })();
 </script>
 </body>
