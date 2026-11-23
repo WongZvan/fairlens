@@ -15,6 +15,7 @@ const fake = vi.hoisted(() => {
   let failDeleteSetting = false;
   let failSampleSettingRead = false;
   let upsertGate: Promise<void> | null = null;
+  let failUpsert = false;
   const settings = new Map<string, unknown>();
   return {
     rows,
@@ -29,6 +30,8 @@ const fake = vi.hoisted(() => {
     set failSampleSettingRead(v: boolean) { failSampleSettingRead = v; },
     get upsertGate() { return upsertGate; },
     set upsertGate(v: Promise<void> | null) { upsertGate = v; },
+    get failUpsert() { return failUpsert; },
+    set failUpsert(v: boolean) { failUpsert = v; },
   };
 });
 
@@ -39,6 +42,7 @@ vi.mock('../lib/persistence/index.js', () => ({
       return fake.rows.get(id) ?? null;
     },
     async upsertResume(row: ResumeRow) {
+      if (fake.failUpsert) throw new Error('upsert failed');
       if (fake.upsertGate) await fake.upsertGate;
       fake.writes.push({ id: row.id, doc: structuredClone(row.doc) });
       fake.rows.set(row.id, structuredClone(row));
@@ -93,6 +97,7 @@ describe('editor-doc 并发（#129）', () => {
     fake.failDeleteSetting = false;
     fake.failSampleSettingRead = false;
     fake.upsertGate = null;
+    fake.failUpsert = false;
     fake.settings.clear();
     useEditorDoc.setState({ ready: false, doc: null, dirty: false, lastError: null, isSample: false });
     fake.rows.set('ResumeAAAA01', row('ResumeAAAA01'));
@@ -195,5 +200,44 @@ describe('editor-doc 并发（#129）', () => {
     expect(fake.settings.has('sampleResumeId')).toBe(false);
     expect(useEditorDoc.getState().resumeId).toBe('ResumeBBBB02');
     expect(useEditorDoc.getState().isSample).toBe(false);
+  });
+
+  it('清空保存失败：回滚画布/标题/会话行，恢复后保存不会写入空白', async () => {
+    fake.settings.set('sampleResumeId', 'ResumeAAAA01');
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
+    const original = useEditorDoc.getState().doc;
+    fake.failUpsert = true;
+
+    const failed = await useEditorDoc.getState().replaceDoc(doc('CLEARED'), '我的简历');
+    expect(failed).toEqual({ ok: false, sampleCleared: true });
+    // 画布与会话行回到清空前；身份仍在
+    expect(useEditorDoc.getState().doc).toEqual(original);
+    expect(useEditorDoc.getState().resumeTitle).toBe('ResumeAAAA01');
+    expect(useEditorDoc.getState().isSample).toBe(true);
+    expect(fake.settings.get('sampleResumeId')).toBe('ResumeAAAA01');
+    expect(fake.rows.get('ResumeAAAA01')?.doc.profile?.name).toBe('ResumeAAAA01');
+
+    // 恢复后普通保存写入的是原文档，不是空白
+    fake.failUpsert = false;
+    expect((await useEditorDoc.getState().saveNow()).ok).toBe(true);
+    const lastWrite = fake.writes.filter((w) => w.id === 'ResumeAAAA01').at(-1);
+    expect(lastWrite?.doc.profile?.name).toBe('ResumeAAAA01');
+  });
+
+  it('waitForReplace：清空落盘挂起时不返回，释放后才放行（关窗入口统一等待）', async () => {
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
+    let release: () => void = () => {};
+    fake.upsertGate = new Promise<void>((resolve) => { release = resolve; });
+    const replaceP = useEditorDoc.getState().replaceDoc(doc('CLEARED'), '我的简历');
+
+    let settled = false;
+    const waitP = useEditorDoc.getState().waitForReplace().then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    release();
+    await replaceP;
+    await waitP;
+    expect(settled).toBe(true);
   });
 });

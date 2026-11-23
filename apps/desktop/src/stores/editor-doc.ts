@@ -50,6 +50,8 @@ interface EditorDocState {
    * `superseded` = 已被更晚的打开请求超越（调用方应静默）；`error` = 读取/不存在。
    */
   openResume(id: string): Promise<OpenResumeResult>;
+  /** 清空示例等整篇替换是否仍在落盘（关窗/返回库前必须等待，见 waitForReplace） */
+  waitForReplace(): Promise<void>;
   /** CanvasEditor onDocChange 唯一入口 */
   applyDoc(doc: ResumeDoc): void;
   /** Ctrl+S：立即落盘（双模式通用）；返回是否真正写入成功——调用方据此决定 toast */
@@ -110,7 +112,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
 
     async openResume(id) {
       // 清空示例正在落盘：先等它完成，再切换会话（否则旧文档的写会与新打开交错）
-      if (replaceInFlight) await replaceInFlight.catch(() => {});
+      await get().waitForReplace();
       const seq = ++openSeq;
       const port = persistence();
       let row: ResumeRow | null = null;
@@ -163,9 +165,13 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       return 'ok';
     },
 
+    async waitForReplace() {
+      // 循环等待：等待期间若又发起新的整篇替换，也要等它完成
+      while (replaceInFlight) await replaceInFlight.catch(() => {});
+    },
+
     applyDoc(doc) {
-      if (!get().ready) return;
-      set({ doc });
+      if (!get().ready) return;      set({ doc });
       if (get().autosave) {
         session?.controller.schedule(doc);
       } else {
@@ -257,6 +263,11 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
       // 身份判断必须在等待落盘前捕获：保存期间用户可能已打开别的简历，
       // 用完成时的 get().isSample 会清错对象
       const wasSample = get().isSample;
+      // 失败恢复的基线：清空是显式操作，但落盘失败必须回到清空前状态，不能把空白留在画布上
+      const prevDoc = get().doc;
+      const prevTitle = get().resumeTitle;
+      const prevRow = s.row;
+      const prevDirty = get().dirty;
       const run = (async (): Promise<{ ok: boolean; sampleCleared: boolean }> => {
         // 丢弃挂起的旧文档变更，避免防抖计时器把刚清空的文档又写回旧内容
         s.controller.discardPending();
@@ -264,9 +275,15 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
         set({ doc, resumeTitle: title, dirty: get().autosave ? false : true });
         // #128：把落盘结果交给调用方——失败时不得 toast「已清空」
         const result = await get().saveNow();
+        if (!result.ok) {
+          // 落盘失败：回滚画布/标题/会话行（磁盘仍是最初版本，示例身份未动）
+          s.row = prevRow;
+          if (session === s) set({ doc: prevDoc, resumeTitle: prevTitle, dirty: prevDirty });
+          return { ok: false, sampleCleared: true };
+        }
         // #129：清空示例 = 不再持有样本身份；删除键失败要如实告知（否则清空入口会复活）
         let sampleCleared = true;
-        if (result.ok && wasSample) {
+        if (wasSample) {
           try {
             await persistence().deleteSetting('sampleResumeId');
             if (session === s) set({ isSample: false });
@@ -275,7 +292,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
             if (session === s) set({ lastError: String(err) });
           }
         }
-        return { ok: result.ok, sampleCleared };
+        return { ok: true, sampleCleared };
       })();
       replaceInFlight = run;
       try {

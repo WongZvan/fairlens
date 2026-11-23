@@ -211,6 +211,8 @@ export function AppShell() {
 
   /** §5.7 关闭保护：save/discard=弹窗动作；无参=先 flush 再判定是否需要弹窗 */
   const requestClose = async (intent: CloseIntent, opts: { save?: boolean; discard?: boolean } = {}) => {
+    // 清空示例正在落盘：先等它结束，再判定保护模式（否则“不保存”无法撤销已发出的写入）
+    await useEditorDoc.getState().waitForReplace();
     const st = useEditorDoc.getState();
     if (opts.save) {
       const saved = await st.saveNow();
