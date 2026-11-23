@@ -15,6 +15,7 @@ const fake = vi.hoisted(() => {
   let failDeleteSetting = false;
   let failSampleSettingRead = false;
   let upsertGate: Promise<void> | null = null;
+  let snapshotGate: Promise<void> | null = null;
   let failUpsert = false;
   const settings = new Map<string, unknown>();
   return {
@@ -32,6 +33,8 @@ const fake = vi.hoisted(() => {
     set upsertGate(v: Promise<void> | null) { upsertGate = v; },
     get failUpsert() { return failUpsert; },
     set failUpsert(v: boolean) { failUpsert = v; },
+    get snapshotGate() { return snapshotGate; },
+    set snapshotGate(v: Promise<void> | null) { snapshotGate = v; },
   };
 });
 
@@ -65,7 +68,9 @@ vi.mock('../lib/persistence/index.js', () => ({
     },
     async deleteResume(id: string) { fake.rows.delete(id); },
     async listSnapshots() { return []; },
-    async insertSnapshot() {},
+    async insertSnapshot() {
+      if (fake.snapshotGate) await fake.snapshotGate;
+    },
   }),
 }));
 
@@ -97,6 +102,7 @@ describe('editor-doc 并发（#129）', () => {
     fake.failDeleteSetting = false;
     fake.failSampleSettingRead = false;
     fake.upsertGate = null;
+    fake.snapshotGate = null;
     fake.failUpsert = false;
     fake.settings.clear();
     useEditorDoc.setState({ ready: false, doc: null, dirty: false, lastError: null, isSample: false });
@@ -239,5 +245,34 @@ describe('editor-doc 并发（#129）', () => {
     await replaceP;
     await waitP;
     expect(settled).toBe(true);
+  });
+
+  it('快照写入挂起时：返回库/关窗被阻塞，释放后才执行清空（原简历被写空且身份清理）', async () => {
+    fake.settings.set('sampleResumeId', 'ResumeAAAA01');
+    expect(await useEditorDoc.getState().openResume('ResumeAAAA01')).toBe('ok');
+
+    let releaseSnapshot: () => void = () => {};
+    fake.snapshotGate = new Promise<void>((resolve) => { releaseSnapshot = resolve; });
+
+    const clearP = useEditorDoc.getState().runExclusive(async () => {
+      await useEditorDoc.getState().createSnapshot('清空前');
+      return useEditorDoc.getState().replaceDoc(doc('CLEARED'), '我的简历');
+    });
+
+    // 快照阶段：waitForReplace 必须仍在等（否则返回库/关窗会放行）
+    let closed = false;
+    const closeP = useEditorDoc.getState().waitForReplace().then(() => { closed = true; });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    // 清空进行中，丢弃无效
+    useEditorDoc.getState().discardPendingChanges();
+    expect(useEditorDoc.getState().doc?.profile?.name).toBe('ResumeAAAA01');
+
+    releaseSnapshot();
+    expect(await clearP).toEqual({ ok: true, sampleCleared: true });
+    await closeP;
+    expect(closed).toBe(true);
+    expect(fake.rows.get('ResumeAAAA01')?.doc.profile?.name).toBe('CLEARED');
+    expect(fake.settings.has('sampleResumeId')).toBe(false);
   });
 });

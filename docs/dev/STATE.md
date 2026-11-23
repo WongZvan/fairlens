@@ -32,7 +32,7 @@
 |---|---|
 | 代码基线 | `dev=02a4e08`（m1.8 + 清空关窗/回滚）；#127 代码基线=`cceb793`；**工作区干净** |
 | 当前分支 | `dev`（`feat/m1.8-library` 已 squash 合并并删除） |
-| 测试基线 | **377 全绿**（50 文件）；覆盖率四包达标（core 96.27 / shared 100 / keygen 93.84 / lease 100 行）；lint / typecheck / contract 零漂移 / build / E2E **9 条**全过 |
+| 测试基线 | **378 全绿**（50 文件）；覆盖率四包达标（core 96.27 / shared 100 / keygen 93.84 / lease 100 行）；lint / typecheck / contract 零漂移 / build / E2E **9 条**全过 |
 | CI 门禁 | 六 job：`lint` / `typecheck` / `test` / `coverage` / `contract-zero-drift` / `e2e`（全部 actions 已固定 SHA）；**2026-11-21 首绿**（run 44884436909 @ dd23b59） |
 | 唯一事实源 | `docs/01-技术开发文档.md`（附录 E 总账 **129 条**）+ `packages/shared/src/`（zod 契约）。**引用字段名前去读源** |
 | 下一步 | **① m1.8 真窗验收**（`acceptance/M1.md §14.1–§14.6`，含 SQLite 四表级联夹具）→ ② **M1 收口证据**：§1–§13.10 真窗/持久化 → ③ m1.7 导入（后置暂缓） |
@@ -217,3 +217,8 @@
   - **关窗统一等待**：`requestClose` 先 `waitForReplace()`；Alt+F4/任务栏关闭不再能在清空落盘中选择“不保存”后销毁窗口
   - **失败回滚**：`replaceDoc` 保存失败恢复画布/标题/会话行（磁盘原版本、身份未动），取消后不会把空白留在画布上
   - **测试**：377 测试 / 50 文件（新增失败回滚、waitForReplace 挂起 2 条）；E2E 9
+- 2026-11-23 m1.8 清空快照阶段保护（分支 `fix/m1.8-clear-snapshot`）：
+  - **保护范围扩到整个清空**：`activeOps` 集合 + `runExclusive`；快照写入与正文替换都在保护内，`waitForReplace` 快照阶段也阻塞
+  - EditorMockup 清空改 `runExclusive(async () => { createSnapshot; replaceDoc })`
+  - 测试：快照挂起 → waitForReplace 不返回、丢弃无效 → 释放后清空完成且身份清理；**378 测试 / 50 文件**；E2E 9
+  - ADR 状态行标注为定案轮历史值（354/8），当前值以 STATE 为准

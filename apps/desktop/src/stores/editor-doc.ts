@@ -28,8 +28,21 @@ interface EditorSession {
 
 let session: EditorSession | null = null;
 let openSeq = 0;
-/** 正在进行的整篇替换（清空示例）：新打开必须等它落盘，避免旧文档写入与新会话交错 */
-let replaceInFlight: Promise<unknown> | null = null;
+/**
+ * 正在进行的保护型操作（清空示例 = 快照写入 + 正文替换）。
+ * 注册的是**整个清空操作**，不是单靠 replaceDoc——否则快照写入挂起时
+ * 关窗/返回库会越过 waitForReplace，清空任务继续把原简历写空。
+ */
+const activeOps = new Set<Promise<unknown>>();
+
+/** 登记一个保护型操作：整个 fn 期间 waitForReplace/discard 都视为“忙” */
+const trackOperation = <T,>(fn: () => Promise<T>): Promise<T> => {
+  const run = fn();
+  activeOps.add(run);
+  const cleanup = () => { activeOps.delete(run); };
+  run.then(cleanup, cleanup);
+  return run;
+};
 
 interface EditorDocState {
   ready: boolean;
@@ -50,8 +63,10 @@ interface EditorDocState {
    * `superseded` = 已被更晚的打开请求超越（调用方应静默）；`error` = 读取/不存在。
    */
   openResume(id: string): Promise<OpenResumeResult>;
-  /** 清空示例等整篇替换是否仍在落盘（关窗/返回库前必须等待，见 waitForReplace） */
+  /** 是否有保护型操作（清空示例含快照写入）在进行（关窗/返回库前必须等待） */
   waitForReplace(): Promise<void>;
+  /** 以“保护型操作”的方式执行一段异步流程：期间关窗/返回库/打开另一份都会等待 */
+  runExclusive<T>(fn: () => Promise<T>): Promise<T>;
   /** CanvasEditor onDocChange 唯一入口 */
   applyDoc(doc: ResumeDoc): void;
   /** Ctrl+S：立即落盘（双模式通用）；返回是否真正写入成功——调用方据此决定 toast */
@@ -166,12 +181,17 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     },
 
     async waitForReplace() {
-      // 循环等待：等待期间若又发起新的整篇替换，也要等它完成
-      while (replaceInFlight) await replaceInFlight.catch(() => {});
+      // 循环等待：等待期间若又发起新的清空/替换，也要等它完成
+      while (activeOps.size) await Promise.all([...activeOps].map((op) => op.catch(() => {})));
+    },
+
+    runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+      return trackOperation(fn);
     },
 
     applyDoc(doc) {
-      if (!get().ready) return;      set({ doc });
+      if (!get().ready) return;
+      set({ doc });
       if (get().autosave) {
         session?.controller.schedule(doc);
       } else {
@@ -203,8 +223,8 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     },
 
     discardPendingChanges() {
-      // 显式清空正在落盘：已经发出的写入无法撤销，丢弃在此刻没有真实语义（UI 也会保持确认框打开）
-      if (replaceInFlight) return;
+      // 清空（快照+替换）进行中：已经发出的写入无法撤销，丢弃在此刻没有真实语义（UI 也会保持确认框打开）
+      if (activeOps.size) return;
       session?.controller.discardPending();
       // 丢弃 = 回到最后保存版本（原实现只清标记，视图里仍留着未保存内容——用户会以为已丢弃）
       const saved = get().savedDoc;
@@ -294,12 +314,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
         }
         return { ok: true, sampleCleared };
       })();
-      replaceInFlight = run;
-      try {
-        return await run;
-      } finally {
-        if (replaceInFlight === run) replaceInFlight = null;
-      }
+      return trackOperation(() => run);
     },
   };
 });
