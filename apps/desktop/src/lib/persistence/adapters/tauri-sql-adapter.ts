@@ -10,7 +10,21 @@ import { repairResumeDoc } from '../repair-doc.js';
 const DB_URL = import.meta.env.DEV ? 'sqlite:fairlens_dev.db' : 'sqlite:fairlens.db';
 
 let dbPromise: Promise<Database> | null = null;
-const db = () => (dbPromise ??= Database.load(DB_URL));
+let fkChecked = false;
+/**
+ * sqlx 0.8.6 默认 `foreign_keys=ON`（源码注释在 sqlx-sqlite/src/options/mod.rs）；
+ * 删除简历依赖它做四表级联（#129）。这里显式断言，不成立就报错而不是静默留孤儿。
+ */
+const db = async (): Promise<Database> => {
+  const database = await (dbPromise ??= Database.load(DB_URL));
+  if (!fkChecked) {
+    const rows = await database.select<Array<Record<string, unknown>>>('PRAGMA foreign_keys');
+    const on = Number(rows[0]?.foreign_keys ?? 0) === 1;
+    if (!on) throw new Error('SQLite 外键未启用：删除简历将无法级联子表（#129）');
+    fkChecked = true;
+  }
+  return database;
+};
 
 type DbRecord = Record<string, unknown>;
 
@@ -45,9 +59,11 @@ const snapshotFromDb = (r: DbRecord): SnapshotRowT => {
 export function createTauriSqlAdapter(): PersistencePort {
   return {
     async listResumeMetas() {
+      // #129：返回全部状态（归档筛选交 UI）；带 template_id 与快照数，避免卡片 N+1 查询
       const rows = await (await db()).select<DbRecord[]>(
-        'SELECT id, title, vertical_id, status, updated_at FROM resumes WHERE status = $1 ORDER BY updated_at DESC',
-        ['active'],
+        `SELECT r.id, r.title, r.vertical_id, r.status, r.updated_at, r.template_id,
+           (SELECT COUNT(*) FROM resume_snapshots s WHERE s.resume_id = r.id) AS snapshot_count
+         FROM resumes r ORDER BY r.updated_at DESC`,
       );
       return rows.map((r) => ({
         id: r.id as string,
@@ -55,6 +71,8 @@ export function createTauriSqlAdapter(): PersistencePort {
         verticalId: r.vertical_id as string,
         status: r.status as 'active' | 'archived',
         updatedAt: r.updated_at as string,
+        templateId: r.template_id as string,
+        snapshotCount: Number(r.snapshot_count ?? 0),
       }));
     },
 

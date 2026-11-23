@@ -5,11 +5,12 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// Migration 未实现 Clone，无法从 const slice to_vec——按调用构造返回
 pub fn migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "create_initial_tables",
-        kind: MigrationKind::Up,
-        sql: r#"
+    vec![
+        Migration {
+            version: 1,
+            description: "create_initial_tables",
+            kind: MigrationKind::Up,
+            sql: r#"
 CREATE TABLE resumes(id TEXT PRIMARY KEY, title TEXT NOT NULL, vertical_id TEXT NOT NULL DEFAULT 'general',
   template_id TEXT NOT NULL, doc_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -27,7 +28,29 @@ CREATE TABLE ai_patch_log(id TEXT PRIMARY KEY, resume_id TEXT NOT NULL, block_id
 CREATE INDEX idx_patch_resume ON ai_patch_log(resume_id, created_at DESC);
 CREATE TABLE settings(key TEXT PRIMARY KEY, value_json TEXT NOT NULL);
 "#,
-    }]
+        },
+        Migration {
+            // #129：v1 的 ai_patch_log 没有外键，删除简历会留下孤儿。
+            // SQLite 不能 ALTER TABLE ADD CONSTRAINT → 重建表补 ON DELETE CASCADE。
+            version: 2,
+            description: "ai_patch_log_fk_cascade",
+            kind: MigrationKind::Up,
+            sql: r#"
+DELETE FROM ai_patch_log WHERE resume_id NOT IN (SELECT id FROM resumes);
+CREATE TABLE ai_patch_log_new(id TEXT PRIMARY KEY,
+  resume_id TEXT NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
+  block_id TEXT NOT NULL, action TEXT NOT NULL,
+  prompt_version INTEGER NOT NULL, model TEXT NOT NULL, original_text TEXT NOT NULL, suggested_text TEXT NOT NULL,
+  accepted INTEGER NOT NULL, created_at TEXT NOT NULL);
+INSERT INTO ai_patch_log_new(id, resume_id, block_id, action, prompt_version, model, original_text, suggested_text, accepted, created_at)
+  SELECT id, resume_id, block_id, action, prompt_version, model, original_text, suggested_text, accepted, created_at
+  FROM ai_patch_log;
+DROP TABLE ai_patch_log;
+ALTER TABLE ai_patch_log_new RENAME TO ai_patch_log;
+CREATE INDEX idx_patch_resume ON ai_patch_log(resume_id, created_at DESC);
+"#,
+        },
+    ]
 }
 
 #[cfg(test)]
@@ -50,5 +73,8 @@ mod tests {
         for index in ["idx_resumes_updated", "idx_snapshots_resume", "idx_reviews_resume", "idx_patch_resume"] {
             assert!(all.contains(&format!("CREATE INDEX {index}")), "缺索引：{index}");
         }
+        // #129：v2 必须把 ai_patch_log 重建为带级联外键
+        assert!(all.contains("REFERENCES resumes(id) ON DELETE CASCADE"));
+        assert!(all.contains("ALTER TABLE ai_patch_log_new RENAME TO ai_patch_log"));
     }
 }

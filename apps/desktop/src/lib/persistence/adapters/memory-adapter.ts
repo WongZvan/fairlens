@@ -11,7 +11,15 @@ export function createMemoryAdapter(): PersistencePort {
     async listResumeMetas() {
       return [...resumes.values()]
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-        .map(({ id, title, verticalId, status, updatedAt }) => ({ id, title, verticalId, status, updatedAt }));
+        .map(({ id, title, verticalId, status, updatedAt, doc }) => ({
+          id,
+          title,
+          verticalId,
+          status,
+          updatedAt,
+          templateId: doc.templateId,
+          snapshotCount: snapshots.get(id)?.length ?? 0,
+        }));
     },
     async getResume(id) {
       return resumes.get(id) ?? null;
@@ -21,6 +29,8 @@ export function createMemoryAdapter(): PersistencePort {
     },
     async deleteResume(id) {
       resumes.delete(id);
+      // #129：与 SQLite 的 ON DELETE CASCADE 对齐——快照必须一起清，不能留孤儿
+      snapshots.delete(id);
     },
     async listSnapshots(resumeId) {
       return [...(snapshots.get(resumeId) ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));

@@ -3,12 +3,11 @@ import { createAutosave, parseSettingValue, sameDoc, type AutosaveController, ty
 import type { ResumeDoc, ResumeRow, SnapshotRow } from '@fairlens/shared';
 import { persistence } from '../lib/persistence/index.js';
 import { nanoid } from '../lib/nanoid.js';
-import { sampleDoc, SAMPLE_RESUME_TITLE } from '../features/editor-mockup/sample-data.js';
 
 /**
  * 编辑器文档状态（m1.6）：当前简历 + 自动保存防抖状态机 + 快照。
  * §5.7 双模式：autosave=true → applyDoc 防抖落盘；false → 仅标 dirty，Ctrl+S（saveNow）落盘。
- * 当前简历选择=m1.6 简化（最近编辑优先，空库建示例）；m1.8 简历库首页接管。
+ * m1.8（#129）：由库页显式 `openResume(id)`；示例播种移到 library store，编辑器不再“查不到就建示例”。
  *
  * 2026-11-13 修复（用户报障）：手动模式的 dirty 原为「发生过编辑」的闩锁——新建要点再删掉、
  * 文档回到打开时原样，关窗仍弹三键框。现改为与 `savedDoc`（最近一次成功落盘的文档）
@@ -31,8 +30,8 @@ interface EditorDocState {
   saveStatus: SaveStatus;
   dirty: boolean;
   lastError: string | null;
-  /** 进入编辑器时对齐当前简历（幂等；返回库再进会重开最近编辑行——选择逻辑 m1.8 接管） */
-  openCurrent(): Promise<void>;
+  /** 打开指定简历（m1.8；库页唯一入口）。返回是否成功——失败时由调用方提示 */
+  openResume(id: string): Promise<boolean>;
   /** CanvasEditor onDocChange 唯一入口 */
   applyDoc(doc: ResumeDoc): void;
   /** Ctrl+S：立即落盘（双模式通用）；返回是否真正写入成功——调用方据此决定 toast */
@@ -72,26 +71,20 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
     dirty: false,
     lastError: null,
 
-    async openCurrent() {
+    async openResume(id) {
       const port = persistence();
       let row: ResumeRow | null = null;
       let loadError: string | null = null;
       try {
-        const meta = (await port.listResumeMetas())[0] ?? null;
-        row = meta ? await port.getResume(meta.id) : null;
+        row = await port.getResume(id);
       } catch (err) {
-        // 旧数据/适配器异常：不让编辑区留白——记录错误并走新建兜底（#109）
+        // 旧数据/适配器异常：记录错误，不建替身文档（#129：编辑器不再播种）
         loadError = String(err);
-        console.error('[editor-doc] 加载当前简历失败，回退新建示例', err);
+        console.error('[editor-doc] 打开简历失败', id, err);
       }
       if (!row) {
-        const now = new Date().toISOString();
-        row = { id: nanoid(), title: SAMPLE_RESUME_TITLE, verticalId: 'general', doc: sampleDoc, status: 'active', createdAt: now, updatedAt: now };
-        try {
-          await port.upsertResume(row);
-        } catch (err) {
-          loadError = loadError ? `${loadError} / ${String(err)}` : String(err);
-        }
+        set({ lastError: loadError ?? `简历不存在：${id}` });
+        return false;
       }
       currentRow = row;
       const autosave = parseSettingValue('autosave', await port.getSettingRaw('autosave').catch(() => undefined));
@@ -113,6 +106,7 @@ export const useEditorDoc = create<EditorDocState>((set, get) => {
         dirty: false,
         lastError: loadError,
       });
+      return true;
     },
 
     applyDoc(doc) {

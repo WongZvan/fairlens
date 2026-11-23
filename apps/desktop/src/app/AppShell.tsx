@@ -1,4 +1,3 @@
-import { FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
@@ -11,6 +10,7 @@ import { ShortcutHelp } from './ShortcutHelp.js';
 import { CloseGuardDialog, collectPendingIssues, resolveGuardMode, type CloseGuardMode, type CloseIntent } from './CloseGuard.js';
 import { ToastHost, toast } from './Toast.js';
 import { EditorMockup } from '../features/editor-mockup/EditorMockup.js';
+import { LibraryView } from '../features/library/LibraryView.js';
 import { useEditorDoc } from '../stores/editor-doc.js';
 import { persistence, repairAllResumes } from '../lib/persistence/index.js';
 import { saveStatusView } from './save-status.js';
@@ -39,10 +39,14 @@ export function AppShell() {
     void useLicense.getState().hydrate();
   }, []);
 
-  // m1.6：进入编辑器时对齐当前简历（最近编辑优先，空库建示例；选择逻辑 m1.8 库首页接管）
-  useEffect(() => {
-    if (view === 'editor' && activated) void useEditorDoc.getState().openCurrent();
-  }, [view, activated]);
+  // m1.8（#129）：编辑器由库页显式打开；这里不再自动选“最近一份”，更不播种示例
+  const openResume = (id: string) => {
+    void (async () => {
+      const ok = await useEditorDoc.getState().openResume(id);
+      if (ok) setView('editor');
+      else toast(t('library.openFailed'));
+    })();
+  };
 
   // #109：激活后一次性修复历史坏数据（旧换序缺陷写入的 null 条目/空 runs）
   useEffect(() => {
@@ -285,7 +289,7 @@ export function AppShell() {
         onAction={handleAction}
         exporting={exporting}
       />
-      {view === 'library' ? <LibraryPlaceholder onOpenMockup={() => setView('editor')} /> : <EditorMockup />}
+      {view === 'library' ? <LibraryView onOpen={openResume} /> : <EditorMockup />}
       <StatusBar
         view={view}
         lastExportPath={lastExportPath}
@@ -381,20 +385,6 @@ function SaveStatusText() {
         </button>
       )}
     </span>
-  );
-}
-
-/** 简历库占位（m1.8 真实化；当前为打样入口） */
-function LibraryPlaceholder({ onOpenMockup }: { onOpenMockup: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <main className="library-empty">
-      <h1>{t('library.title')}</h1>
-      <p className="muted">{t('library.emptyHint')}</p>
-      <button className="m-btn primary" style={{ marginTop: 8 }} onClick={onOpenMockup}>
-        <FileText size={14} />{t('library.openMockup')}
-      </button>
-    </main>
   );
 }
 

@@ -9,7 +9,9 @@ async function enterEditor(page: import('@playwright/test').Page) {
   await page.goto('/');
   await page.getByLabel('FL-XXXX-XXXX-XXXX').fill('FL-2026-Q4XY-8F3K');
   await page.getByRole('button', { name: '激活' }).click();
-  await page.getByRole('button', { name: '开始写简历' }).click();
+  const sample = page.getByRole('button', { name: '打开 示例简历' });
+  await expect(sample).toBeVisible();
+  await sample.click();
   await expect(page.locator('.ProseMirror')).toBeVisible();
 }
 
@@ -49,7 +51,7 @@ test('首用：清空 → 添加基本信息字段 → 姓名未填时导出被�
 test('首用：库页底栏不显示编辑器保存状态与字数', async ({ page }) => {
   await enterEditor(page);
   await page.getByRole('button', { name: '返回简历库' }).click();
-  await expect(page.getByRole('button', { name: '开始写简历' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '打开 示例简历' })).toBeVisible();
   await expect(page.locator('.statusbar')).not.toContainText('条要点');
   await expect(page.locator('.statusbar')).not.toContainText('已保存');
 });

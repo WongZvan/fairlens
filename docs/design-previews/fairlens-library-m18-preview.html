@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FairLens · 简历库预览（m1.8）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ color-scheme: dark light; }
+  body{ margin:0; padding:28px; background:#17181B; font-family:'IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif; }
+  @media (prefers-color-scheme: light){ body{ background:#E9E7E1; } }
+  #fl-lib{
+    --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23; --card:#2A2B30;
+    --fg:#E8E6E1; --muted:#9B998F; --line:#3A3B40; --hover:#33343A;
+    --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
+    --ok:#7FB89A; --warn:#D6A831; --pen-red:#D96A5F;
+    font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+    font-size:14px; line-height:1.5; color:var(--fg);
+    max-width:1180px; margin:0 auto;
+  }
+  #fl-lib.light{
+    --bench:#F2F1ED; --panel:#F7F6F2; --chrome:#ECEAE4; --card:#FFFFFF;
+    --fg:#1C1D1B; --muted:#8B8983; --line:#E4E2DC; --hover:#ECEAE4;
+    --accent:#33518E; --accent-solid:#33518E; --accent-tint:rgba(51,81,142,.08);
+    --ok:#2E6E4E; --warn:#A37F18; --pen-red:#C4372B;
+  }
+  #fl-lib .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; }
+  #fl-lib .preview-bar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px; }
+  #fl-lib .preview-bar .caption{ font-size:11px; color:#9B998F; margin:0 auto 0 0; }
+  #fl-lib .demo-toggle{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; }
+  #fl-lib .demo-toggle:hover{ border-color:var(--accent); }
+
+  #fl-lib .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  #fl-lib.light .win{ border-color:#D9D6CF; }
+  #fl-lib .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
+  #fl-lib .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
+  #fl-lib .crumb{ font-size:12px; color:var(--muted); }
+  #fl-lib .wbtns{ margin-left:auto; display:flex; gap:2px; }
+  #fl-lib .wbtn{ width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; }
+  #fl-lib .wbtn:hover{ background:var(--hover); color:var(--fg); }
+  #fl-lib .wbtn.close:hover{ background:#C4372B; color:#fff; }
+
+  #fl-lib .home{ padding:22px 26px 20px; min-height:520px; }
+  #fl-lib .home-head{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  #fl-lib .home-head h1{ font-family:'Noto Serif SC',serif; font-size:19px; font-weight:600; margin:0; letter-spacing:.06em; }
+  #fl-lib .home-head .sub{ font-size:12px; color:var(--muted); }
+  #fl-lib .home-head .spacer{ flex:1; }
+  #fl-lib .btn{ font:inherit; font-size:12.5px; display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:7px 12px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg); }
+  #fl-lib .btn:hover:not(:disabled){ border-color:var(--accent); }
+  #fl-lib .btn:disabled{ opacity:.55; cursor:not-allowed; }
+  #fl-lib .btn .chip{ font-size:9.5px; letter-spacing:.04em; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 3px; line-height:14px; }
+  #fl-lib .switch{ display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); cursor:pointer; user-select:none; }
+  #fl-lib .switch input{ position:absolute; opacity:0; pointer-events:none; }
+  #fl-lib .switch .track{ width:28px; height:16px; border-radius:99px; background:var(--line); position:relative; transition:background 140ms; }
+  #fl-lib .switch .track::after{ content:""; position:absolute; width:12px; height:12px; left:2px; top:2px; border-radius:50%; background:var(--panel); transition:transform 140ms; }
+  #fl-lib .switch input:checked + .track{ background:var(--accent); }
+  #fl-lib .switch input:checked + .track::after{ transform:translateX(12px); background:#fff; }
+
+  #fl-lib .create-row{ display:flex; gap:12px; margin-bottom:18px; align-items:stretch; transition:justify-content 160ms; }
+  #fl-lib .tpl-quick{ display:flex; gap:10px; }
+  #fl-lib .tq{ width:108px; border:1px solid var(--line); border-radius:8px; background:var(--card); padding:9px 10px 8px; cursor:pointer; text-align:left; font:inherit; color:inherit; }
+  #fl-lib .tq:hover{ border-color:var(--accent); }
+  #fl-lib .tq:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  #fl-lib .tq .thumb{ height:52px; border-radius:4px; background:var(--panel); border:1px solid var(--line); margin-bottom:7px; position:relative; overflow:hidden; }
+  #fl-lib .tq .thumb i{ position:absolute; background:var(--muted); opacity:.5; }
+  #fl-lib .tq .nm{ font-size:11.5px; }
+  #fl-lib .tq .hint{ font-size:10px; color:var(--muted); margin-top:1px; }
+  #fl-lib .dropzone{ flex:1; border:1.5px dashed var(--line); border-radius:8px; display:flex; align-items:center; gap:12px; padding:12px 18px; color:var(--muted); font-size:12.5px; }
+  #fl-lib .dropzone.disabled{ cursor:not-allowed; background:color-mix(in srgb, var(--panel) 45%, transparent); }
+  #fl-lib .dropzone b{ color:var(--fg); font-weight:500; }
+  #fl-lib .dropzone .tag{ margin-left:auto; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:1px 5px; white-space:nowrap; }
+
+  /* 空库态：模板卡居中放大，不放大一个不可用的投放区 */
+  #fl-lib .home.is-empty .create-row{ justify-content:center; }
+  #fl-lib .home.is-empty .tpl-quick{ gap:16px; }
+  #fl-lib .home.is-empty .tq{ width:150px; padding:13px 14px 11px; }
+  #fl-lib .home.is-empty .tq .thumb{ height:74px; }
+  #fl-lib .home.is-empty .dropzone{ display:none; }
+  #fl-lib .empty-note{ text-align:center; color:var(--muted); font-size:12px; margin:6px 0 18px; }
+  #fl-lib .empty-note b{ color:var(--fg); font-weight:500; }
+  #fl-lib .empty-card{ grid-column:1/-1; border:1.5px dashed var(--line); border-radius:10px; padding:44px 20px; text-align:center; color:var(--muted); font-size:12.5px; }
+  #fl-lib .empty-card b{ display:block; font-family:'Noto Serif SC',serif; font-size:15px; color:var(--fg); margin-bottom:5px; }
+
+  #fl-lib .cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  #fl-lib .rcard{ position:relative; border:1px solid var(--line); border-radius:9px; background:var(--card); padding:13px 14px 11px; }
+  #fl-lib .rcard.archived{ opacity:.55; background:color-mix(in srgb, var(--card) 55%, var(--bench)); }
+  #fl-lib .rcard:has(.card-open:focus-visible){ outline:2px solid var(--accent); outline-offset:1px; }
+  #fl-lib .rcard .card-open{ position:absolute; inset:0; width:100%; border:0; background:transparent; border-radius:9px; cursor:pointer; z-index:0; }
+  #fl-lib .rcard .card-open:focus{ outline:none; }
+  #fl-lib .rcard .nm{ position:relative; z-index:1; pointer-events:none; font-family:'Noto Serif SC',serif; font-size:14.5px; font-weight:600; padding-right:44px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #fl-lib .rcard .meta{ position:relative; z-index:1; pointer-events:none; font-size:11px; color:var(--muted); margin-top:4px; line-height:1.7; }
+  #fl-lib .rcard .foot{ position:relative; z-index:1; pointer-events:none; display:flex; align-items:center; gap:8px; margin-top:10px; font-size:10.5px; color:var(--muted); }
+  #fl-lib .rcard .badge{ border:1px solid var(--line); border-radius:3px; padding:0 4px; line-height:15px; font-size:9.5px; }
+  #fl-lib .rcard .badge.sample{ color:var(--accent); border-color:var(--accent); }
+  #fl-lib .rcard .more{ position:absolute; top:9px; right:9px; z-index:2; width:26px; height:24px; border-radius:5px; border:1px solid transparent; background:none; color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font:inherit; font-size:15px; line-height:1; }
+  #fl-lib .rcard .more:hover{ background:var(--hover); color:var(--fg); }
+  #fl-lib .rcard .more:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  #fl-lib .rcard .card-open:hover ~ .nm{ color:var(--accent); }
+
+  #fl-lib .card-menu{ position:absolute; z-index:30; width:200px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; box-shadow:0 14px 38px rgba(0,0,0,.35); }
+  #fl-lib .card-menu .it{ width:100%; display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:6px; border:0; background:none; color:var(--fg); font:inherit; font-size:12.5px; text-align:left; cursor:pointer; }
+  #fl-lib .card-menu .it:hover{ background:var(--hover); }
+  #fl-lib .card-menu .it:focus-visible{ outline:2px solid var(--accent); outline-offset:-1px; }
+  #fl-lib .card-menu .it.danger{ color:var(--pen-red); }
+  #fl-lib .card-menu .sep{ height:1px; background:var(--line); margin:4px 6px; }
+
+  #fl-lib .dialog-mask{ position:absolute; inset:0; background:rgba(0,0,0,.38); display:flex; align-items:center; justify-content:center; z-index:40; }
+  #fl-lib .dialog{ width:430px; max-width:calc(100% - 40px); background:var(--panel); border:1px solid var(--line); border-radius:9px; box-shadow:0 18px 48px rgba(0,0,0,.4); padding:18px; }
+  #fl-lib .dialog h3{ margin:0 0 8px; font-size:15px; }
+  #fl-lib .dialog p{ margin:0 0 12px; font-size:12.5px; color:var(--muted); line-height:1.65; }
+  #fl-lib .dialog p b{ color:var(--fg); }
+  #fl-lib .dialog input{ width:100%; box-sizing:border-box; font:inherit; font-size:13px; padding:7px 10px; border-radius:5px; border:1px solid var(--line); background:var(--bench); color:var(--fg); }
+  #fl-lib .dialog input:focus{ outline:none; border-color:var(--accent); }
+  #fl-lib .dlg-error{ margin:-4px 0 8px; font-size:11.5px; color:var(--pen-red); }
+  #fl-lib .dialog .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  #fl-lib .dialog .actions .danger{ border-color:var(--pen-red); color:var(--pen-red); }
+
+  #fl-lib .toast-wrap{ position:absolute; left:50%; bottom:18px; transform:translateX(-50%); display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; z-index:50; }
+  #fl-lib .toast{ background:var(--fg); color:var(--bench); font-size:12px; padding:7px 14px; border-radius:6px; animation:fl-toast 180ms ease-out; }
+  @keyframes fl-toast{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+  #fl-lib .notes{ margin:12px 2px 0; font-size:11.5px; line-height:1.8; color:#9B998F; }
+  #fl-lib .notes b{ color:#C9C6BE; font-weight:500; }
+  #fl-lib.light .notes{ color:#8B8983; }
+  #fl-lib.light .notes b{ color:#1C1D1B; }
+</style>
+</head>
+<body>
+<div id="fl-lib">
+  <div class="preview-bar">
+    <p class="caption">FairLens · 简历库预览（可点击）</p>
+    <button type="button" class="demo-toggle" id="btn-theme">◐ 切换浅色 / 深色</button>
+    <button type="button" class="demo-toggle" id="btn-empty">空库态</button>
+    <button type="button" class="demo-toggle" id="btn-back-guard">模拟：编辑器 → 返回库（有未保存）</button>
+  </div>
+
+  <div class="win" id="win">
+    <div class="titlebar">
+      <span class="app">FAIRLENS</span>
+      <span class="crumb">简历库</span>
+      <div class="wbtns">
+        <button class="wbtn" type="button" title="主题">☾</button>
+        <button class="wbtn" type="button" title="设置">⚙</button>
+        <button class="wbtn" type="button" title="最小化">─</button>
+        <button class="wbtn" type="button" title="最大化">□</button>
+        <button class="wbtn close" type="button" title="关闭">✕</button>
+      </div>
+    </div>
+
+    <main class="home" id="home">
+      <div class="home-head">
+        <h1>简历库</h1>
+        <span class="sub" id="sub-count">3 份简历 · 数据仅存本机</span>
+        <span class="spacer"></span>
+        <label class="switch" title="显示已归档的简历（置灰、不参与统计）">
+          <input type="checkbox" id="chk-archived">
+          <span class="track"></span>
+          显示归档
+        </label>
+        <button class="btn" type="button" disabled title="备份与恢复暂未开放">备份与恢复 <span class="chip">未开放</span></button>
+      </div>
+
+      <div class="create-row">
+        <div class="tpl-quick" id="tpl-quick"></div>
+        <div class="dropzone disabled" aria-disabled="true" id="dropzone">
+          <span style="font-size:20px; line-height:1">⇩</span>
+          <span><b>导入暂未开放</b><br>之后支持拖入 DOCX / PDF 与粘贴文本</span>
+          <span class="tag">未开放</span>
+        </div>
+      </div>
+      <p class="empty-note" id="empty-note" hidden><b>导入暂未开放</b> · 之后支持拖入 DOCX / PDF 与粘贴文本。</p>
+
+      <div class="cards" id="cards"></div>
+    </main>
+
+    <div class="toast-wrap" id="toasts"></div>
+  </div>
+
+  <p class="notes">
+    <b>预览说明</b>：模板卡 = <b>新建一份空白简历</b>（示例卡始终独立，不再被打开）；卡片 <b>⋯</b> = 打开 / 重命名 / 归档 / 删除；
+    「归档」= 软归档（置灰、默认不参与统计），用右上「显示归档」切回；删除确认会列明快照数并建议先归档；
+    导入区与「备份与恢复」为未开放占位，<b>没有可点但完不成的按钮</b>；
+    <b>未保存保护发生在「编辑器 → 返回库」</b>：用顶部「模拟：编辑器 → 返回库」按钮演示；库页点卡片只会打开，不会再弹保护框。
+  </p>
+</div>
+
+<script>
+(() => {
+  const root = document.getElementById('fl-lib');
+  const win = document.getElementById('win');
+  const home = document.getElementById('home');
+  const $ = (s) => root.querySelector(s);
+  const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.className = cls; return n; };
+
+  const TEMPLATES = [
+    { id: 'tpl-classic', name: '经典单栏' },
+    { id: 'tpl-duo', name: '侧栏双栏' },
+    { id: 'tpl-sidebar', name: '强调色侧边' },
+  ];
+
+  const SEED_CARDS = [
+    { id: 'c1', title: '示例简历', tpl: 'tpl-classic', updated: '今天 10:24', snaps: 0, sample: true, archived: false },
+    { id: 'c2', title: '李思远 · 产品经理', tpl: 'tpl-duo', updated: '10-20 09:12', snaps: 6, sample: false, archived: false },
+    { id: 'c4', title: '校招冲刺 · 通用版', tpl: 'tpl-classic', updated: '10-12 21:03', snaps: 3, sample: false, archived: false },
+    { id: 'c3', title: '实习冲刺 · 9 月版', tpl: 'tpl-sidebar', updated: '09-28 18:40', snaps: 2, sample: false, archived: true },
+  ];
+
+  const state = {
+    light: false,
+    emptyDemo: false,
+    showArchived: false,
+    cards: SEED_CARDS.map((c) => ({ ...c })),
+  };
+
+  /** ID 唯一：从现有 cN 的最大值之后开始，避免与种子卡撞号 */
+  let nextId = state.cards.reduce((max, c) => {
+    const m = /^c(\d+)$/.exec(c.id);
+    return m ? Math.max(max, Number(m[1])) : max;
+  }, 0);
+  const newId = () => { nextId += 1; return 'c' + nextId; };
+
+  const tplName = (id) => (TEMPLATES.find((t) => t.id === id) || TEMPLATES[0]).name;
+  const activeCards = () => state.cards.filter((c) => !c.archived);
+  const visibleCards = () => state.cards.filter((c) => state.showArchived || !c.archived);
+
+  function toast(text) {
+    const wrap = $('#toasts');
+    const n = el('div', 'toast');
+    n.textContent = text;
+    wrap.appendChild(n);
+    setTimeout(() => n.remove(), 2400);
+  }
+
+  function nextTitle() {
+    const base = '我的简历';
+    const titles = new Set(state.cards.map((c) => c.title));
+    if (!titles.has(base)) return base;
+    for (let i = 2; i < 100; i += 1) if (!titles.has(base + ' ' + i)) return base + ' ' + i;
+    return base;
+  }
+
+  function renderTemplates() {
+    const host = $('#tpl-quick');
+    host.textContent = '';
+    for (const t of TEMPLATES) {
+      const b = el('button', 'tq');
+      b.type = 'button';
+      b.dataset.tpl = t.id;
+      b.innerHTML =
+        '<div class="thumb"><i style="left:12px;right:12px;top:8px;height:3px"></i>' +
+        '<i style="left:12px;right:34px;top:17px;height:2px"></i>' +
+        '<i style="left:12px;right:12px;top:25px;height:2px"></i>' +
+        '<i style="left:12px;right:44px;top:33px;height:2px"></i></div>' +
+        '<div class="nm">' + t.name + '</div><div class="hint">点击新建</div>';
+      b.addEventListener('click', () => createFromTemplate(t));
+      host.appendChild(b);
+    }
+  }
+
+  function createFromTemplate(t) {
+    const card = { id: newId(), title: nextTitle(), tpl: t.id, updated: '刚刚', snaps: 0, sample: false, archived: false };
+    state.cards.unshift(card);
+    state.emptyDemo = false;
+    render();
+    toast('已新建：' + card.title + '（' + t.name + '）');
+  }
+
+  function renderCards() {
+    const host = $('#cards');
+    host.textContent = '';
+    const list = visibleCards();
+    if (!list.length) {
+      const empty = el('div', 'empty-card');
+      // 真正空库 vs 全部归档：后者必须提示打开「显示归档」，不能说“还没有简历”
+      empty.innerHTML = state.cards.length === 0
+        ? '<b>还没有简历</b>从上方三套模板新建一份。'
+        : '<b>没有可显示的简历</b>已归档的简历被隐藏了，打开右上「显示归档」查看。';
+      host.appendChild(empty);
+    }
+    for (const c of list) {
+      const card = el('div', 'rcard' + (c.archived ? ' archived' : ''));
+      card.dataset.id = c.id;
+
+      const open = el('button', 'card-open');
+      open.type = 'button';
+      open.setAttribute('aria-label', '打开 ' + c.title);
+      open.addEventListener('click', () => openCard(c));
+
+      const nm = el('div', 'nm');
+      nm.textContent = c.title;
+      const meta = el('div', 'meta');
+      meta.innerHTML = tplName(c.tpl) + ' · 最近编辑 ' + c.updated + '<br>' +
+        (c.snaps ? c.snaps + ' 个快照' : '还没有快照') + (c.archived ? ' · 已归档，不参与统计' : '');
+      const foot = el('div', 'foot');
+      if (c.sample) { const b = el('span', 'badge sample'); b.textContent = '示例'; foot.appendChild(b); }
+      if (c.archived) { const b = el('span', 'badge'); b.textContent = '已归档'; foot.appendChild(b); }
+
+      const more = el('button', 'more');
+      more.type = 'button';
+      more.setAttribute('aria-label', '卡片操作：' + c.title);
+      more.setAttribute('aria-haspopup', 'menu');
+      more.textContent = '⋯';
+      more.addEventListener('click', (e) => { e.stopPropagation(); openMenu(more, c); });
+
+      card.append(open, nm, meta, foot, more);
+      host.appendChild(card);
+    }
+  }
+
+  function openCard(c) {
+    toast('打开：' + c.title + '（真实实现进入编辑器）');
+  }
+
+  let menuEl = null;
+  let menuTrigger = null;
+  function closeMenu(restoreFocus = false) {
+    if (!menuEl) return;
+    const trigger = menuTrigger;
+    menuEl.remove();
+    menuEl = null;
+    menuTrigger = null;
+    if (restoreFocus && trigger) trigger.focus();
+  }
+  function openMenu(trigger, c) {
+    closeMenu();
+    const m = el('div', 'card-menu');
+    m.setAttribute('role', 'menu');
+    m.setAttribute('aria-label', '卡片操作');
+    const mk = (label, fn, cls) => {
+      const b = el('button', 'it' + (cls ? ' ' + cls : ''));
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      b.textContent = label;
+      b.addEventListener('click', (e) => { e.stopPropagation(); closeMenu(true); fn(); });
+      m.appendChild(b);
+    };
+    mk('打开', () => openCard(c));
+    mk('重命名…', () => renameDialog(c, trigger));
+    mk(c.archived ? '取消归档' : '归档', () => toggleArchive(c));
+    m.appendChild(el('div', 'sep'));
+    mk('删除…', () => deleteDialog(c, trigger), 'danger');
+
+    m.addEventListener('keydown', (e) => {
+      const items = [...m.querySelectorAll('.it')];
+      const idx = items.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length]?.focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); items[(idx - 1 + items.length) % items.length]?.focus(); }
+    });
+
+    win.appendChild(m);
+    const r = trigger.getBoundingClientRect();
+    const w = win.getBoundingClientRect();
+    m.style.left = Math.min(r.right - w.left - 200, w.width - 214) + 'px';
+    m.style.top = (r.top - w.top + 30) + 'px';
+    menuEl = m;
+    menuTrigger = trigger;
+    m.querySelector('.it')?.focus();
+  }
+
+  /** 卡片重绘后把焦点放回同一张卡的 ⋯；卡已不可见则退到下一张/模板卡 */
+  function focusCard(cardId) {
+    const card = state.cards.find((c) => c.id === cardId);
+    const visible = card && (state.showArchived || !card.archived);
+    const same = visible ? $('.rcard[data-id="' + cardId + '"] .more') : null;
+    const target = same || $('.rcard .more') || $('.tq');
+    target?.focus();
+  }
+
+  function toggleArchive(c) {
+    c.archived = !c.archived;
+    render();
+    toast(c.archived ? '已归档：' + c.title + '（可在「显示归档」中查看）' : '已取消归档：' + c.title);
+    focusCard(c.id);
+  }
+
+  // ---- 统一对话框：Esc 取消 / 焦点陷阱 / 关闭后焦点归还 / 遮罩策略 ----
+  let dialogOpen = false;
+  function openDialog({ title, bodyHtml, actions, initialFocus, backdropClose, afterClose }) {
+    if (dialogOpen) return;
+    dialogOpen = true;
+    const returnTo = document.activeElement;
+    const mask = el('div', 'dialog-mask');
+    const box = el('div', 'dialog');
+    const titleId = 'dlg-' + Math.random().toString(36).slice(2, 8);
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-labelledby', titleId);
+    box.innerHTML = '<h3 id="' + titleId + '">' + title + '</h3>' + bodyHtml +
+      '<div class="actions">' + actions.map((a, i) =>
+        '<button type="button" class="btn' + (a.cls ? ' ' + a.cls : '') + '" data-idx="' + i + '">' + a.label + '</button>').join('') +
+      '</div>';
+    mask.appendChild(box);
+    win.appendChild(mask);
+
+    const close = (run) => {
+      if (!dialogOpen) return;
+      // 动作返回 false = 校验不通过，框保持打开（例：空标题）
+      const keep = run ? run() : undefined;
+      if (keep === false) return;
+      dialogOpen = false;
+      document.removeEventListener('keydown', onKey, true);
+      mask.remove();
+      // 旧触发点可能已被重绘脱离文档（重命名/删除会 render），isConnected 守卫后交给 afterClose
+      if (returnTo instanceof HTMLElement && returnTo.isConnected) returnTo.focus();
+      if (afterClose) afterClose();
+    };
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
+      if (e.key !== 'Tab') return;
+      const focusables = [...box.querySelectorAll('button, input')].filter((n) => !n.disabled);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!box.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+
+    actions.forEach((a, i) => {
+      box.querySelector('[data-idx="' + i + '"]').addEventListener('click', () => close(a.onClick));
+    });
+    if (backdropClose) mask.addEventListener('mousedown', (e) => { if (e.target === mask) close(); });
+
+    const target = initialFocus ? box.querySelector(initialFocus) : box.querySelector('.actions .btn:last-child');
+    target?.focus();
+    return { close };
+  }
+
+  function renameDialog(c, trigger) {
+    openDialog({
+      title: '重命名简历',
+      bodyHtml: '<p>标题只影响简历库显示，不改变画布内容。</p>' +
+        '<input id="rn" value="' + escapeAttr(c.title) + '" aria-label="简历标题" maxlength="40">' +
+        '<p class="dlg-error" id="rn-error" hidden>标题不能为空</p>',
+      actions: [
+        { label: '取消' },
+        { label: '保存', cls: 'primary', onClick: () => {
+          const input = $('#rn');
+          const v = (input?.value ?? '').trim();
+          if (!v) {
+            const err = $('#rn-error');
+            if (err) err.hidden = false;
+            input?.focus();
+            return false; // 校验不通过：框保持打开并说明原因
+          }
+          c.title = v;
+          render();
+          toast('已重命名');
+        } },
+      ],
+      initialFocus: '#rn',
+      backdropClose: true,
+      afterClose: () => focusCard(c.id),
+    });
+    const input = $('#rn');
+    if (input) {
+      input.addEventListener('input', () => { const err = $('#rn-error'); if (err) err.hidden = true; });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.closest('.dialog').querySelector('[data-idx="1"]').click(); }
+      });
+      input.select();
+    }
+  }
+
+  function deleteDialog(c, trigger) {
+    openDialog({
+      title: '删除「' + escapeHtml(c.title) + '」？',
+      bodyHtml: '<p>将一并删除 <b>' + c.snaps + ' 个快照</b>，且无法撤销。<br>建议先用「归档」保留：卡片置灰、不参与统计，但随时可以找回。</p>',
+      actions: [
+        { label: '取消' },
+        { label: '删除', cls: 'danger', onClick: () => {
+          state.cards = state.cards.filter((x) => x.id !== c.id);
+          render();
+          toast('已删除：' + c.title);
+        } },
+      ],
+      backdropClose: false,
+      afterClose: () => { ($('.rcard .more') || $('.tq'))?.focus(); },
+    });
+  }
+
+  function backToLibraryGuard() {
+    openDialog({
+      title: '关闭前确认',
+      bodyHtml: '<p>你有尚未保存的更改。<br>目标：返回简历库</p>',
+      actions: [
+        { label: '取消' },
+        { label: '不保存', onClick: () => toast('不保存，已返回简历库') },
+        { label: '保存并返回', cls: 'primary', onClick: () => toast('已保存，已返回简历库') },
+      ],
+      backdropClose: false,
+    });
+  }
+
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  function render() {
+    const active = activeCards().length;
+    const archived = state.cards.length - active;
+    $('#sub-count').textContent = active + ' 份简历' + (archived ? ' · ' + archived + ' 份已归档' : '') + ' · 数据仅存本机';
+    home.classList.toggle('is-empty', state.cards.length === 0);
+    $('#empty-note').hidden = state.cards.length !== 0;
+    renderCards();
+  }
+
+  $('#btn-theme').addEventListener('click', () => {
+    state.light = !state.light;
+    root.classList.toggle('light', state.light);
+  });
+  $('#btn-empty').addEventListener('click', () => {
+    state.emptyDemo = !state.emptyDemo;
+    if (state.emptyDemo) state.cards = [];
+    else if (!state.cards.length) state.cards = SEED_CARDS.map((c) => ({ ...c }));
+    render();
+  });
+  $('#btn-back-guard').addEventListener('click', backToLibraryGuard);
+  $('#chk-archived').addEventListener('change', (e) => { state.showArchived = e.target.checked; render(); });
+  document.addEventListener('click', (e) => {
+    if (menuEl && !menuEl.contains(e.target)) closeMenu();
+  });
+
+  renderTemplates();
+  render();
+})();
+</script>
+</body>
+</html>

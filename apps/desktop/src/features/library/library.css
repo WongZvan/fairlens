@@ -1,0 +1,124 @@
+/* 简历库（m1.8 / #129）：预览基线 docs/design-previews/fairlens-library-m18-preview.html */
+.lib-home {
+  flex: 1; min-height: 0; overflow: auto;
+  padding: 22px 26px 20px;
+  display: flex; flex-direction: column;
+}
+
+.lib-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.lib-head h1 {
+  font-family: var(--ade-font-serif); font-size: 19px; font-weight: 600;
+  margin: 0; letter-spacing: 0.06em;
+}
+.lib-sub { font-size: 12px; color: var(--ade-muted); }
+.lib-spacer { flex: 1; }
+
+.lib-switch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ade-muted); cursor: pointer; user-select: none; }
+.lib-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.lib-switch-track {
+  width: 28px; height: 16px; border-radius: 99px; background: var(--ade-line);
+  position: relative; transition: background 140ms;
+}
+.lib-switch-track::after {
+  content: ''; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px;
+  border-radius: 50%; background: var(--ade-panel); transition: transform 140ms;
+}
+.lib-switch input:checked + .lib-switch-track { background: var(--ade-accent); }
+.lib-switch input:checked + .lib-switch-track::after { transform: translateX(12px); background: #fff; }
+.lib-switch input:focus-visible + .lib-switch-track { outline: 2px solid var(--ade-accent); outline-offset: 2px; }
+
+.lib-btn {
+  font: inherit; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 6px; padding: 7px 12px; cursor: pointer;
+  border: 1px solid var(--ade-line); background: var(--ade-panel); color: var(--ade-ink);
+}
+.lib-btn:hover:not(:disabled) { border-color: var(--ade-accent); }
+.lib-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.lib-tag {
+  font-size: 9.5px; letter-spacing: 0.04em; color: var(--ade-muted);
+  border: 1px solid var(--ade-line); border-radius: 3px; padding: 0 3px; line-height: 14px;
+}
+
+.lib-create-row { display: flex; gap: 12px; margin-bottom: 18px; align-items: stretch; }
+.lib-tpl-quick { display: flex; gap: 10px; }
+.lib-tpl {
+  width: 108px; border: 1px solid var(--ade-line); border-radius: 8px;
+  background: var(--ade-panel); padding: 9px 10px 8px;
+  cursor: pointer; text-align: left; font: inherit; color: inherit;
+}
+.lib-tpl:hover { border-color: var(--ade-accent); }
+.lib-tpl:focus-visible { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
+.lib-tpl-thumb {
+  display: block; height: 52px; border-radius: 4px; background: var(--ade-bench);
+  border: 1px solid var(--ade-line); margin-bottom: 7px; position: relative; overflow: hidden;
+}
+.lib-tpl-thumb::before,
+.lib-tpl-thumb::after {
+  content: ''; position: absolute; left: 12px; right: 12px; height: 2px;
+  background: var(--ade-muted); opacity: 0.45;
+}
+.lib-tpl-thumb::before { top: 10px; box-shadow: 0 9px 0 var(--ade-muted), 0 18px 0 var(--ade-muted); }
+.lib-tpl-thumb::after { top: 30px; right: 40px; }
+.lib-tpl[data-tpl='tpl-duo'] .lib-tpl-thumb::after { left: 8px; width: 28px; right: auto; height: 34px; top: 8px; opacity: 0.28; }
+.lib-tpl[data-tpl='tpl-sidebar'] .lib-tpl-thumb::after { left: 0; width: 26px; right: auto; height: 100%; top: 0; opacity: 0.22; background: var(--ade-accent); }
+.lib-tpl-name { display: block; font-size: 11.5px; }
+.lib-tpl-hint { display: block; font-size: 10px; color: var(--ade-muted); margin-top: 1px; }
+
+.lib-import {
+  flex: 1; border: 1.5px dashed var(--ade-line); border-radius: 8px;
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+  color: var(--ade-muted); font-size: 12.5px;
+  cursor: not-allowed; background: color-mix(in srgb, var(--ade-panel) 45%, transparent);
+}
+.lib-import b { color: var(--ade-ink); font-weight: 500; }
+.lib-import-icon { font-size: 20px; line-height: 1; }
+
+/* 空态：模板卡居中放大；导入不可用时不放大禁用投放区 */
+.lib-home.is-empty .lib-create-row { justify-content: center; }
+.lib-home.is-empty .lib-tpl-quick { gap: 16px; }
+.lib-home.is-empty .lib-tpl { width: 150px; padding: 13px 14px 11px; }
+.lib-home.is-empty .lib-tpl-thumb { height: 74px; }
+.lib-empty-note { text-align: center; color: var(--ade-muted); font-size: 12px; margin: 6px 0 18px; }
+
+.lib-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.lib-card {
+  position: relative; border: 1px solid var(--ade-line); border-radius: 9px;
+  background: var(--ade-panel); padding: 13px 14px 11px;
+}
+.lib-card.is-archived { opacity: 0.55; background: color-mix(in srgb, var(--ade-panel) 55%, var(--ade-bench)); }
+.lib-card:has(.lib-card-open:focus-visible) { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
+.lib-card-open {
+  position: absolute; inset: 0; width: 100%; border: 0; background: transparent;
+  border-radius: 9px; cursor: pointer; z-index: 0;
+}
+.lib-card-open:focus { outline: none; }
+.lib-card-title {
+  position: relative; z-index: 1; pointer-events: none;
+  font-family: var(--ade-font-serif); font-size: 14.5px; font-weight: 600;
+  margin: 0; padding-right: 44px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lib-card-meta { position: relative; z-index: 1; pointer-events: none; font-size: 11px; color: var(--ade-muted); margin: 4px 0 0; line-height: 1.7; }
+.lib-card-foot { position: relative; z-index: 1; pointer-events: none; display: flex; gap: 8px; margin-top: 10px; min-height: 16px; }
+.lib-badge {
+  font-size: 9.5px; color: var(--ade-accent); border: 1px solid var(--ade-accent);
+  border-radius: 3px; padding: 0 4px; line-height: 15px;
+}
+
+.lib-more { position: absolute; top: 9px; right: 9px; z-index: 2; }
+.lib-more-btn {
+  width: 26px; height: 24px; border-radius: 5px; border: 1px solid transparent;
+  background: none; color: var(--ade-muted); cursor: pointer;
+  font: inherit; font-size: 15px; line-height: 1;
+}
+.lib-more-btn:hover { background: var(--ade-hover); color: var(--ade-ink); }
+.lib-more-btn:focus-visible { outline: 2px solid var(--ade-accent); outline-offset: 1px; }
+.lib-danger { color: var(--ade-pen-red); }
+
+.lib-empty-card {
+  grid-column: 1 / -1; border: 1.5px dashed var(--ade-line); border-radius: 10px;
+  padding: 44px 20px; text-align: center; color: var(--ade-muted); font-size: 12.5px;
+}
+.lib-empty-card b { display: block; font-family: var(--ade-font-serif); font-size: 15px; color: var(--ade-ink); margin-bottom: 5px; }
+.lib-loading { margin-top: 10px; font-size: 11.5px; color: var(--ade-muted); }
+.lib-dialog-error { margin: -4px 0 8px; font-size: 11.5px; color: var(--ade-pen-red); }

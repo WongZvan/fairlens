@@ -19,6 +19,7 @@ import { toast } from './Toast.js';
 import { SettingsGear } from './SettingsWindow.js';
 import { Dropdown } from './dropdown.js';
 import { buildMenus, type MenuActionId, type MenuDef, type MenuItem } from './menu-model.js';
+import { TEMPLATE_CHOICES } from '../features/templates/choices.js';
 
 export interface CommandBarProps {
   view: 'library' | 'editor';
@@ -111,11 +112,7 @@ function AutosaveSwitch() {
   );
 }
 
-const TEMPLATE_OPTIONS = [
-  { id: 'tpl-classic', key: 'editor.tplClassic' },
-  { id: 'tpl-duo', key: 'editor.tplDuo' },
-  { id: 'tpl-sidebar', key: 'editor.tplSidebar' },
-] as const;
+const TEMPLATE_OPTIONS = TEMPLATE_CHOICES;
 
 /** 模板下拉（取代原三按钮分段控件：960px 下省 ~110px） */
 function TemplatePicker() {

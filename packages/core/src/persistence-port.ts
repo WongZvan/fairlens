@@ -1,5 +1,13 @@
 import type { ResumeRow, SettingKey, SnapshotRow } from '@fairlens/shared';
 
+/** 简历库卡片所需的轻量元信息（不加载 doc_json；#129） */
+export interface ResumeMeta extends Pick<ResumeRow, 'id' | 'title' | 'verticalId' | 'status' | 'updatedAt'> {
+  /** 来源 doc.templateId（SQL 读 template_id 列） */
+  templateId: string;
+  /** 快照数（删除确认与卡片元信息用） */
+  snapshotCount: number;
+}
+
 /**
  * 持久层端口（core 定义接口，desktop 实现适配器）：
  * - TauriSqlAdapter：tauri-plugin-sql（生产/真机）
@@ -8,7 +16,8 @@ import type { ResumeRow, SettingKey, SnapshotRow } from '@fairlens/shared';
  */
 export interface PersistencePort {
   // resumes
-  listResumeMetas(): Promise<Array<Pick<ResumeRow, 'id' | 'title' | 'verticalId' | 'status' | 'updatedAt'>>>;
+  /** 返回**全部状态**（active + archived），按 updatedAt 倒序；归档筛选由 UI 负责 */
+  listResumeMetas(): Promise<ResumeMeta[]>;
   getResume(id: string): Promise<ResumeRow | null>;
   upsertResume(row: ResumeRow): Promise<void>;
   deleteResume(id: string): Promise<void>;

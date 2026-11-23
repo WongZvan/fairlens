@@ -17,6 +17,25 @@ const doc = (): ResumeDoc => ({
   ],
 });
 
+/** m1.8：库页显式打开；测试里“重开”=按第一份 meta 再开一次（空库先补一份夹具） */
+async function openDoc(): Promise<boolean> {
+  const { persistence } = await import('../lib/persistence/index.js');
+  const metas = await persistence().listResumeMetas();
+  if (metas.length) return useEditorDoc.getState().openResume(metas[0]!.id);
+  const now = new Date().toISOString();
+  const id = 'TestResume01';
+  await persistence().upsertResume({
+    id,
+    title: '测试简历',
+    verticalId: 'general',
+    doc: doc(),
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+  });
+  return useEditorDoc.getState().openResume(id);
+}
+
 describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -24,8 +43,11 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it('openCurrent：空库建示例简历并就绪；重开读回最近编辑行', async () => {
-    await useEditorDoc.getState().openCurrent();
+  it('openResume：打开已存在简历；不存在的 id 返回 false 且不播种替身', async () => {
+    expect(await useEditorDoc.getState().openResume('NoSuchResume1')).toBe(false);
+    expect(useEditorDoc.getState().ready).toBe(false);
+
+    expect(await openDoc()).toBe(true);
     const s1 = useEditorDoc.getState();
     expect(s1.ready).toBe(true);
     expect(s1.resumeId).toBeTruthy();
@@ -33,12 +55,12 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
     expect(s1.autosave).toBe(true); // settings 默认（§5.7 默认开）
 
     const firstId = s1.resumeId;
-    await useEditorDoc.getState().openCurrent(); // 重开=最近编辑行（同一份）
+    expect(await openDoc()).toBe(true); // 重开=同一份
     expect(useEditorDoc.getState().resumeId).toBe(firstId);
   });
 
   it('自动模式：applyDoc 防抖 800ms 落盘；重开读回新内容', async () => {
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const changed = doc();
     changed.sections[1]!.entries[0]!.org = '腾讯';
     useEditorDoc.getState().applyDoc(changed);
@@ -47,15 +69,15 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
     expect(useEditorDoc.getState().saveStatus).toBe('saved');
     expect(useEditorDoc.getState().dirty).toBe(false);
 
-    await useEditorDoc.getState().openCurrent(); // 重开读回
+    await openDoc(); // 重开读回
     expect(useEditorDoc.getState().doc?.sections[1]!.entries[0]!.org).toBe('腾讯');
   });
 
   it('手动模式（autosave=false）：applyDoc 只标 dirty；saveNow 落盘', async () => {
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const { persistence } = await import('../lib/persistence/index.js');
     await persistence().setSettingRaw('autosave', false);
-    await useEditorDoc.getState().openCurrent(); // 重读 settings
+    await openDoc(); // 重读 settings
     expect(useEditorDoc.getState().autosave).toBe(false);
 
     const changed = doc();
@@ -71,10 +93,10 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   });
 
   it('手动模式：flushPending 不得清掉未保存标记（#110 关窗保护回归）', async () => {
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const { persistence } = await import('../lib/persistence/index.js');
     await persistence().setSettingRaw('autosave', false);
-    await useEditorDoc.getState().openCurrent(); // 重读 settings → autosave=false
+    await openDoc(); // 重读 settings → autosave=false
 
     const changed = doc();
     changed.sections[1]!.entries[0]!.org = '百度';
@@ -88,7 +110,7 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   it('setAutosave(false)：先把挂起的自动保存落盘，再把旧计时器清零（#110）', async () => {
     const { persistence } = await import('../lib/persistence/index.js');
     await persistence().setSettingRaw('autosave', true); // 前序用例可能已改设置，显式复位
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     expect(useEditorDoc.getState().autosave).toBe(true);
     const changed = doc();
     changed.sections[1]!.entries[0]!.org = '小米';
@@ -111,10 +133,10 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   });
 
   it('手动模式：内容改回基线后 dirty=false（修复"删掉新要点仍弹三键框"）', async () => {
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const { persistence } = await import('../lib/persistence/index.js');
     await persistence().setSettingRaw('autosave', false);
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const base = useEditorDoc.getState().doc!;
 
     // 模拟"新建要点"：深拷贝后追加一条
@@ -130,10 +152,10 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   });
 
   it('手动模式：discardPendingChanges 把文档复位到最后保存版本', async () => {
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const { persistence } = await import('../lib/persistence/index.js');
     await persistence().setSettingRaw('autosave', false);
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const base = useEditorDoc.getState().doc!;
 
     const changed = structuredClone(base);
@@ -147,7 +169,7 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
   });
 
   it('快照：createSnapshot→listSnapshots→restoreSnapshot 立即落盘回滚内容', async () => {
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     const base = useEditorDoc.getState().doc!;
     await useEditorDoc.getState().createSnapshot();
 
@@ -165,7 +187,7 @@ describe('editor-doc store（§5.7 双模式 + 快照）', () => {
     expect(useEditorDoc.getState().doc?.templateId).toBe('tpl-classic');
     expect(useEditorDoc.getState().doc).toEqual(base);
     // 回滚立即落盘：重开读回仍是快照内容
-    await useEditorDoc.getState().openCurrent();
+    await openDoc();
     expect(useEditorDoc.getState().doc?.templateId).toBe('tpl-classic');
 
     // 快照留档：可再回滚回「美团」版本

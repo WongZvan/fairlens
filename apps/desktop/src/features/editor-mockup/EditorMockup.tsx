@@ -285,6 +285,7 @@ export function EditorMockup() {
   const isSample = resumeTitle === SAMPLE_RESUME_TITLE;
   const applyDoc = useEditorDoc((s) => s.applyDoc);
   const loadError = useEditorDoc((s) => s.lastError);
+  const activeResumeId = useEditorDoc((s) => s.resumeId);
   const leftWidth = useMockup((s) => s.leftWidth);
   const rightWidth = useMockup((s) => s.rightWidth);
 
@@ -408,9 +409,15 @@ export function EditorMockup() {
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
           {loadError ? (
             <>
-              <p className="muted">简历加载失败，已回退为空文档。错误信息：</p>
+              <p className="muted">简历加载失败。错误信息：</p>
               <pre className="mono small" style={{ whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto' }}>{loadError}</pre>
-              <button className="m-btn primary" onClick={() => void useEditorDoc.getState().openCurrent()}>重试</button>
+              <button
+                className="m-btn primary"
+                disabled={!activeResumeId}
+                onClick={() => { if (activeResumeId) void useEditorDoc.getState().openResume(activeResumeId); }}
+              >
+                重试
+              </button>
             </>
           ) : (
             <p className="muted">正在加载简历…</p>
