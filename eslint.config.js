@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 
 // 防腐规则①：依赖方向单向 shared←core←features（docs/01 §2.4）
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/target/**', '**/node_modules/**', '**/*.config.*'] },
+  { ignores: ['**/dist/**', '**/target/**', '**/node_modules/**', '**/*.config.*', '**/.zcode/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
