@@ -825,7 +825,44 @@
 
   function doImport(){
     const title = draft.title || draft.name || '导入的简历';
-    // 与决策对齐：创建成功后直接进入成品视图，不设独立完成页
+    const basic = draft.sections.find((s) => s.type === 'basic');
+    const fields = basic?.fields ?? [];
+    const fieldOf = (label) => (fields.find(([k]) => k === label)?.[1] ?? '');
+    const sections = draft.sections.map((s) => ({
+      id: s.id, title: s.title, type: s.type,
+      fields: (s.fields || []).map(([label, value]) => [label, value]),
+      entries: (s.entries || []).map((e, i) => ({
+        id: `e-${s.id}-${i}`,
+        org: e.org || '', role: e.role || '', date: e.date || '',
+        bullets: (e.bullets || []).map((b, j) => ({
+          id: `b-${s.id}-${i}-${j}`,
+          text: typeof b === 'string' ? b : (b.text || ''),
+        })),
+      })),
+    }));
+    const inbox = inboxPending();
+    if (inbox.length){
+      sections.push({
+        id: 'inbox', title: '待整理内容', type: 'inbox',
+        blocks: inbox.map((b) => ({ id: b.id, text: b.text, issue: `待整理内容：${b.text}` })),
+      });
+    }
+    const payload = {
+      doc: {
+        id: 'imported-1', title,
+        profile: {
+          name: draft.name || title,
+          headline: fieldOf('求职意向'),
+          contact: fieldOf('联系方式'),
+        },
+        sections,
+      },
+      sourcePages: draft.pages,
+      extractedPages: draft.extractedPages,
+      noTextPages: draft.raw.filter((r) => r.noText).map((r) => r.page),
+    };
+    try { localStorage.setItem('fl:preview-import', JSON.stringify(payload)); } catch {}
+    // 与决策对齐：创建成功后直接进入成品视图，不设独立完成页；携带同一份草稿
     const url = `fairlens-paged-view-m19-preview.html?imported=1&title=${encodeURIComponent(title)}`;
     window.location.href = url;
   }

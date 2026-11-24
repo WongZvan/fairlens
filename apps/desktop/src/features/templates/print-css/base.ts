@@ -143,9 +143,11 @@ article[data-type="fl-entry"] > li[data-type="fl-bullet"][data-depth="2"]::befor
 .fl-photo-slot img { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; }
 
 /* 编辑按钮只属于屏幕交互；打印/导出隐藏 */
+.fl-entry-head .row-actions { display: inline-flex; align-items: center; gap: 2px; margin-left: 2mm; }
+.fl-entry-head .row-actions .fl-edit-btn { margin-left: 0; }
 .fl-edit-btn {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

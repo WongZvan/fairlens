@@ -1,6 +1,6 @@
 /** 条目头 NodeView（#117）：org/role/date 三段；点击编辑元信息（日期纯文本解析）；#127 加 ⋯ 复制/删除 */
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
-import { MoreHorizontal, Pencil } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../../../app/dropdown.js';
@@ -39,36 +39,38 @@ export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProp
         <b>{org || t('editor.orgPlaceholder')}</b>
         {role && <span className="role">{role}</span>}
         {date && <span className="date">{date}</span>}
+        {/* 操作区独立拦截冒泡：只保留一个 ⋯，避免“点偏左就开编辑框”（codex 真窗复现） */}
+        <div className="row-actions" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+          <button
+            ref={moreRef}
+            type="button"
+            className="fl-edit-btn"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label={t('editor.entryMenu')}
+            title={t('editor.entryMenu')}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((o) => !o);
+            }}
+          >
+            <MoreHorizontal size={13} />
+          </button>
+        </div>
+      </div>
+      <Dropdown open={menuOpen} anchorRef={moreRef} align="right" className="ctx-menu" role="menu" onClose={() => setMenuOpen(false)}>
         <button
           type="button"
-          className="fl-edit-btn"
-          aria-label={t('editor.editEntryMeta')}
-          title={t('editor.editEntryMeta')}
-          onClick={(e) => {
-            e.stopPropagation();
+          role="menuitem"
+          className="ctx-item"
+          onClick={() => {
+            setMenuOpen(false);
             setOpen(true);
           }}
         >
-          <Pencil size={12} />
+          {t('editor.editEntryMeta')}
         </button>
-        <button
-          ref={moreRef}
-          type="button"
-          className="fl-edit-btn"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          aria-label={t('editor.entryMenu')}
-          title={t('editor.entryMenu')}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((o) => !o);
-          }}
-        >
-          <MoreHorizontal size={13} />
-        </button>
-      </div>
-      <Dropdown open={menuOpen} anchorRef={moreRef} align="right" className="ctx-menu" role="menu" onClose={() => setMenuOpen(false)}>
         <button
           type="button"
           role="menuitem"

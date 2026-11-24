@@ -71,11 +71,11 @@
 
   /* 纸面排版（密度两档；测量与成品同源） */
   #fl-page .sheet .u{ padding-bottom:0; }
-  #fl-page .sheet .u.profile{ padding-bottom:10px; border-bottom:1.5px solid #1C1D1B; margin-bottom:6px; }
+  #fl-page .sheet .u.profile{ padding-bottom:16px; border-bottom:1.5px solid #1C1D1B; }
   #fl-page .profile-name{ font-family:'Noto Serif SC',serif; font-size:26px; font-weight:600; letter-spacing:.04em; line-height:1.25; }
   #fl-page .profile-head{ font-size:12px; color:#3B3A36; margin-top:3px; }
   #fl-page .profile-contact{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#5C5A55; margin-top:4px; }
-  #fl-page .u.heading{ padding-top:10px; padding-bottom:4px; margin-top:4px; border-bottom:1px solid #C9C6BF; }
+  #fl-page .u.heading{ padding-top:14px; padding-bottom:4px; border-bottom:1px solid #C9C6BF; }
   #fl-page .heading-title{ font-family:'Noto Serif SC',serif; font-size:15px; font-weight:600; letter-spacing:.05em; }
   #fl-page .u.field{ display:grid; grid-template-columns:76px 1fr; gap:6px; padding:2.5px 0; font-size:12px; }
   #fl-page .field-k{ font-size:10.5px; color:#7A776F; }
@@ -89,7 +89,7 @@
   #fl-page .bullet-text{ min-width:0; }
   #fl-page .u.bullet[data-depth="1"]{ padding-left:14px; }
   #fl-page .u.bullet[data-depth="2"]{ padding-left:28px; }
-  #fl-page .u.cont-head{ margin-top:4px; padding:4px 0 2px; border-top:1px dashed #C9C6BF; font-size:10.5px; color:#7A776F; }
+  #fl-page .u.cont-head{ padding:8px 0 2px; border-top:1px dashed #C9C6BF; font-size:10.5px; color:#7A776F; }
   #fl-page .u.inbox{ display:flex; gap:7px; padding:3px 0; font-size:11.5px; line-height:1.65; }
   #fl-page .inbox-mark{ color:#A37F18; flex:none; }
   #fl-page .u.flash{ outline:2px solid #D6A831; outline-offset:2px; border-radius:2px; transition:outline 120ms; }
@@ -151,7 +151,7 @@
         <button class="tbtn" id="tpl-classic" aria-pressed="true">经典</button>
         <button class="tbtn" id="tpl-compact" aria-pressed="false">紧凑</button>
       </div>
-      <span class="pages-summary">原文件 <b>2 页</b> → 排版后 <b id="out-pages">3</b> 页</span>
+      <span class="pages-summary">原文件 <b id="source-pages">2</b> 页（提取 <b id="source-extracted">2</b> 页）→ 排版后 <b id="out-pages">3</b> 页</span>
       <button class="issue-chip" id="issue-chip" hidden><span class="dot"></span><span id="issue-count">2 处待确认</span></button>
     </div>
 
@@ -168,7 +168,7 @@
       <button class="navbtn" id="prev">‹ 上一页</button>
       <span class="page-indicator"><b id="page-cur">1</b> / <span id="page-total">3</span></span>
       <button class="navbtn" id="next">下一页 ›</button>
-      <span class="page-hint">缩放只改变查看，不改变分页；屏幕分页 = 导出 PDF</span>
+      <span class="page-hint">缩放只改变查看，不改变分页；导出将复用同一分页（待验收）</span>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
@@ -275,13 +275,28 @@
     };
   }
 
-  let doc = baseDoc();
   let page = 0;
   let zoom = 100;
   let userZoomed = false;
   let dense = false;
   let pages = [];
   let unitHeights = new Map();
+  let sourcePages = 2;
+  let sourceExtracted = 2;
+  let sourceNoText = [];
+
+  let doc = baseDoc();
+  const q = new URLSearchParams(location.search);
+  let importedPayload = null;
+  if (q.get('imported') === '1'){
+    try { importedPayload = JSON.parse(localStorage.getItem('fl:preview-import') || 'null'); } catch {}
+  }
+  if (importedPayload && importedPayload.doc){
+    doc = importedPayload.doc;
+    sourcePages = Number(importedPayload.sourcePages) || 2;
+    sourceExtracted = Number(importedPayload.extractedPages) || sourcePages;
+    sourceNoText = Array.isArray(importedPayload.noTextPages) ? importedPayload.noTextPages : [];
+  }
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -433,7 +448,15 @@
       pageUnits.forEach(({ unit }) => { if (unit.issue) issueMap.set(unit.uid, { label:unit.issue, page:pi }); });
     });
     $('out-pages').textContent = String(pages.length);
+    $('source-pages').textContent = String(sourcePages);
+    $('source-extracted').textContent = String(sourceExtracted);
     $('page-total').textContent = String(pages.length);
+    if (importedPayload && q.get('imported') === '1'){
+      const inboxCount = doc.sections.reduce((n, s) => n + (s.blocks ? s.blocks.length : 0), 0);
+      const noText = sourceNoText.length ? `；原文件第 ${sourceNoText.join('、')} 页无文字` : '';
+      $('imported-banner').classList.add('show');
+      $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图。原文件 ${sourcePages} 页（提取 ${sourceExtracted} 页）→ 排版后 ${pages.length} 页；待整理内容 ${inboxCount} 块${noText}。`;
+    }
     $('page-cur').textContent = String(Math.min(page + 1, pages.length));
     $('prev').disabled = page <= 0;
     $('next').disabled = page >= pages.length - 1;
@@ -466,7 +489,17 @@
       };
       gutter.appendChild(dot);
     });
+    assertPageFits();
     applyZoom();
+  }
+
+  /** 每页内容不超过安全高度；测量/间距漂移时给出可见的 console 警告 */
+  function assertPageFits(){
+    const content = $('content');
+    const used = Array.from(content.children).reduce((n, el) => n + el.offsetHeight, 0);
+    if (used > CONTENT_H + 1){
+      console.warn(`[m1.9 preview] page ${page + 1} content overflow: ${used}px > ${CONTENT_H}px`);
+    }
   }
 
   function applyZoom(){
@@ -484,7 +517,7 @@
     const availW = Math.max(300, stage.clientWidth - 56);
     const availH = Math.max(300, stage.clientHeight - 30);
     const z = Math.min(availW / 700, availH / 990, 1) * 100;
-    zoom = Math.max(50, Math.min(140, Math.floor(z / 5) * 5));
+    zoom = Math.max(30, Math.min(150, Math.floor(z / 5) * 5));
     applyZoom();
   }
 
@@ -523,8 +556,8 @@
   $('prev').onclick = () => setPage(page - 1);
   $('next').onclick = () => setPage(page + 1);
   $('issue-chip').onclick = jumpToIssue;
-  $('zoom-in').onclick = () => { userZoomed = true; zoom = Math.min(140, zoom + 10); applyZoom(); };
-  $('zoom-out').onclick = () => { userZoomed = true; zoom = Math.max(50, zoom - 10); applyZoom(); };
+  $('zoom-in').onclick = () => { userZoomed = true; zoom = Math.min(150, zoom + 10); applyZoom(); };
+  $('zoom-out').onclick = () => { userZoomed = true; zoom = Math.max(30, zoom - 10); applyZoom(); };
 
   function setDensity(next){
     dense = next;
@@ -600,13 +633,14 @@
     e.currentTarget.textContent = root.classList.contains('light') ? '深色' : '浅色';
   };
 
-  // 从导入预览跳转：标题 + 已导入提示
-  const q = new URLSearchParams(location.search);
+  // 从导入预览跳转：标题 + 同一份草稿 + 来源页数
   if (q.get('title')) doc.title = q.get('title');
   $('title').textContent = doc.title;
   if (q.get('imported') === '1'){
+    const inboxCount = doc.sections.reduce((n, s) => n + (s.blocks ? s.blocks.length : 0), 0);
+    const noText = sourceNoText.length ? `；原文件第 ${sourceNoText.join('、')} 页无文字` : '';
     $('imported-banner').classList.add('show');
-    $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图（演示内容）。批量检查请用顶部「待确认」入口。`;
+    $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图。原文件 ${sourcePages} 页（提取 ${sourceExtracted} 页）→ 排版后 ${pages.length} 页；待整理内容 ${inboxCount} 块${noText}。`;
     toast('已导入并打开：这里是成品视图，不是独立完成页');
   }
 
