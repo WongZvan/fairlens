@@ -31,7 +31,7 @@
 | 项 | 值 |
 |---|---|
 | 代码基线 | 代码=`9174ce2`（m1.8 终态）；文档 HEAD=`ca3d7d4`（§14 验收补齐）；#127 代码基线=`cceb793`；**工作区干净** |
-| 当前分支 | `feat/m1.7-import`（m1.7 规划/预览阶段；dev 最近 squash=`ef0a191`，m1.8 收口） |
+| 当前分支 | `feat/m1.7-import`（HEAD 以 git log 为准；预览第四轮=`9f7061c`，另含 `91da53c` lint ignore / `81ac495` 复制软上限；dev 最近 squash=`ef0a191`，m1.8 收口） |
 | 测试基线 | **379 全绿**（50 文件）；覆盖率四包达标（core 96.27 / shared 100 / keygen 93.84 / lease 100 行）；lint / typecheck / contract 零漂移 / build / E2E **9 条**全过 |
 | CI 门禁 | 六 job：`lint` / `typecheck` / `test` / `coverage` / `contract-zero-drift` / `e2e`（全部 actions 已固定 SHA）；**2026-11-21 首绿**（run 44884436909 @ dd23b59） |
 | 唯一事实源 | `docs/01-技术开发文档.md`（附录 E 总账 **130 条**）+ `packages/shared/src/`（zod 契约）。**引用字段名前去读源** |
