@@ -193,6 +193,7 @@
   #fl-imp .drawer .raw .dest{ display:inline-block; font-size:9.5px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 4px; margin-top:3px; }
   #fl-imp .drawer .raw .dest.inbox{ color:var(--warn-ink); border-color:var(--warn); }
   #fl-imp .drawer .raw-page{ font-size:10px; letter-spacing:.06em; color:var(--muted); margin:12px 0 4px; }
+  #fl-imp .drawer .raw-pos{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted); }
   #fl-imp .drawer .raw.no-text{ color:var(--pen-red); }
 
   /* 错误 */
@@ -525,8 +526,8 @@
     return n;
   }
 
-  function setRawDest(id, dest){
-    const r = draft.raw.find((x) => x.id === id);
+  function setRawDest(target, id, dest){
+    const r = target.raw.find((x) => x.id === id);
     if (r) r.dest = dest;
   }
 
@@ -604,7 +605,7 @@
           pending.bullets.push(txt); continue;
         }
         if (cur){ cur.fields.push(['其他', txt]); continue; }
-        d.inbox.push({ id:'x'+d.inbox.length, rawId:rid, text:txt, dest:'inbox' }); setRawDest(rid,'待整理内容'); continue;
+        d.inbox.push({ id:'x'+d.inbox.length, rawId:rid, text:txt, dest:'inbox' }); setRawDest(d, rid, '待整理内容'); continue;
       }
       if (cur){
         if (cur.type === 'skill' || cur.type === 'basic'){
@@ -624,7 +625,7 @@
           cur.entries.push(pending); continue;
         }
         if (pending){ pending.bullets.push(line); continue; }
-        d.inbox.push({ id:'x'+d.inbox.length, rawId:rid, text:line, dest:'inbox' }); setRawDest(rid,'待整理内容'); continue;
+        d.inbox.push({ id:'x'+d.inbox.length, rawId:rid, text:line, dest:'inbox' }); setRawDest(d, rid, '待整理内容'); continue;
       }
       profile.push(line);
     }
@@ -636,7 +637,7 @@
     }
     if (recognized === 0){
       d.sections = [];
-      d.inbox = [{ id:'x0', rawId:'r0', text: lines.join(' '), dest:'inbox' }];
+      d.inbox = lines.map((l, i) => ({ id:'x'+i, rawId:'r'+i, text:l, dest:'inbox' }));
       d.raw = lines.map((l, i) => ({ id:'r'+i, page:1, text:l, dest:'待整理内容' }));
       d.name = ''; d.title = '导入的简历';
     }
@@ -788,7 +789,7 @@
     if (sel.value === 'inbox'){ block.dest = 'inbox'; }
     else if (sel.value === 'discard'){
       draft.inbox = draft.inbox.filter((b) => b !== block);
-      setRawDest(block.rawId, '已丢弃');
+      setRawDest(draft, block.rawId, '已丢弃');
       toast('已显式丢弃该块');
     } else {
       const s = draft.sections.find((x) => x.id === sel.value);
@@ -797,7 +798,7 @@
       if (s.type === 'skill') s.fields.push(['待整理', block.text]);
       else s.entries.push({ org:'', role:'', date:'', bullets:[block.text] });
       draft.inbox = draft.inbox.filter((b) => b !== block);
-      setRawDest(block.rawId, s.title);
+      setRawDest(draft, block.rawId, s.title);
       toast(`已移入「${s.title}」`);
     }
     buildReview();
@@ -829,9 +830,9 @@
     const pages = [...new Set(draft.raw.map((r) => r.page))].sort((a,b)=>a-b);
     raw.innerHTML = pages.map((p) => {
       const blocks = draft.raw.filter((r) => r.page === p);
-      return `<div class="raw-page">第 ${p} 页</div>` + blocks.map((r) => r.noText
-        ? `<div class="raw no-text">（本页没有可提取文字，可能是图片；图片中的文字不会导入）<br><span class="dest">无文字</span></div>`
-        : `<div class="raw">${esc(r.text)}<br><span class="dest${r.dest==='待整理内容'?' inbox':''}">→ ${esc(r.dest)}</span></div>`
+      return `<div class="raw-page">第 ${p} 页</div>` + blocks.map((r, bi) => r.noText
+        ? `<div class="raw no-text">（本页没有可提取文字，可能是图片；图片中的文字不会导入）<br><span class="dest">第 ${p} 页 · 无文字</span></div>`
+        : `<div class="raw"><span class="raw-pos">第 ${p} 页 · 第 ${bi+1} 段</span><br>${esc(r.text)}<br><span class="dest${r.dest==='待整理内容'?' inbox':''}">→ ${esc(r.dest)}</span></div>`
       ).join('');
     }).join('');
     document.getElementById('drawer').hidden = false;
@@ -888,15 +889,23 @@
 
   function showGuard(){
     const pending = inboxPending().length;
-    if (!pending){ toast('没有待整理内容，导出结果与纸面一致'); return; }
+    const over = overSections();
+    if (!pending && !over.length){
+      toast('没有待整理内容，篇幅也在建议内，导出结果与纸面一致');
+      return;
+    }
+    const items = [];
+    if (pending) items.push(`「待整理内容」还有 ${pending} 块（PDF 会包含它们，与纸面一致）`);
+    over.forEach((sec) => items.push(`${sec.title} ${sec.entries.length} 条，超过建议上限 ${LIMITS[sec.type]} 条（会正常分页，简历可能偏长）`));
     openModal(`<h3>导出前检查</h3>
-      <p>这份简历还不可交付：PDF 会包含「待整理内容」${pending} 块，与你看到的纸面一致。</p>
-      <p>把它归入正式分区或删除后，会更适合投递。</p>
+      <p>这份简历还不可交付，以下内容会原样出现在 PDF 里：</p>
+      <ul>${items.map((t)=>`<li>${esc(t)}</li>`).join('')}</ul>
+      <p>处理完再导出会更适合投递；也可以确认仍然导出。</p>
       <div class="acts"><button class="btn" data-x="cancel">取消</button><button class="btn" data-x="fix">去处理</button><button class="btn primary" data-x="ok">仍然导出</button></div>`,
       (wrap, close) => {
         wrap.querySelector('[data-x="cancel"]').onclick = close;
-        wrap.querySelector('[data-x="fix"]').onclick = () => { close(); openReviewAt('inbox'); };
-        wrap.querySelector('[data-x="ok"]').onclick = () => { close(); toast('已导出（演示），PDF 包含待整理内容'); };
+        wrap.querySelector('[data-x="fix"]').onclick = () => { close(); openReviewAt(pending ? 'inbox' : 'sec-'+over[0].id); };
+        wrap.querySelector('[data-x="ok"]').onclick = () => { close(); toast('已导出（演示）：内容与纸面一致'); };
       });
   }
   document.getElementById('mock-export').onclick = showGuard;
