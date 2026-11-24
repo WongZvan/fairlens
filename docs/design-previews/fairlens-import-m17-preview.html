@@ -203,16 +203,6 @@
   #fl-imp .parse-error ul{ margin:6px 0 14px; padding-left:18px; font-size:12px; line-height:1.8; }
   #fl-imp .parse-error .acts{ display:flex; gap:8px; }
 
-  /* 成功 */
-  #fl-imp .success{ max-width:560px; margin:24px auto 0; }
-  #fl-imp .success .ok{ display:flex; align-items:center; gap:10px; margin-bottom:15px; }
-  #fl-imp .success .mark{ width:30px; height:30px; border-radius:50%; background:var(--ok); color:#fff; display:flex; align-items:center; justify-content:center; }
-  #fl-imp .success h2{ font-family:'Noto Serif SC',serif; font-size:17px; margin:0; }
-  #fl-imp .success .sub{ font-size:11.5px; color:var(--muted); margin-top:2px; }
-  #fl-imp .success .card{ border:1px solid var(--line); border-radius:9px; background:var(--panel); padding:14px 16px; font-size:12px; line-height:1.8; }
-  #fl-imp .success .card b{ font-weight:500; }
-  #fl-imp .success .actions{ display:flex; gap:8px; margin-top:13px; }
-
   /* 库页（放弃后） */
   #fl-imp .lib{ max-width:640px; margin:34px auto 0; text-align:center; }
   #fl-imp .lib h2{ font-family:'Noto Serif SC',serif; font-size:17px; margin:0 0 6px; }
@@ -242,8 +232,10 @@
     <button class="pbtn" id="pv-issues">结果·有疑点</button>
     <button class="pbtn" id="pv-review">检查视图</button>
     <button class="pbtn" id="pv-error">无文本</button>
-    <button class="pbtn" id="pv-success">已导入</button>
+    <button class="pbtn" id="pv-editor">成品视图</button>
+    <button class="pbtn" id="pv-guard">导出守关</button>
     <button class="pbtn" id="pv-paste">粘贴前选择</button>
+    <button class="pbtn" id="pv-regress">回归：附加信息行</button>
     <button class="pbtn" id="pv-theme">浅色</button>
   </div>
 
@@ -353,18 +345,6 @@
           </div>
         </section>
 
-        <!-- 成功 -->
-        <section id="view-success" hidden>
-          <div class="success">
-            <div class="ok"><div class="mark" aria-hidden="true">✓</div><div><h2>已导入并打开草稿</h2><div class="sub" id="success-sub">「林知远」已创建，正在进入编辑器。</div></div></div>
-            <div class="card" id="success-card"></div>
-            <div class="actions">
-              <button class="btn" id="mock-export">模拟导出前检查</button>
-              <button class="btn ghost" id="back-preview">返回预览起点</button>
-            </div>
-          </div>
-        </section>
-
         <!-- 放弃后库页 -->
         <section id="view-library" hidden>
           <div class="lib">
@@ -405,7 +385,7 @@
   const footNote = document.getElementById('foot-note');
   const btnCancel = document.getElementById('cancel');
   const btnImport = document.getElementById('review-import');
-  const viewIds = ['view-source','view-clean','view-issues','view-review','view-error','view-success','view-library'];
+  const viewIds = ['view-source','view-clean','view-issues','view-review','view-error','view-library'];
 
   const LIMITS = { basic:1, education:4, experience:8, project:6, skill:1 };
   const SAMPLE_TEXT = `林知远
@@ -539,7 +519,7 @@
     steps[0].classList.toggle('on', isSource);
     steps[1].classList.toggle('on', !isSource);
     steps[0].classList.toggle('done', !isSource);
-    btnCancel.hidden = id === 'view-success' || id === 'view-library';
+    btnCancel.hidden = id === 'view-library';
     btnImport.hidden = id !== 'view-review';
     document.getElementById('issues-next').hidden = id !== 'view-issues';
     document.getElementById('issues-fast').hidden = id !== 'view-issues';
@@ -550,8 +530,8 @@
   }
 
   function setPressed(id){
-    const map = { 'view-source':'pv-source','view-clean':'pv-clean','view-issues':'pv-issues','view-review':'pv-review','view-error':'pv-error','view-success':'pv-success' };
-    ['pv-source','pv-clean','pv-issues','pv-review','pv-error','pv-success'].forEach((b) => {
+    const map = { 'view-source':'pv-source','view-clean':'pv-clean','view-issues':'pv-issues','view-review':'pv-review','view-error':'pv-error' };
+    ['pv-source','pv-clean','pv-issues','pv-review','pv-error'].forEach((b) => {
       const el = document.getElementById(b);
       if (el) el.setAttribute('aria-pressed', String(b === map[id]));
     });
@@ -632,7 +612,10 @@
     const recognized = d.sections.length;
     if (profile.length && recognized > 0){
       d.name = profile[0] || '';
-      d.sections.unshift({ id:'basic', title:'基本信息', type:'basic', fields:[['姓名',profile[0]||''],['求职意向',profile[1]||''],['联系方式',profile[2]||'']], entries:[] });
+      const fields = [['姓名',profile[0]||''],['求职意向',profile[1]||''],['联系方式',profile[2]||'']];
+      // 首分区前的第 4 行及后续不能丢：放进基本信息「附加信息」，原文去向同步为基本信息
+      profile.slice(3).forEach((line) => fields.push(['附加信息', line]));
+      d.sections.unshift({ id:'basic', title:'基本信息', type:'basic', fields, entries:[] });
       d.title = d.name || '导入的简历';
     }
     if (recognized === 0){
@@ -842,16 +825,9 @@
 
   function doImport(){
     const title = draft.title || draft.name || '导入的简历';
-    const pending = inboxPending().length;
-    const over = overSections();
-    document.getElementById('success-sub').textContent = `「${title}」已创建，正在进入编辑器。`;
-    document.getElementById('success-card').innerHTML =
-      `<b>模板：</b>经典单栏（进入编辑器可切换）<br>` +
-      `<b>分区：</b>${draft.sections.length} 个${pending ? `（另有「待整理内容」${pending} 块）` : ''}<br>` +
-      `<b>条目：</b>${draft.sections.reduce((n,s)=>n+s.entries.length,0)} 条` +
-      (pending ? `<br><b>待整理内容：</b>${pending} 块会随简历一起导出；导出前会再次提醒。` : '') +
-      (over.length ? `<br><b>篇幅：</b>${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}——会正常分页，可能偏长。` : '');
-    show('view-success');
+    // 与决策对齐：创建成功后直接进入成品视图，不设独立完成页
+    const url = `fairlens-paged-view-m19-preview.html?imported=1&title=${encodeURIComponent(title)}`;
+    window.location.href = url;
   }
   document.getElementById('clean-import').onclick = doImport;
   document.getElementById('issues-fast').onclick = doImport;
@@ -908,10 +884,9 @@
         wrap.querySelector('[data-x="ok"]').onclick = () => { close(); toast('已导出（演示）：内容与纸面一致'); };
       });
   }
-  document.getElementById('mock-export').onclick = showGuard;
 
   function confirmDiscard(){
-    if (current === 'view-library' || current === 'view-success') return;
+    if (current === 'view-library') return;
     openModal(`<h3>放弃本次导入？</h3><p>已解析和修改的内容不会保存，也不会创建简历。</p>
       <div class="acts"><button class="btn" data-x="stay">继续导入</button><button class="btn danger" data-x="leave">放弃并返回库</button></div>`,
       (wrap, close) => {
@@ -921,6 +896,21 @@
   }
   document.getElementById('back').onclick = confirmDiscard;
   document.getElementById('cancel').onclick = confirmDiscard;
+
+  document.getElementById('pv-regress').onclick = () => {
+    ta.value = `林知远
+前端工程师
+175-0000-0000
+有海外项目经验
+
+教育经历
+华中科技大学 · 软件工程 · 本科
+2022.09 – 2026.06
+• GPA 3.6/4.0，主修交互设计与数据分析`;
+    syncPaste();
+    draft = parseText(ta.value);
+    goResult();
+  };
 
   document.getElementById('pv-paste').onclick = () => {
     openModal(`<h3>这段内容较长</h3><p>先选择这次粘贴的去向；内容还没有插入当前简历。</p>
@@ -938,7 +928,8 @@
   document.getElementById('pv-issues').onclick = () => { draft = issuesCollapsed(issuesDraft()); renderIssues(); show('view-issues'); };
   document.getElementById('pv-review').onclick = () => { draft = issuesCollapsed(issuesDraft()); buildReview(); show('view-review'); };
   document.getElementById('pv-error').onclick = () => show('view-error');
-  document.getElementById('pv-success').onclick = () => { draft = issuesCollapsed(issuesDraft()); doImport(); };
+  document.getElementById('pv-editor').onclick = () => doImport();
+  document.getElementById('pv-guard').onclick = () => showGuard();
   document.getElementById('pv-theme').onclick = (e) => {
     root.classList.toggle('light');
     e.currentTarget.textContent = root.classList.contains('light') ? '深色' : '浅色';
@@ -946,7 +937,6 @@
   document.getElementById('err-back').onclick = () => show('view-source');
   document.getElementById('err-paste').onclick = () => show('view-source');
   document.getElementById('restart').onclick = () => { ta.value=''; syncPaste(); show('view-source'); };
-  document.getElementById('back-preview').onclick = () => { draft = cleanDraft(); show('view-source'); };
 
   let t = null;
   function toast(msg){

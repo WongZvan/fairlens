@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FairLens · 成品分页视图预览（m1.9）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ color-scheme: dark light; }
+  body{ margin:0; padding:26px; background:#17181B; font-family:'IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif; }
+  @media (prefers-color-scheme: light){ body{ background:#E9E7E1; } }
+
+  #fl-page{
+    --bench:#232428; --panel:#2A2B30; --chrome:#1E1F23; --raised:#303138;
+    --fg:#E8E6E1; --muted:#A3A198; --line:#3A3B40; --hover:#33343A;
+    --accent:#8FA6D9; --accent-solid:#4A6296; --accent-tint:rgba(143,166,217,.13);
+    --ok:#7FB89A; --warn:#D6A831; --warn-ink:#E3C06A;
+    font-family:'IBM Plex Sans','IBM Plex Sans SC','Microsoft YaHei',system-ui,sans-serif;
+    color:var(--fg); max-width:1080px; margin:0 auto;
+  }
+  #fl-page.light{
+    --bench:#F2F1ED; --panel:#F7F6F2; --chrome:#ECEAE4; --raised:#FFFFFF;
+    --fg:#1C1D1B; --muted:#66645E; --line:#DCD9D2; --hover:#E9E7E1;
+    --accent:#33518E; --accent-solid:#33518E; --accent-tint:rgba(51,81,142,.08);
+    --ok:#2E6E4E; --warn:#7A5E0E; --warn-ink:#6B520C;
+  }
+  #fl-page .mono{ font-family:'IBM Plex Mono',ui-monospace,monospace; }
+  #fl-page .preview-bar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 10px; }
+  #fl-page .preview-bar .caption{ font-size:11px; color:#9B998F; margin:0 auto 0 0; }
+  #fl-page .pbtn{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:5px 11px; cursor:pointer; }
+  #fl-page .pbtn:hover{ border-color:var(--accent); }
+  #fl-page .pbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  #fl-page .pbtn[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-tint); }
+
+  #fl-page .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; height:clamp(560px, calc(100vh - 100px), 860px); }
+  #fl-page.light .win{ border-color:#D9D6CF; }
+  #fl-page .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
+  #fl-page .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
+  #fl-page .titlebar .doc{ font-family:'Noto Serif SC',serif; font-size:13px; }
+  #fl-page .titlebar .crumb{ font-size:11px; color:var(--muted); }
+  #fl-page .wbtns{ margin-left:auto; display:flex; gap:2px; }
+  #fl-page .wbtn{ width:34px; height:30px; border:0; background:transparent; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; font-size:13px; }
+  #fl-page .wbtn:hover{ background:var(--hover); color:var(--fg); }
+
+  #fl-page .toolbar{ flex:none; display:flex; align-items:center; gap:10px; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  #fl-page .tbtn{ font:inherit; font-size:11.5px; color:var(--fg); background:var(--bench); border:1px solid var(--line); border-radius:5px; padding:4px 8px; cursor:pointer; }
+  #fl-page .tbtn:hover{ border-color:var(--accent); }
+  #fl-page .tbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  #fl-page .tbtn[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); }
+  #fl-page .tgroup{ display:flex; gap:4px; }
+  #fl-page .zoom{ display:flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); }
+  #fl-page .zoom b{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--fg); width:38px; text-align:center; }
+  #fl-page .pages-summary{ margin-left:auto; font-size:11px; color:var(--muted); }
+  #fl-page .pages-summary b{ color:var(--fg); font-weight:500; }
+  #fl-page .issue-chip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--warn-ink); background:var(--panel); border:1px solid var(--warn); border-radius:999px; padding:3px 9px; cursor:pointer; }
+  #fl-page .issue-chip:hover{ background:var(--warn-tint, rgba(214,168,49,.12)); }
+  #fl-page .issue-chip .dot{ width:6px; height:6px; border-radius:50%; background:var(--warn); }
+
+  #fl-page .stage{ flex:1; min-height:0; overflow:auto; padding:22px 28px 12px; display:flex; justify-content:center; }
+  #fl-page .page-shell{ position:relative; flex:none; }
+  #fl-page .sheet{ width:700px; height:990px; box-sizing:border-box; background:#fff; color:#1C1D1B;
+    border-radius:2px; box-shadow:0 10px 30px rgba(0,0,0,.28); padding:38px 46px 46px; transform-origin:top center; }
+  #fl-page.light .sheet{ box-shadow:0 8px 22px rgba(0,0,0,.12); }
+  #fl-page .sheet-content{ position:relative; }
+  #fl-page .sheet-gutter{ position:absolute; top:38px; right:-26px; width:18px; bottom:46px; }
+  #fl-page .gutter-dot{ position:absolute; left:2px; width:7px; height:7px; border-radius:50%; background:#D6A831; border:1.5px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.12); cursor:pointer; padding:0; }
+  #fl-page .gutter-dot:hover{ transform:scale(1.25); }
+  #fl-page .gutter-dot:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* 纸面排版（密度两档；测量与成品同源） */
+  #fl-page .sheet .u{ padding-bottom:0; }
+  #fl-page .sheet .u.profile{ padding-bottom:10px; border-bottom:1.5px solid #1C1D1B; margin-bottom:6px; }
+  #fl-page .profile-name{ font-family:'Noto Serif SC',serif; font-size:26px; font-weight:600; letter-spacing:.04em; line-height:1.25; }
+  #fl-page .profile-head{ font-size:12px; color:#3B3A36; margin-top:3px; }
+  #fl-page .profile-contact{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#5C5A55; margin-top:4px; }
+  #fl-page .u.heading{ padding-top:10px; padding-bottom:4px; margin-top:4px; border-bottom:1px solid #C9C6BF; }
+  #fl-page .heading-title{ font-family:'Noto Serif SC',serif; font-size:15px; font-weight:600; letter-spacing:.05em; }
+  #fl-page .u.field{ display:grid; grid-template-columns:76px 1fr; gap:6px; padding:2.5px 0; font-size:12px; }
+  #fl-page .field-k{ font-size:10.5px; color:#7A776F; }
+  #fl-page .field-v{ line-height:1.6; }
+  #fl-page .u.entry-head{ padding-top:7px; padding-bottom:3px; display:flex; align-items:baseline; gap:8px; }
+  #fl-page .entry-org{ font-size:12.5px; font-weight:600; }
+  #fl-page .entry-role{ font-size:11.5px; color:#5C5A55; }
+  #fl-page .entry-date{ margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#7A776F; white-space:nowrap; }
+  #fl-page .u.bullet{ display:flex; gap:7px; padding:1.5px 0; font-size:12px; line-height:1.7; }
+  #fl-page .bullet-mark{ color:#3B3A36; flex:none; }
+  #fl-page .bullet-text{ min-width:0; }
+  #fl-page .u.bullet[data-depth="1"]{ padding-left:14px; }
+  #fl-page .u.bullet[data-depth="2"]{ padding-left:28px; }
+  #fl-page .u.cont-head{ margin-top:4px; padding:4px 0 2px; border-top:1px dashed #C9C6BF; font-size:10.5px; color:#7A776F; }
+  #fl-page .u.inbox{ display:flex; gap:7px; padding:3px 0; font-size:11.5px; line-height:1.65; }
+  #fl-page .inbox-mark{ color:#A37F18; flex:none; }
+  #fl-page .u.flash{ outline:2px solid #D6A831; outline-offset:2px; border-radius:2px; transition:outline 120ms; }
+
+  #fl-page .sheet.compact .profile-name{ font-size:23px; }
+  #fl-page .sheet.compact .u.heading{ padding-top:6px; }
+  #fl-page .sheet.compact .heading-title{ font-size:13.5px; }
+  #fl-page .sheet.compact .u.bullet{ font-size:11.2px; line-height:1.55; }
+  #fl-page .sheet.compact .u.field{ font-size:11.2px; padding:1.5px 0; }
+  #fl-page .sheet.compact .u.entry-head{ padding-top:5px; }
+  #fl-page .sheet.compact .u.profile{ padding-bottom:7px; }
+  #fl-page .sheet.compact .profile-name{ line-height:1.2; }
+
+  #fl-page .pagebar{ flex:none; display:flex; align-items:center; justify-content:center; gap:14px; padding:9px 14px; border-top:1px solid var(--line); background:var(--chrome); position:relative; }
+  #fl-page .navbtn{ font:inherit; font-size:12.5px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 12px; cursor:pointer; }
+  #fl-page .navbtn:hover:not(:disabled){ border-color:var(--accent); }
+  #fl-page .navbtn:disabled{ opacity:.45; cursor:not-allowed; }
+  #fl-page .navbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  #fl-page .page-indicator{ font-family:'IBM Plex Mono',monospace; font-size:12px; min-width:62px; text-align:center; }
+  #fl-page .page-indicator b{ font-weight:500; }
+  #fl-page .page-hint{ position:absolute; right:14px; font-size:10.5px; color:var(--muted); }
+  #fl-page .nav-dot{ width:5px; height:5px; border-radius:50%; background:var(--warn); display:inline-block; margin-left:5px; vertical-align:1px; }
+
+  #fl-page .toast{ position:absolute; left:50%; bottom:96px; transform:translateX(-50%); background:var(--raised); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font-size:11.5px; box-shadow:0 10px 26px rgba(0,0,0,.3); opacity:0; pointer-events:none; transition:opacity 160ms; z-index:10; }
+  #fl-page .toast.show{ opacity:1; }
+  #fl-page .imported-banner{ display:none; font-size:11px; color:var(--ok); border:1px solid var(--line); border-left:3px solid var(--ok); background:var(--panel); border-radius:6px; padding:6px 10px; margin-bottom:8px; }
+  #fl-page .imported-banner.show{ display:block; }
+  #fl-page .measure{ position:fixed; left:-9999px; top:0; width:608px; visibility:hidden; pointer-events:none; background:#fff; color:#1C1D1B; padding:0; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<div id="fl-page" class="dark">
+  <div class="preview-bar">
+    <span class="caption">FairLens · m1.9 成品分页预览 · 左右翻页 / 密度切换 / 加内容重排 / 疑点定位</span>
+    <button class="pbtn" id="pv-theme">浅色</button>
+    <button class="pbtn" id="pv-dense" aria-pressed="false">紧凑密度</button>
+    <button class="pbtn" id="pv-add">加内容（两段）</button>
+    <button class="pbtn" id="pv-reset">重置</button>
+  </div>
+
+  <div class="imported-banner" id="imported-banner"></div>
+
+  <div class="win">
+    <div class="titlebar">
+      <span class="app">FAIRLENS</span>
+      <span class="doc" id="title">林知远</span>
+      <span class="crumb">成品视图 · 单页翻页</span>
+      <div class="wbtns"><button class="wbtn" title="最小化">─</button><button class="wbtn" title="最大化">□</button><button class="wbtn" title="关闭">✕</button></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="zoom">
+        <button class="tbtn" id="zoom-out" aria-label="缩小">−</button>
+        <b id="zoom-val">100%</b>
+        <button class="tbtn" id="zoom-in" aria-label="放大">+</button>
+      </div>
+      <div class="tgroup">
+        <button class="tbtn" id="tpl-classic" aria-pressed="true">经典</button>
+        <button class="tbtn" id="tpl-compact" aria-pressed="false">紧凑</button>
+      </div>
+      <span class="pages-summary">原文件 <b>2 页</b> → 排版后 <b id="out-pages">3</b> 页</span>
+      <button class="issue-chip" id="issue-chip" hidden><span class="dot"></span><span id="issue-count">2 处待确认</span></button>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="page-shell" id="shell">
+        <div class="sheet" id="sheet">
+          <div class="sheet-content" id="content"></div>
+          <div class="sheet-gutter" id="gutter"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pagebar">
+      <button class="navbtn" id="prev">‹ 上一页</button>
+      <span class="page-indicator"><b id="page-cur">1</b> / <span id="page-total">3</span></span>
+      <button class="navbtn" id="next">下一页 ›</button>
+      <span class="page-hint">缩放只改变查看，不改变分页；屏幕分页 = 导出 PDF</span>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('fl-page');
+  const CONTENT_W = 608;   // 700 - 46*2
+  const CONTENT_H = 900;   // 990 - 38 - 46 = 906，留 6px 安全余量
+
+  function baseDoc(){
+    return {
+      id:'resume-1',
+      title:'林知远',
+      profile:{ name:'林知远', headline:'前端工程师 · 3 年经验', contact:'175-0000-0000 · lin@example.com · 上海' },
+      sections:[
+        { id:'basic', title:'基本信息', type:'basic', fields:[
+          ['姓名','林知远'],['求职意向','前端工程师'],['联系方式','175-0000-0000 · lin@example.com · 上海'],['附加信息','有海外项目经验']
+        ]},
+        { id:'edu', title:'教育经历', type:'education', entries:[
+          { id:'e-exp-1', org:'华中科技大学', role:'软件工程 · 本科', date:'2022.09 – 2026.06', bullets:[
+            { id:'b-edu-1', text:'GPA 3.6/4.0，主修交互设计与数据分析' },
+            { id:'b-edu-2', text:'校级奖学金两次；课程项目三次获得优秀评价' }
+          ]}
+        ]},
+        { id:'exp', title:'实习经历', type:'experience', entries:[
+          { id:'e-exp-1', org:'字节跳动', role:'前端开发实习生', date:'2025.06 – 2025.12', bullets:[
+            { id:'b-exp-1', text:'负责简历编辑器画布性能优化，首屏渲染从 1.2s 降到 480ms' },
+            { id:'b-exp-2', text:'搭建组件快照测试，回归缺陷下降 35%，并把流程写进团队手册' },
+            { id:'b-exp-3', text:'与设计、后端共同定义编辑器的撤销/重做边界，减少 40% 的重复沟通' },
+            { id:'b-exp-4', text:'为中文输入法组合态补上守卫，避免快捷键在拼音未上屏时误触' }
+          ]},
+          { id:'e-exp-2', org:'美团', role:'前端开发实习生', date:'2024.07 – 2024.10', bullets:[
+            { id:'b-exp-5', text:'重构商户后台表单，重复代码减少 40%（分栏顺序待确认）', issue:'分栏顺序待确认：这段要点可能来自两栏' },
+            { id:'b-exp-6', text:'补齐表单校验与错误提示，线上工单下降 22%' },
+            { id:'b-exp-7', text:'用 Playwright 覆盖核心路径，回归时间从 2 小时降到 25 分钟' },
+            { id:'b-exp-8', text:'整理接入文档，新同学上手时间缩短到半天' },
+            { id:'b-exp-9', text:'参与周会同步进度，保持与产品和后端的一致' },
+            { id:'b-exp-10', text:'完成实习总结并做一次团队分享' },
+            { id:'b-exp-11', text:'把常用的 5 个表单抽象成组件，复用率提升 60%' },
+            { id:'b-exp-12', text:'为团队补充错误监控看板，线上问题定位时间减半' },
+            { id:'b-exp-13', text:'牵头一次跨组分享，整理成可检索的文档' }
+          ]},
+          { id:'e-exp-3', org:'开源社区', role:'贡献者', date:'2023.03 – 2023.08', bullets:[
+            { id:'b-exp-14', text:'为编辑器库修复中文输入法组合态问题，合并 2 个 PR' },
+            { id:'b-exp-15', text:'补充中文文档与示例，issue 响应时间缩短到 24 小时' },
+            { id:'b-exp-16', text:'参与版本发布前的回归测试，覆盖 3 个平台' },
+            { id:'b-exp-17', text:'整理贡献指南，新贡献者首次提交更顺畅' },
+            // 演示：超长条目用于验证「条目跨页」+ 续页小标题
+            ...Array.from({ length: 16 }, (_, i) => ({
+              id: 'b-exp-long-' + i,
+              text: [
+                '维护中文 issue 模板，减少信息缺失导致的往返',
+                '补充可复现示例仓库，维护者平均处理时间下降',
+                '参与社区例会，同步版本计划与已知问题',
+                '把常见问题整理成 FAQ，重复提问明显减少',
+                '为文档补上截图与最小示例，降低上手门槛',
+                '协助新贡献者完成首次提交与代码评审',
+                '跟进上游依赖升级，提前发现兼容问题',
+                '整理测试数据与夹具，提升回归稳定性',
+                '在发布说明中标注破坏性变更与迁移步骤',
+                '维护贡献者名单与致谢页，保持社区透明度',
+                '参与中文文档校对，统一术语与示例风格',
+                '把社区反馈转成可执行 issue，附最小复现',
+                '为跨平台差异补充说明，减少环境类问题',
+                '整理版本兼容矩阵，方便使用者选型',
+                '在 issue 中补充排查步骤，缩短定位时间',
+                '参与一次线下分享，介绍编辑器扩展机制',
+              ][i],
+            })),
+          ]},
+          { id:'e-exp-4', org:'学校实验室', role:'前端负责人', date:'2023.09 – 2024.05', bullets:[
+            { id:'b-exp-11', text:'维护可视化实验平台，服务 6 个课题组、每周约 300 次使用' },
+            { id:'b-exp-12', text:'把构建时间从 6 分钟压到 90 秒，发布频率提高一倍' }
+          ]}
+        ]},
+        { id:'proj', title:'项目经历', type:'project', entries:[
+          { id:'e-proj-1', org:'课程项目 · 协作看板', role:'独立开发', date:'2022.09 – 2022.12', bullets:[
+            { id:'b-proj-1', text:'实现任务拖拽、筛选与本地持久化，课程评分位列前 10%' },
+            { id:'b-proj-2', text:'用 IndexedDB 做离线缓存，弱网下仍可继续编辑' }
+          ]},
+          { id:'e-proj-2', org:'技术博客', role:'作者', date:'2022.05 – 至今', bullets:[
+            { id:'b-proj-3', text:'持续输出前端工程化笔记 30 篇，累计阅读 5 万+' },
+            { id:'b-proj-4', text:'整理编辑器性能专题，被 3 个团队引用' },
+            { id:'b-proj-5', text:'维护可运行的示例仓库，issue 平均 2 天响应' },
+            { id:'b-proj-6', text:'把踩坑记录做成检索页，减少重复提问' }
+          ]},
+          { id:'e-proj-3', org:'竞赛作品', role:'前端开发', date:'2021.11 – 2021.12', bullets:[
+            { id:'b-proj-7', text:'可视化数据看板，获校级程序设计竞赛二等奖' },
+            { id:'b-proj-8', text:'实现实时筛选与导出，答辩现场演示稳定' },
+            { id:'b-proj-9', text:'用 3 天完成从设计到上线，控制范围与质量' }
+          ]}
+        ]},
+        { id:'skills', title:'技能', type:'skill', fields:[
+          ['语言','TypeScript、JavaScript、SQL'],['框架','React、Tiptap、Vite'],['工具','Playwright、SQLite']
+        ]},
+        { id:'inbox', title:'待整理内容', type:'inbox', blocks:[
+          { id:'b-inbox-1', text:'获奖：校级程序设计竞赛二等奖（2021.12）', issue:'未归类：获奖信息暂放待整理内容，会随成品导出' },
+          { id:'b-inbox-2', text:'语言：英语 CET-6（580）' },
+          { id:'b-inbox-3', text:'自我评价：关注可维护性与细节。' }
+        ]}
+      ]
+    };
+  }
+
+  let doc = baseDoc();
+  let page = 0;
+  let zoom = 100;
+  let userZoomed = false;
+  let dense = false;
+  let pages = [];
+  let unitHeights = new Map();
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function renderUnit(u, { continuation = false } = {}){
+    if (u.type === 'profile'){
+      return `<div class="u profile" data-uid="${u.uid}">
+        <div class="profile-name">${esc(doc.profile.name)}</div>
+        <div class="profile-head">${esc(doc.profile.headline)}</div>
+        <div class="profile-contact">${esc(doc.profile.contact)}</div>
+      </div>`;
+    }
+    if (u.type === 'heading'){
+      return `<div class="u heading" data-uid="${u.uid}"><div class="heading-title">${esc(u.title)}</div></div>`;
+    }
+    if (u.type === 'field'){
+      return `<div class="u field" data-uid="${u.uid}"><div class="field-k">${esc(u.label)}</div><div class="field-v">${esc(u.value)}</div></div>`;
+    }
+    if (u.type === 'entry-head'){
+      return `<div class="u entry-head" data-uid="${u.uid}">
+        <span class="entry-org">${esc(u.org)}</span><span class="entry-role">${esc(u.role)}</span><span class="entry-date">${esc(u.date)}</span>
+      </div>`;
+    }
+    if (u.type === 'bullet'){
+      return `<div class="u bullet" data-uid="${u.uid}" data-depth="${u.depth || 0}"><span class="bullet-mark">▪</span><span class="bullet-text">${esc(u.text)}</span></div>`;
+    }
+    if (u.type === 'inbox'){
+      return `<div class="u inbox" data-uid="${u.uid}"><span class="inbox-mark">▪</span><span>${esc(u.text)}</span></div>`;
+    }
+    if (u.type === 'cont-head'){
+      return `<div class="u cont-head" data-uid="${u.uid}">${esc(u.text)}</div>`;
+    }
+    return '';
+  }
+
+  /** 文档 → 线性排版单元（标题与后续内容保持同页、条目可在要点边界分页） */
+  function buildUnits(){
+    const units = [{ type:'profile', uid:'profile' }];
+    for (const section of doc.sections){
+      units.push({ type:'heading', uid:'sec-'+section.id, title:section.title });
+      if (section.fields){
+        section.fields.forEach(([label, value], i) => units.push({ type:'field', uid:`f-${section.id}-${i}`, label, value }));
+      }
+      if (section.entries){
+        section.entries.forEach((entry) => {
+          units.push({ type:'entry-head', uid:'eh-'+entry.id, org:entry.org, role:entry.role, date:entry.date, entryId:entry.id });
+          entry.bullets.forEach((b) => units.push({
+            type:'bullet', uid:b.id, text:b.text, depth:b.depth || 0,
+            entryId:entry.id, entryMeta:`${entry.org}${entry.role ? ' · ' + entry.role : ''}（续）`,
+            ...(b.issue ? { issue:b.issue } : {}),
+          }));
+        });
+      }
+      if (section.blocks){
+        section.blocks.forEach((b) => units.push({
+          type:'inbox', uid:b.id, text:b.text,
+          ...(b.issue ? { issue:b.issue } : {}),
+        }));
+      }
+    }
+    return units;
+  }
+
+  function makeMeasure(){
+    const m = document.createElement('div');
+    m.className = 'measure sheet' + (dense ? ' compact' : '');
+    m.style.width = CONTENT_W + 'px';
+    m.style.padding = '0';
+    root.appendChild(m);
+    return m;
+  }
+
+  function measureAll(units){
+    const m = makeMeasure();
+    unitHeights = new Map();
+    units.forEach((u) => {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = renderUnit(u);
+      const el = wrap.firstElementChild;
+      m.appendChild(el);
+      unitHeights.set(u.uid, el.offsetHeight);
+    });
+    // 续页小标题的高度（按每条经历实际测量）
+    const metas = new Set(units.filter((u) => u.entryMeta).map((u) => u.entryMeta));
+    metas.forEach((text, i) => {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = renderUnit({ type:'cont-head', uid:'__cont-'+i, text });
+      const el = wrap.firstElementChild;
+      m.appendChild(el);
+      unitHeights.set('__cont-' + text, el.offsetHeight);
+    });
+    m.remove();
+  }
+
+  const heightOf = (u) => unitHeights.get(u.uid) ?? 0;
+  const contHeight = (meta) => unitHeights.get('__cont-' + meta) ?? 0;
+
+  /** 分页：按测量高度分配，不按固定高度切片；标题/条目头与首条内容保持同页 */
+  function paginate(units){
+    measureAll(units);
+    const result = [];
+    let cur = [];
+    let y = 0;
+    let openEntry = null;
+
+    const flush = () => { result.push(cur); cur = []; y = 0; };
+
+    for (let i = 0; i < units.length; i += 1){
+      const u = units[i];
+      const h = heightOf(u);
+      if (u.type === 'heading' && cur.length){
+        // 标题不与后续内容分离：标题 + 下一个内容单元（entry-head+首 bullet 或 field）必须同页
+        const next = units[i+1];
+        const nextH = next ? heightOf(next) : 0;
+        const nextNext = next && next.type === 'entry-head' ? heightOf(units[i+2] || {}) : 0;
+        if (y + h + nextH + nextNext > CONTENT_H) flush();
+      }
+      if (u.type === 'entry-head' && cur.length){
+        const firstBullet = units[i+1] && units[i+1].type === 'bullet' ? heightOf(units[i+1]) : 0;
+        if (y + h + firstBullet > CONTENT_H) flush();
+      }
+      if (y + h > CONTENT_H && cur.length){
+        flush();
+        if (u.type === 'bullet' && openEntry){
+          const ch = contHeight(u.entryMeta);
+          cur.push({ unit:{ type:'cont-head', uid:'cont-'+u.entryId+'-'+result.length, text:u.entryMeta } });
+          y += ch;
+        }
+      }
+      if (u.type === 'bullet') openEntry = u.entryMeta;
+      if (u.type === 'heading' || u.type === 'field' || u.type === 'inbox') openEntry = null;
+      cur.push({ unit:u });
+      y += h;
+    }
+    if (cur.length) result.push(cur);
+    return result.length ? result : [[]];
+  }
+
+  function issueUnits(){
+    return buildUnits().filter((u) => u.issue);
+  }
+
+  function render(){
+    const units = buildUnits();
+    pages = paginate(units);
+    const issueMap = new Map();
+    pages.forEach((pageUnits, pi) => {
+      pageUnits.forEach(({ unit }) => { if (unit.issue) issueMap.set(unit.uid, { label:unit.issue, page:pi }); });
+    });
+    $('out-pages').textContent = String(pages.length);
+    $('page-total').textContent = String(pages.length);
+    $('page-cur').textContent = String(Math.min(page + 1, pages.length));
+    $('prev').disabled = page <= 0;
+    $('next').disabled = page >= pages.length - 1;
+    const chip = $('issue-chip');
+    const count = issueMap.size;
+    chip.hidden = count === 0;
+    $('issue-count').textContent = count ? `${count} 处待确认` : '';
+    chip.dataset.pages = Array.from(new Set(Array.from(issueMap.values()).map((v) => v.page + 1))).join(',');
+
+    const content = $('content');
+    const gutter = $('gutter');
+    const current = pages[page] || [];
+    content.innerHTML = current.map(({ unit }) => renderUnit(unit)).join('');
+    gutter.innerHTML = '';
+    // 疑点在纸外挂标记（成品纸面不出现检查标记）
+    current.forEach(({ unit }) => {
+      if (!unit.issue) return;
+      const el = content.querySelector(`[data-uid="${CSS.escape(unit.uid)}"]`);
+      if (!el) return;
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'gutter-dot';
+      dot.style.top = (el.offsetTop + Math.max(0, el.offsetHeight - 10) / 2) + 'px';
+      dot.title = unit.issue;
+      dot.setAttribute('aria-label', unit.issue);
+      dot.onclick = () => {
+        el.classList.add('flash');
+        toast(unit.issue);
+        setTimeout(() => el.classList.remove('flash'), 1200);
+      };
+      gutter.appendChild(dot);
+    });
+    applyZoom();
+  }
+
+  function applyZoom(){
+    const sheet = $('sheet');
+    sheet.style.transform = `scale(${zoom / 100})`;
+    const shell = $('shell');
+    shell.style.width = Math.round(700 * zoom / 100) + 'px';
+    shell.style.height = Math.round(990 * zoom / 100) + 'px';
+    $('zoom-val').textContent = zoom + '%';
+  }
+
+  /** 默认按窗口高度适配，一次完整显示一张 A4；缩放不参与分页计算 */
+  function fitZoom(){
+    const stage = $('stage');
+    const availW = Math.max(300, stage.clientWidth - 56);
+    const availH = Math.max(300, stage.clientHeight - 30);
+    const z = Math.min(availW / 700, availH / 990, 1) * 100;
+    zoom = Math.max(50, Math.min(140, Math.floor(z / 5) * 5));
+    applyZoom();
+  }
+
+  function setPage(nextPage){
+    page = Math.max(0, Math.min(nextPage, pages.length - 1));
+    render();
+  }
+
+  let issueCursor = 0;
+  function jumpToIssue(){
+    const values = Array.from(pages.flatMap((pu, pi) => pu.filter((x) => x.unit.issue).map((x) => ({ unit:x.unit, page:pi }))));
+    if (!values.length) return;
+    const target = values[issueCursor % values.length];
+    issueCursor += 1;
+    setPage(target.page);
+    requestAnimationFrame(() => {
+      const el = $('content').querySelector(`[data-uid="${CSS.escape(target.unit.uid)}"]`);
+      if (el){
+        el.classList.add('flash');
+        el.scrollIntoView({ block:'center', behavior:'smooth' });
+        setTimeout(() => el.classList.remove('flash'), 1200);
+      }
+      toast(`第 ${target.page + 1} 页：${target.unit.issue}`);
+    });
+  }
+
+  function toast(msg){
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  // 顶部控制
+  $('prev').onclick = () => setPage(page - 1);
+  $('next').onclick = () => setPage(page + 1);
+  $('issue-chip').onclick = jumpToIssue;
+  $('zoom-in').onclick = () => { userZoomed = true; zoom = Math.min(140, zoom + 10); applyZoom(); };
+  $('zoom-out').onclick = () => { userZoomed = true; zoom = Math.max(50, zoom - 10); applyZoom(); };
+
+  function setDensity(next){
+    dense = next;
+    $('sheet').classList.toggle('compact', dense);
+    $('tpl-classic').setAttribute('aria-pressed', String(!dense));
+    $('tpl-compact').setAttribute('aria-pressed', String(dense));
+    $('pv-dense').setAttribute('aria-pressed', String(dense));
+    const before = pages.length;
+    render();
+    if (before && pages.length !== before) toast(`密度已切换，重新分页：${before} → ${pages.length} 页`);
+  }
+  $('tpl-classic').onclick = () => setDensity(false);
+  $('tpl-compact').onclick = () => setDensity(true);
+  $('pv-dense').onclick = () => setDensity(!dense);
+
+  $('pv-add').onclick = () => {
+    const exp = doc.sections.find((s) => s.id === 'exp');
+    if (!exp) return;
+    const before = pages.length;
+    const stamp = Date.now();
+    exp.entries.push({
+      id:'e-add-a-'+stamp, org:'新增公司 A（演示）', role:'前端开发', date:'2026.01 – 2026.06',
+      bullets: Array.from({ length: 7 }, (_, i) => ({
+        id:`b-add-a-${stamp}-${i}`,
+        text:[
+          '负责新业务的前端架构与交付，覆盖 3 个核心页面',
+          '把加载时间压到 1 秒内，转化率提升 8%',
+          '建立组件规范与评审流程，缺陷率下降 30%',
+          '补齐错误监控与告警，线上问题平均 10 分钟定位',
+          '和设计一起整理交互规范，减少返工',
+          '完成交接文档，新同学一周内可独立开发',
+          '每周复盘数据，持续修正性能与体验问题',
+        ][i],
+      })),
+    });
+    exp.entries.push({
+      id:'e-add-b-'+stamp, org:'新增公司 B（演示）', role:'前端负责人', date:'2025.01 – 2025.06',
+      bullets: Array.from({ length: 7 }, (_, i) => ({
+        id:`b-add-b-${stamp}-${i}`,
+        text:[
+          '搭起前端基础设施，统一构建、测试与发布',
+          '覆盖核心链路的 E2E，回归从 2 小时降到 25 分钟',
+          '推动可访问性检查，覆盖全部表单与导航',
+          '把中文输入法守卫抽成公共能力，减少重复缺陷',
+          '整理性能基线，每次发布自动对比',
+          '带 2 位同学完成模块交接与代码评审',
+          '把发布流程写成 Runbook，减少发布事故',
+        ][i],
+      })),
+    });
+    render();
+    page = 0;
+    render();
+    toast(`已加入两段经历，重新分页完成：共 ${pages.length} 页（内容已重新分配）`);
+  };
+
+  $('pv-reset').onclick = () => {
+    doc = baseDoc();
+    page = 0;
+    dense = false;
+    $('sheet').classList.remove('compact');
+    $('tpl-classic').setAttribute('aria-pressed','true');
+    $('tpl-compact').setAttribute('aria-pressed','false');
+    $('pv-dense').setAttribute('aria-pressed','false');
+    userZoomed = false;
+    render();
+    fitZoom();
+    toast('已重置预览文档');
+  };
+
+  $('pv-theme').onclick = (e) => {
+    root.classList.toggle('light');
+    e.currentTarget.textContent = root.classList.contains('light') ? '深色' : '浅色';
+  };
+
+  // 从导入预览跳转：标题 + 已导入提示
+  const q = new URLSearchParams(location.search);
+  if (q.get('title')) doc.title = q.get('title');
+  $('title').textContent = doc.title;
+  if (q.get('imported') === '1'){
+    $('imported-banner').classList.add('show');
+    $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图（演示内容）。批量检查请用顶部「待确认」入口。`;
+    toast('已导入并打开：这里是成品视图，不是独立完成页');
+  }
+
+  function rerenderKeepPage(){
+    const keep = page;
+    render();
+    page = Math.min(keep, pages.length - 1);
+    render();
+  }
+
+  page = 0;
+  render();
+  // 远程字体加载完成后字宽/行高变化 → 必须重新测量分页（否则页面实际内容会溢出）
+  function initialFit(){
+    rerenderKeepPage();
+    if (!userZoomed) fitZoom();
+  }
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(initialFit);
+  }
+  window.addEventListener('load', initialFit, { once: true });
+  window.addEventListener('resize', () => { if (!userZoomed) fitZoom(); });
+})();
+</script>
+</body>
+</html>
