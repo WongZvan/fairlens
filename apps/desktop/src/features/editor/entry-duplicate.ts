@@ -1,30 +1,44 @@
 /**
- * 条目副本 + 结构 gating（m1.4 尾项，docs/01 §5.2/§5.6）：
- * 结构命令经 manifest.sections[].maxEntries 校验；复制条目/要点均换新 id。
- * 纯函数：返回新 doc（不就地修改），便于单测锁定上限行为。
+ * 条目副本 + 篇幅建议（m1.4 尾项；#130 修订）：
+ * `maxEntries` 是**建议上限**，不是硬限制——导入可全量保留（正常分页），
+ * 编辑器复制在达到建议上限时由 UI 先弹确认，确认后允许复制（不截断、不隐藏）。
+ * 本文件保持纯函数：`entryLimitFor` 只报告状态，`duplicateEntry` 只做复制。
  */
 import type { ResumeDoc, TemplateManifest } from '@fairlens/shared';
 import { nanoid } from '../../lib/nanoid.js';
 
-export type DuplicateEntryResult =
-  | { ok: true; doc: ResumeDoc }
-  | { ok: false; limit: number };
+export interface EntryLimit {
+  /** 模板建议上限 */
+  limit: number;
+  /** 当前条目数 */
+  count: number;
+  /** 已达/超过建议上限（UI 应先确认） */
+  reached: boolean;
+}
 
-export function duplicateEntry(
+/** 某分区的建议上限状态；分区不存在、无 manifest、无匹配规则 → null（不提示） */
+export function entryLimitFor(
   doc: ResumeDoc,
   manifest: TemplateManifest | undefined,
   sectionId: string,
-  entryId: string,
-): DuplicateEntryResult {
+): EntryLimit | null {
   const section = doc.sections.find((s) => s.id === sectionId);
-  if (!section) return { ok: true, doc };
-  const idx = section.entries.findIndex((e) => e.id === entryId);
-  if (idx === -1) return { ok: true, doc };
-
+  if (!section) return null;
   const rule = manifest?.sections.find((r) => r.type === section.type);
-  if (rule && section.entries.length >= rule.maxEntries) {
-    return { ok: false, limit: rule.maxEntries };
-  }
+  if (!rule) return null;
+  return {
+    limit: rule.maxEntries,
+    count: section.entries.length,
+    reached: section.entries.length >= rule.maxEntries,
+  };
+}
+
+/** 复制条目到原条目之后（条目/要点 id 全换新）；分区或条目不存在时返回原 doc 引用 */
+export function duplicateEntry(doc: ResumeDoc, sectionId: string, entryId: string): ResumeDoc {
+  const section = doc.sections.find((s) => s.id === sectionId);
+  if (!section) return doc;
+  const idx = section.entries.findIndex((e) => e.id === entryId);
+  if (idx === -1) return doc;
 
   const src = section.entries[idx]!;
   const copy = {
@@ -35,10 +49,7 @@ export function duplicateEntry(
   const entries = [...section.entries];
   entries.splice(idx + 1, 0, copy);
   return {
-    ok: true,
-    doc: {
-      ...doc,
-      sections: doc.sections.map((s) => (s.id === sectionId ? { ...s, entries } : s)),
-    },
+    ...doc,
+    sections: doc.sections.map((s) => (s.id === sectionId ? { ...s, entries } : s)),
   };
 }

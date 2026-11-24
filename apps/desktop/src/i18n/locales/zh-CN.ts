@@ -358,7 +358,9 @@ export default {
       failed: '粘贴失败：剪贴板不可读或格式不支持',
     },
     structure: {
-      limitReached: '该分区最多 {{max}} 条',
+      overLimitTitle: '已到建议上限',
+      overLimitBody: '「{{section}}」已有 {{count}} 条，建议上限 {{max}} 条。继续复制会让简历偏长；导出会正常分页，不会隐藏或截断。',
+      overLimitConfirm: '仍然复制',
     },
   },
 } as const;

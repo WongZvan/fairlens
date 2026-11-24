@@ -22,7 +22,7 @@ import { SidebarResizer } from './SidebarResizer.js';
 import { ContextMenuView, useContextMenu } from './ContextMenu.js';
 import { buildCanvasMenuItems } from './canvas-menu.js';
 import { moveEntry } from './entry-order.js';
-import { duplicateEntry as duplicateEntryDoc } from '../editor/entry-duplicate.js';
+import { duplicateEntry as duplicateEntryDoc, entryLimitFor } from '../editor/entry-duplicate.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
@@ -134,6 +134,10 @@ export function EditorMockup() {
   const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
   /** #127：删除分区确认（取代原生 window.confirm） */
   const [sectionConfirm, setSectionConfirm] = useState<string | null>(null);
+  /** #130：复制条目达到建议上限的确认（确认后仍复制；软上限不阻断） */
+  const [limitConfirm, setLimitConfirm] = useState<{
+    sectionId: string; entryId: string; sectionTitle: string; count: number; limit: number;
+  } | null>(null);
   /** #127：清空示例确认 */
   const [clearConfirm, setClearConfirm] = useState(false);
   const [clearPending, setClearPending] = useState(false);
@@ -306,17 +310,28 @@ export function EditorMockup() {
   const rightWidth = useMockup((s) => s.rightWidth);
 
   // #93：画布右键菜单（两种光标态）。结构复制真实现（同 entry 内复制条目，nanoid 新块）
-  // 2026-11-04：按 manifest maxEntries 结构 gating（超限 toast，不复制）
+  // #130：maxEntries 为建议上限——达到上限时先确认，确认后仍复制（不截断、不隐藏）
+  const performDuplicateEntry = (sectionId: string, entryId: string) => {
+    const d = useEditorDoc.getState().doc;
+    if (!d) return;
+    const next = duplicateEntryDoc(d, sectionId, entryId);
+    if (next !== d) useEditorDoc.getState().applyDoc(next);
+  };
   const duplicateEntry = (sectionId: string, entryId: string) => {
     const d = useEditorDoc.getState().doc;
     if (!d) return;
-    const manifest = getBuiltinTemplate(d.templateId)?.manifest;
-    const result = duplicateEntryDoc(d, manifest, sectionId, entryId);
-    if (!result.ok) {
-      toast(t('editor.structure.limitReached', { max: result.limit }));
+    const limit = entryLimitFor(d, getBuiltinTemplate(d.templateId)?.manifest, sectionId);
+    if (limit?.reached) {
+      setLimitConfirm({
+        sectionId,
+        entryId,
+        sectionTitle: d.sections.find((s) => s.id === sectionId)?.title ?? '',
+        count: limit.count,
+        limit: limit.limit,
+      });
       return;
     }
-    if (result.doc !== d) useEditorDoc.getState().applyDoc(result.doc);
+    performDuplicateEntry(sectionId, entryId);
   };
   const reorderEntry = (sectionId: string, from: number, to: number) => {
     const d = useEditorDoc.getState().doc;
@@ -494,6 +509,22 @@ export function EditorMockup() {
       )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <SnapshotDialog open={snapOpen} onClose={() => setSnapOpen(false)} />
+      <ConfirmDialog
+        open={limitConfirm !== null}
+        title={t('editor.structure.overLimitTitle')}
+        body={t('editor.structure.overLimitBody', {
+          section: limitConfirm?.sectionTitle ?? '',
+          count: limitConfirm?.count ?? 0,
+          max: limitConfirm?.limit ?? 0,
+        })}
+        confirmLabel={t('editor.structure.overLimitConfirm')}
+        onConfirm={() => {
+          const c = limitConfirm;
+          setLimitConfirm(null);
+          if (c) performDuplicateEntry(c.sectionId, c.entryId);
+        }}
+        onClose={() => setLimitConfirm(null)}
+      />
       <ConfirmDialog
         open={sectionConfirm !== null}
         title={t('editor.sectionDeleteTitle')}
