@@ -411,6 +411,7 @@
           y += ch;
         }
       }
+      if (u.type === 'entry-head') openEntry = null;
       if (u.type === 'bullet') openEntry = u.entryMeta;
       if (u.type === 'heading' || u.type === 'field' || u.type === 'inbox') openEntry = null;
       cur.push({ unit:u });
