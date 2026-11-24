@@ -551,20 +551,6 @@ export const EntryNode = Node.create({
           }
           return true;
         },
-
-      /** 复制条目（#127）：紧跟在原条目后插入副本，entry/header 共享新 id，bullet 各自换新 id */
-      duplicateEntry:
-        (attrs?: { entryId?: string }) =>
-        ({ state, tr, dispatch }) => {
-          const target = findEntryIn(state.doc, state.selection, attrs?.entryId);
-          if (!target) return false;
-          if (dispatch) {
-            const at = target.pos + target.node.nodeSize;
-            tr.insert(at, cloneEntryFresh(target.node));
-            tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(at + 3, tr.doc.content.size))));
-          }
-          return true;
-        },
     };
   },
 });
@@ -593,22 +579,6 @@ function findEntryIn(
     if (node.type.name === 'flEntry') return { pos: $from.before(d), node };
   }
   return null;
-}
-
-/** 复制条目：entry 与 header 共用新 id（画布依赖两者一致），bullet 各自换新 */
-function cloneEntryFresh(node: PMDocNode): PMDocNode {
-  const id = nanoid12();
-  const content: PMDocNode[] = [];
-  node.forEach((child) => {
-    if (child.type.name === 'flEntryHeader') {
-      content.push(child.type.create({ ...child.attrs, id }, [], child.marks));
-    } else if (child.type.name === 'flBullet') {
-      content.push(child.type.create({ ...child.attrs, id: nanoid12() }, child.content, child.marks));
-    } else {
-      content.push(child);
-    }
-  });
-  return node.type.create({ ...node.attrs, id }, content, node.marks);
 }
 
 /** 条目头（#117）：atom，org/role/date 三段由 attrs 驱动；序列化直接读 attrs */
@@ -1239,7 +1209,6 @@ declare module '@tiptap/core' {
     };
     flEntry: {
       deleteEntry: (attrs?: { entryId?: string }) => ReturnType;
-      duplicateEntry: (attrs?: { entryId?: string }) => ReturnType;
     };
   }
 }

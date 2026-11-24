@@ -33,6 +33,33 @@ export function entryLimitFor(
   };
 }
 
+/** 条目所属分区 id；找不到返回 null（供统一复制入口使用） */
+export function sectionIdForEntry(doc: ResumeDoc, entryId: string): string | null {
+  for (const section of doc.sections) {
+    if (section.entries.some((e) => e.id === entryId)) return section.id;
+  }
+  return null;
+}
+
+export type DuplicatePlan =
+  | { kind: 'duplicate'; doc: ResumeDoc }
+  | { kind: 'needs-confirm'; limit: EntryLimit };
+
+/**
+ * 复制入口的统一决策：达到建议上限 → needs-confirm（**不修改 doc**，取消即无新增）；
+ * 未达上限 → 直接返回复制后的 doc。
+ */
+export function planDuplicateEntry(
+  doc: ResumeDoc,
+  manifest: TemplateManifest | undefined,
+  sectionId: string,
+  entryId: string,
+): DuplicatePlan {
+  const limit = entryLimitFor(doc, manifest, sectionId);
+  if (limit?.reached) return { kind:'needs-confirm', limit };
+  return { kind:'duplicate', doc: duplicateEntry(doc, sectionId, entryId) };
+}
+
 /** 复制条目到原条目之后（条目/要点 id 全换新）；分区或条目不存在时返回原 doc 引用 */
 export function duplicateEntry(doc: ResumeDoc, sectionId: string, entryId: string): ResumeDoc {
   const section = doc.sections.find((s) => s.id === sectionId);

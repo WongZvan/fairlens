@@ -75,7 +75,8 @@ export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProp
           className="ctx-item"
           onClick={() => {
             setMenuOpen(false);
-            editor.commands.duplicateEntry({ entryId });
+            // #130：复制走统一确认流程（达到建议上限先确认）；NodeView 不直接执行命令
+            window.dispatchEvent(new CustomEvent('fl:duplicate-entry', { detail: { entryId } }));
           }}
         >
           {t('editor.duplicateEntry')}

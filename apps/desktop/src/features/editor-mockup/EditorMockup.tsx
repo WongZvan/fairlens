@@ -22,7 +22,7 @@ import { SidebarResizer } from './SidebarResizer.js';
 import { ContextMenuView, useContextMenu } from './ContextMenu.js';
 import { buildCanvasMenuItems } from './canvas-menu.js';
 import { moveEntry } from './entry-order.js';
-import { duplicateEntry as duplicateEntryDoc, entryLimitFor } from '../editor/entry-duplicate.js';
+import { duplicateEntry as duplicateEntryDoc, planDuplicateEntry, sectionIdForEntry } from '../editor/entry-duplicate.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 
 /** 三栏编辑器打样（m1.1）：可点击项=模板切换/缩放/面板折叠（边缘细轨展开）/主题（TitleBar） */
@@ -320,19 +320,33 @@ export function EditorMockup() {
   const duplicateEntry = (sectionId: string, entryId: string) => {
     const d = useEditorDoc.getState().doc;
     if (!d) return;
-    const limit = entryLimitFor(d, getBuiltinTemplate(d.templateId)?.manifest, sectionId);
-    if (limit?.reached) {
+    const plan = planDuplicateEntry(d, getBuiltinTemplate(d.templateId)?.manifest, sectionId, entryId);
+    if (plan.kind === 'needs-confirm') {
       setLimitConfirm({
         sectionId,
         entryId,
         sectionTitle: d.sections.find((s) => s.id === sectionId)?.title ?? '',
-        count: limit.count,
-        limit: limit.limit,
+        count: plan.limit.count,
+        limit: plan.limit.limit,
       });
       return;
     }
-    performDuplicateEntry(sectionId, entryId);
+    if (plan.doc !== d) useEditorDoc.getState().applyDoc(plan.doc);
   };
+  // #130：条目头「⋯ → 复制条目」等 NodeView 入口只发事件；统一走 duplicateEntry 确认流程
+  useEffect(() => {
+    const onDuplicate = (e: Event) => {
+      const entryId = (e as CustomEvent<{ entryId?: string }>).detail?.entryId;
+      if (!entryId) return;
+      const d = useEditorDoc.getState().doc;
+      if (!d) return;
+      const sectionId = sectionIdForEntry(d, entryId);
+      if (sectionId) duplicateEntry(sectionId, entryId);
+    };
+    window.addEventListener('fl:duplicate-entry', onDuplicate);
+    return () => window.removeEventListener('fl:duplicate-entry', onDuplicate);
+  }, [duplicateEntry]);
+
   const reorderEntry = (sectionId: string, from: number, to: number) => {
     const d = useEditorDoc.getState().doc;
     if (!d) return;

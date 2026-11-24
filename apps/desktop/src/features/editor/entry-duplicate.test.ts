@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ResumeDoc, TemplateManifest } from '@fairlens/shared';
-import { duplicateEntry, entryLimitFor } from './entry-duplicate.js';
+import { duplicateEntry, entryLimitFor, planDuplicateEntry, sectionIdForEntry } from './entry-duplicate.js';
 import { getBuiltinTemplate } from '../templates/builtin-registry.js';
 
 const sec = (entries: ResumeDoc['sections'][number]['entries']): ResumeDoc => ({
@@ -53,6 +53,27 @@ describe('条目副本 + 篇幅建议（#130 软上限）', () => {
   it('条目不存在：no-op（返回原 doc 引用）', () => {
     const doc = sec([entry('e00000000001', 'b00000000001')]);
     expect(duplicateEntry(doc, 'sec000000001', 'e00000000099')).toBe(doc);
+  });
+
+  it('复制入口决策：未达上限直接复制；达上限只返回 needs-confirm 且不修改 doc（取消=不新增）', () => {
+    const doc = sec([entry('e00000000001', 'b00000000001'), entry('e00000000002', 'b00000000002')]);
+    const below = planDuplicateEntry(doc, manifestWith(3), 'sec000000001', 'e00000000002');
+    expect(below.kind).toBe('duplicate');
+    if (below.kind === 'duplicate') expect(below.doc.sections[0]!.entries).toHaveLength(3);
+
+    const atLimit = planDuplicateEntry(doc, manifestWith(2), 'sec000000001', 'e00000000002');
+    expect(atLimit.kind).toBe('needs-confirm');
+    if (atLimit.kind === 'needs-confirm') expect(atLimit.limit).toMatchObject({ limit:2, count:2, reached:true });
+    // 取消路径：原 doc 不变
+    expect(doc.sections[0]!.entries).toHaveLength(2);
+    // 确认路径：显式调用 duplicateEntry 才新增
+    expect(duplicateEntry(doc, 'sec000000001', 'e00000000002').sections[0]!.entries).toHaveLength(3);
+  });
+
+  it('按 entryId 找到所属分区（统一复制入口用）', () => {
+    const doc = sec([entry('e00000000001', 'b00000000001')]);
+    expect(sectionIdForEntry(doc, 'e00000000001')).toBe('sec000000001');
+    expect(sectionIdForEntry(doc, 'e00000000099')).toBeNull();
   });
 
   it('真实模板 manifest：education 建议上限参与判定', () => {
