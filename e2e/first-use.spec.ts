@@ -45,10 +45,25 @@ test('首用：清空 → 添加基本信息字段 → 姓名未填时导出被�
   // 先把光标移到别处，再点字段行（不按 End）直接打字：靠字段行本身聚焦
   await page.keyboard.press('Control+Home');
   const fieldBox = await fields.first().boundingBox();
-  await fields.first().click({ position: { x: Math.max(4, (fieldBox?.width ?? 40) - 6), y: (fieldBox?.height ?? 20) / 2 } });
+  await fields.first().click({ position: { x: Math.max(4, (fieldBox?.width ?? 40) - 6), y: Math.min(10, (fieldBox?.height ?? 20) / 2) } });
   await expect(page.locator('.ProseMirror')).toBeFocused();
   await page.keyboard.type('（补充）');
   await expect(fields.first()).toHaveText(/武汉 · 可即时到岗\s*（补充）/);
+
+  // 无尾空格的已有字段：ABCD + 点行尾追加 X → ABCDX
+  await basicSection.locator('.fl-add-entry').click();
+  await expect(fields).toHaveCount(2);
+  await page.keyboard.type('ABCD');
+  // 新字段默认带一个尾部空格；删掉它，构造「无尾空格的已有字段」ABCD
+  await page.keyboard.press('End');
+  await page.keyboard.press('Backspace');
+  await expect(fields.nth(1)).toHaveText(/ABCD$/);
+  await page.locator('.statusbar').click();
+  const box2 = await fields.nth(1).boundingBox();
+  await fields.nth(1).click({ position: { x: Math.max(4, (box2?.width ?? 40) - 6), y: Math.min(10, (box2?.height ?? 20) / 2) } });
+  await page.keyboard.type('X');
+  await expect(fields.nth(1)).toHaveText(/ABCDX/);
+  await expect(fields.nth(1)).not.toHaveText(/ABCXD/);
 
   // 字段行铅笔 → 弹窗输入：鼠标点输入框 + 键盘输入，不得写进纸面字段值
   await fields.first().getByLabel('编辑字段').click();

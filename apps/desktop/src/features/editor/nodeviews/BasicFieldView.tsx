@@ -25,7 +25,7 @@ export function BasicFieldView({ node, updateAttributes, editor, getPos, deleteN
     const at = pos + node.nodeSize;
     const next = fieldType.create({ id: nanoid(), label: t('editor.fieldLabelDefault'), href: null }, editor.schema.text(' '));
     // 新字段插入后把光标放到其值末尾：用户点「添加字段」即可直接打字
-    editor.chain().focus().insertContentAt(at, next).setTextSelection(at + next.nodeSize - 2).run();
+    editor.chain().focus().insertContentAt(at, next).setTextSelection(at + next.nodeSize - 1).run();
   };
 
   /**
@@ -42,7 +42,7 @@ export function BasicFieldView({ node, updateAttributes, editor, getPos, deleteN
     const pos = typeof getPos === 'function' ? getPos() : null;
     if (typeof pos !== 'number') return;
     e.preventDefault();
-    editor.chain().focus().setTextSelection(pos + node.nodeSize - 2).run();
+    editor.chain().focus().setTextSelection(pos + node.nodeSize - 1).run();
   };
 
   return (
