@@ -296,6 +296,7 @@
 
   let doc = baseDoc();
   const q = new URLSearchParams(location.search);
+  const longFirstRepeat = 220;
   let importedPayload = null;
   if (q.get('imported') === '1'){
     try { importedPayload = JSON.parse(localStorage.getItem('fl:preview-import') || 'null'); } catch {}
@@ -355,7 +356,7 @@
         section.entries.forEach((entry) => {
           units.push({ type:'entry-head', uid:'eh-'+entry.id, org:entry.org, role:entry.role, date:entry.date, entryId:entry.id });
           entry.bullets.forEach((b) => units.push({
-            type:'bullet', uid:b.id, text:b.text, depth:b.depth || 0,
+            type:'bullet', uid:b.id, text:b.text, depth:b.depth || 0, srcStart:0, srcEnd:b.text.length,
             entryId:entry.id, entryMeta:`${entry.org}${entry.role ? ' · ' + entry.role : ''}（续）`,
             ...(b.issue ? { issue:b.issue } : {}),
           }));
@@ -737,14 +738,18 @@
   $('tpl-compact').onclick = () => setDensity(true);
   $('pv-dense').onclick = () => setDensity(!dense);
 
-  $('pv-long-first').onclick = () => {
-    doc = {
+  function longFirstDoc(n){
+    return {
       id:'long-first', title:'超长首条', profile:{ name:'测试', headline:'', contact:'' },
       sections:[{ id:'exp', title:'实习经历', type:'experience', entries:[{
         id:'e-long-first', org:'某公司', role:'工程师', date:'2024.01 – 2024.12',
-        bullets:[{ id:'b-long-first', text:'首条超长要点：' + '这一条非常长，需要跨页显示。'.repeat(220) }],
+        bullets:[{ id:'b-long-first', text:'首条超长要点：' + '这一条非常长，需要跨页显示。'.repeat(n) }],
       }]}],
     };
+  }
+
+  $('pv-long-first').onclick = () => {
+    doc = longFirstDoc(longFirstRepeat);
     page = 0; dense = false;
     $('sheet').classList.remove('compact');
     $('tpl-classic').setAttribute('aria-pressed','true');

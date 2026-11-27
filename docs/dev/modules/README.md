@@ -14,9 +14,9 @@
 | m1.4 | 画布渲染（权限矩阵/粘贴归一化） | 基础 | ✅ 67a4cb0（2026-11-05 预览 NodeView 扩展 #117；背景层 #86 延后 m2.3） | [m1/m1.4-canvas.md](m1/m1.4-canvas.md) | feat/m1.4-tail（已并入） |
 | m1.5 | 树/快捷键/命令面板/Ctrl+F | 基础 | ✅ 92b4cad（收口回填；实现提交=5db0e3a；+2026-11-05 大纲折叠/雷达/模板工具栏与 #118 完整树；#126 Ctrl+F 内联查找已落地；#127 键盘契约与 `?` 速查表；四次打磨：模板按钮箭头随悬停） | [m1/m1.5-tree-shortcuts.md](m1/m1.5-tree-shortcuts.md) | feat/m1.5-tree-shortcuts |
 | m1.6 | 持久层+快照+关闭保护 | 基础 | ✅ deb5d6a（真机冒烟自动部分已过；人工验收项见 STATE 悬挂⑤） | [m1/m1.6-persist-snapshot.md](m1/m1.6-persist-snapshot.md) | feat/m1.6（已并入） |
-| m1.7 | 导入管线（LLM 接入点留 m3.5） | 基础 | 🔄 预览第十二轮待复核（姓名补填实际分区/已编辑姓名同步；ADR #130） | [m1/m1.7-import.md](m1/m1.7-import.md) | feat/m1.7-import |
+| m1.7 | 导入管线（LLM 接入点留 m3.5） | 基础 | 🔄 预览第十三轮待复核（标题与姓名分离/显式姓名优先；ADR #130） | [m1/m1.7-import.md](m1/m1.7-import.md) | feat/m1.7-import |
 | m1.8 | 简历库首页 | 基础 | ✅ 收口（9174ce2；§14.0–14.6 真窗全 PASS，codex 9/10，2026-11-23） | [m1/m1.8-library-home.md](m1/m1.8-library-home.md) | 已删（squash 8e41823） |
-| m1.9 | 成品分页视图（单页翻页+真实分页） | 基础 | 🔄 方向定案，预览第十二轮待过目（双向要点偏移锚点/分页与导出；ADR #131；业务代码未开始） | [m1/m1.9-paged-view.md](m1/m1.9-paged-view.md) | 待切 |
+| m1.9 | 成品分页视图（单页翻页+真实分页） | 基础 | 🔄 方向定案，预览第十三轮待过目（完整要点 srcStart/双向锚点；ADR #131；业务代码未开始） | [m1/m1.9-paged-view.md](m1/m1.9-paged-view.md) | 待切 |
 | m2.1 | lease 端点（miniflare） | 共享 | ⬜ | [m2/m2.1-lease-endpoint.md](m2/m2.1-lease-endpoint.md) | 待切 |
 | m2.2 | 双证状态机（幂等恢复边） | 共享 | ⬜ | [m2/m2.2-license-statemachine.md](m2/m2.2-license-statemachine.md) | 待切 |
 | m2.3 | 激活向导+设置+角色门控 | 共享 | ⬜ | [m2/m2.3-activation-ui.md](m2/m2.3-activation-ui.md) | 待切 |

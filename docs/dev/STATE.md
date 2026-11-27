@@ -31,7 +31,7 @@
 | 项 | 值 |
 |---|---|
 | 代码基线 | 代码=`9174ce2`（m1.8 终态）+ 本分支复制软上限（#130）；文档/预览提交见 `git log`；#127 代码基线=`cceb793` |
-| 当前分支 | `feat/m1.7-import`（HEAD 以 git log 为准；第十二轮=姓名补填实际分区/双向要点偏移锚点；dev 最近 squash=`ef0a191`，m1.8 收口） |
+| 当前分支 | `feat/m1.7-import`（HEAD 以 git log 为准；第十三轮=完整要点 srcStart/标题与姓名分离；dev 最近 squash=`ef0a191`，m1.8 收口） |
 | 测试基线 | **381 全绿**（50 文件）；覆盖率四包达标（core 96.27 / shared 100 / keygen 93.84 / lease 100 行）；lint / typecheck / contract 零漂移 / build / E2E **11 条**全过 |
 | CI 门禁 | 六 job：`lint` / `typecheck` / `test` / `coverage` / `contract-zero-drift` / `e2e`（全部 actions 已固定 SHA）；**2026-11-21 首绿**（run 44884436909 @ dd23b59） |
 | 唯一事实源 | `docs/01-技术开发文档.md`（附录 E 总账 **131 条**）+ `packages/shared/src/`（zod 契约）。**引用字段名前去读源** |
@@ -315,3 +315,7 @@
   - **姓名补填**：`focusNameField` 不再写死 `sec-basic`，按草稿实际 basic 分区 id 定位；分区折叠时先展开再聚焦；实测「基本信息标题+只有联系方式」输入可聚焦并输入「张三」。
   - **双向锚点**：阅读锚点优先取当前页第一条要点（完整要点 `srcStart=0`，续段 `srcStart/srcEnd`）；完整要点→拆段与续段→重新分配都定位到含原偏移的页；实测 dense→classic `2415` 仍落在覆盖段页。
   - **状态同步**：STATE 当前分支/导航表 m1.7/m1.9 状态改为第十二轮。
+- 2026-11-27 m1.7/m1.9 第十三轮（codex 8.5/10）：
+  - **完整要点锚点**：`buildUnits` 为每条要点补 `srcStart:0 / srcEnd:length`；此前完整要点 `srcStart` 为空，`renderKeepingAnchor` 退化成只查原 uid，拆段后匹配不到 `#s0`。现在完整要点→拆段按 offset 0 定位；实测长度 140/160 的完整要点切经典拆段后视图跟到首段页。
+  - **标题与姓名分离**：首行「个人简历」+ 基本信息「姓名：张三」时不再造第二个 basic/姓名；显式姓名优先，首行留作文档标题；检查页只有一个姓名，改名李四后成品页头李四、标题个人简历。原文标题行 raw 去向改「文档标题」。
+  - **文档**：验收 §16.2/§16.10、ADR、m1.9 模块同步；STATE 修正上一轮“双向均通过”的过表述。
