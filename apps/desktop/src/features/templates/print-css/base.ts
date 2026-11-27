@@ -167,5 +167,6 @@ article[data-type="fl-entry"] > li[data-type="fl-bullet"][data-depth="2"]::befor
 .fl-edit-btn:hover { color: #33518e; border-color: #33518e; }
 @media print {
   .fl-edit-btn { display: none !important; }
+  .fl-entry-head .row-actions { display: none !important; }
 }
 `;

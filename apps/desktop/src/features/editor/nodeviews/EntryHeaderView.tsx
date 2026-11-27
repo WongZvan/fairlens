@@ -1,6 +1,6 @@
 /** 条目头 NodeView（#117）：org/role/date 三段；点击编辑元信息（日期纯文本解析）；#127 加 ⋯ 复制/删除 */
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Pencil } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../../../app/dropdown.js';
@@ -30,6 +30,8 @@ export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProp
         tabIndex={0}
         onClick={() => setOpen(true)}
         onKeyDown={(e) => {
+          // 只处理父行自身获得焦点的按键；子按钮的 Enter/Space 不能冒泡成“编辑条目信息”
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setOpen(true);
@@ -39,8 +41,23 @@ export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProp
         <b>{org || t('editor.orgPlaceholder')}</b>
         {role && <span className="role">{role}</span>}
         {date && <span className="date">{date}</span>}
-        {/* 操作区独立拦截冒泡：只保留一个 ⋯，避免“点偏左就开编辑框”（codex 真窗复现） */}
-        <div className="row-actions" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+        {/* 操作区独立拦截冒泡：鼠标与键盘都不触发父行“编辑条目信息” */}
+        <div className="row-actions" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => {
+            // 只拦 Enter/Space（防父行误开编辑框）；Esc 必须冒泡到 Dropdown 关闭菜单
+            if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+          }}>
+          <button
+            type="button"
+            className="fl-edit-btn"
+            aria-label={t('editor.editEntryMeta')}
+            title={t('editor.editEntryMeta')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(true);
+            }}
+          >
+            <Pencil size={12} />
+          </button>
           <button
             ref={moreRef}
             type="button"
@@ -60,17 +77,6 @@ export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProp
         </div>
       </div>
       <Dropdown open={menuOpen} anchorRef={moreRef} align="right" className="ctx-menu" role="menu" onClose={() => setMenuOpen(false)}>
-        <button
-          type="button"
-          role="menuitem"
-          className="ctx-item"
-          onClick={() => {
-            setMenuOpen(false);
-            setOpen(true);
-          }}
-        >
-          {t('editor.editEntryMeta')}
-        </button>
         <button
           type="button"
           role="menuitem"
