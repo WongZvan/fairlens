@@ -828,6 +828,9 @@
     const basic = draft.sections.find((s) => s.type === 'basic');
     const fields = basic?.fields ?? [];
     const fieldOf = (label) => (fields.find(([k]) => k === label)?.[1] ?? '');
+    // 区分「没有姓名字段」与「用户主动清空」：后者不能回落到解析时的旧姓名
+    const nameField = fields.find(([k]) => k === '姓名');
+    const finalName = nameField ? nameField[1] : (draft.name || title);
     const sections = draft.sections.map((s) => ({
       id: s.id, title: s.title, type: s.type,
       fields: (s.fields || []).map(([label, value]) => [label, value]),
@@ -851,7 +854,7 @@
       doc: {
         id: 'imported-1', title,
         profile: {
-          name: fieldOf('姓名') || draft.name || title,
+          name: finalName,
           headline: fieldOf('求职意向'),
           contact: fieldOf('联系方式'),
         },
@@ -860,6 +863,7 @@
       sourcePages: draft.pages,
       extractedPages: draft.extractedPages,
       noTextPages: draft.raw.filter((r) => r.noText).map((r) => r.page),
+      nameMissing: !finalName,
     };
     try { localStorage.setItem('fl:preview-import', JSON.stringify(payload)); } catch {}
     // 与决策对齐：创建成功后直接进入成品视图，不设独立完成页；携带同一份草稿
