@@ -332,7 +332,7 @@
     }
     if (u.type === 'bullet'){
       const mark = u.splitContinuation ? '↳' : '▪';
-      return `<div class="u bullet${u.splitContinuation ? ' is-split-cont' : ''}" data-uid="${u.uid}" data-depth="${u.depth || 0}"><span class="bullet-mark">${mark}</span><span class="bullet-text">${esc(u.text)}</span></div>`;
+      return `<div class="u bullet${u.splitContinuation ? ' is-split-cont' : ''}" data-uid="${u.uid}" data-depth="${u.depth || 0}" data-src-start="${typeof u.srcStart === 'number' ? u.srcStart : ''}" data-src-end="${typeof u.srcEnd === 'number' ? u.srcEnd : ''}"><span class="bullet-mark">${mark}</span><span class="bullet-text">${esc(u.text)}</span></div>`;
     }
     if (u.type === 'inbox'){
       return `<div class="u inbox" data-uid="${u.uid}"><span class="inbox-mark">▪</span><span>${esc(u.text)}</span></div>`;
@@ -462,6 +462,7 @@
       if (fullH <= freshCapacity){ out.push(u); continue; }
       let rest = u.text;
       let seg = 0;
+      let consumed = 0;
       while (rest.length){
         const maxH = seg === 0 ? maxFirst : maxNext;
         const cut = rest.length ? longestFittingPrefix(rest, maxH, u.depth) : 0;
@@ -470,11 +471,14 @@
           ...u,
           uid: `${u.uid}#s${seg}`,
           text,
+          srcStart: consumed,
+          srcEnd: consumed + text.length,
           issue: seg === 0 ? u.issue : null,
           splitContinuation: seg > 0,
           forceBreakBefore: seg > 0,
         });
         rest = rest.slice(cut);
+        consumed += cut;
         seg += 1;
         if (cut === 0) break;
       }
@@ -692,24 +696,24 @@
   function renderKeepingAnchor(){
     // 跳过自动生成的续页标题：用当前页第一个真实内容单元（要点/条目头/字段）的稳定 uid
     const first = (pages[page] || []).find(({ unit }) => unit.type !== 'cont-head')?.unit ?? (pages[page] || [])[0]?.unit;
-    const anchor = first?.uid ?? null;
+    const anchor = first ? { base:first.uid.split('#')[0], offset:(typeof first.srcStart === 'number' ? first.srcStart : null), uid:first.uid } : null;
     const fallback = page;
     render();
     if (!anchor) return;
-    const exact = pages.findIndex((pu) => pu.some(({ unit }) => unit.uid === anchor));
-    const base = anchor.split('#')[0];
-    const segMatch = anchor.match(/#s(\d+)/);
-    const wantSeg = segMatch ? Number(segMatch[1]) : 0;
-    let found = exact;
-    if (found < 0){
-      // 同一要点可能被重新拆段：优先找 >= 当前段的续段，否则找同基 id 的最后一页
-      const candidates = [];
+    let found = -1;
+    if (anchor.offset !== null){
+      // 同一要点重新分段：定位到「包含原字符位置」的段所在页
       pages.forEach((pu, pi) => pu.forEach(({ unit }) => {
-        const m = unit.uid.match(/#s(\d+)/);
-        if (unit.uid.split('#')[0] === base) candidates.push({ page:pi, seg:m ? Number(m[1]) : 0 });
+        if (found >= 0 || unit.uid.split('#')[0] !== anchor.base) return;
+        const s = typeof unit.srcStart === 'number' ? unit.srcStart : 0;
+        const e = typeof unit.srcEnd === 'number' ? unit.srcEnd : s + (unit.text ? unit.text.length : 0);
+        if (anchor.offset >= s && anchor.offset < e) found = pi;
       }));
-      const after = candidates.find((c) => c.seg >= wantSeg);
-      found = after ? after.page : (candidates.length ? candidates[candidates.length - 1].page : -1);
+      if (found < 0){
+        pages.forEach((pu, pi) => pu.forEach(({ unit }) => { if (unit.uid.split('#')[0] === anchor.base) found = pi; }));
+      }
+    } else {
+      found = pages.findIndex((pu) => pu.some(({ unit }) => unit.uid === anchor.uid));
     }
     page = found >= 0 ? found : Math.min(fallback, pages.length - 1);
     render();
