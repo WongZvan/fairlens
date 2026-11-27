@@ -649,12 +649,36 @@
     }
     const recognized = d.sections.length;
     if (profile.length && recognized > 0){
-      d.name = profile[0] || '';
-      const fields = [['姓名',profile[0]||''],['求职意向',profile[1]||''],['联系方式',profile[2]||'']];
-      // 首分区前的第 4 行及后续不能丢：放进基本信息「附加信息」，原文去向同步为基本信息
-      profile.slice(3).forEach((line) => fields.push(['附加信息', line]));
-      d.sections.unshift({ id:'basic', title:'基本信息', type:'basic', fields, entries:[] });
-      d.title = d.name || '导入的简历';
+      const existingBasic = d.sections.find((s) => s.type === 'basic');
+      const addMissing = (label, value) => {
+        if (!value || !existingBasic) return;
+        if (!existingBasic.fields.some(([k]) => k === label)) existingBasic.fields.push([label, value]);
+      };
+      if (existingBasic){
+        const explicitName = existingBasic.fields.find(([k]) => k === '姓名')?.[1];
+        if (explicitName && explicitName.trim()){
+          // 显式姓名字段优先；首行是文档标题（如「个人简历」），不再造第二个「姓名」
+          d.name = explicitName;
+          if (profile[0]) d.title = profile[0];
+          const rawTitle = d.raw.find((r) => r.text === profile[0] && r.dest === '基本信息');
+          if (rawTitle) rawTitle.dest = '文档标题';
+        } else {
+          existingBasic.fields.unshift(['姓名', profile[0] || '']);
+          d.name = profile[0] || '';
+          d.title = d.name || '导入的简历';
+        }
+        // 页头其余行按缺失字段补齐；多余行仍进「附加信息」，不丢
+        addMissing('求职意向', profile[1]);
+        addMissing('联系方式', profile[2]);
+        profile.slice(3).forEach((line) => existingBasic.fields.push(['附加信息', line]));
+      } else {
+        d.name = profile[0] || '';
+        const fields = [['姓名',profile[0]||''],['求职意向',profile[1]||''],['联系方式',profile[2]||'']];
+        // 首分区前的第 4 行及后续不能丢：放进基本信息「附加信息」，原文去向同步为基本信息
+        profile.slice(3).forEach((line) => fields.push(['附加信息', line]));
+        d.sections.unshift({ id:'basic', title:'基本信息', type:'basic', fields, entries:[] });
+        d.title = d.name || '导入的简历';
+      }
     }
     if (recognized === 0){
       d.sections = [];
