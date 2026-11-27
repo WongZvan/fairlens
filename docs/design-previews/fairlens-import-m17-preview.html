@@ -296,7 +296,7 @@
                 <span>条目</span><b>6 条</b>
                 <span>要点</span><b>12 条</b>
               </div>
-              <div class="dest">没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。</div>
+              <div class="dest" id="clean-dest">没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。</div>
             </div>
             <div class="actions">
               <button class="btn primary" id="clean-import">导入并打开</button>
@@ -639,6 +639,10 @@
     const bullets = draft.sections.reduce((n,s)=>n+s.entries.reduce((m,e)=>m+e.bullets.length,0),0);
     const meta = document.querySelector('#view-clean .meta');
     if (meta) meta.innerHTML = `<span>模板</span><b>经典单栏（进入编辑器可切换）</b><span>分区</span><b>${draft.sections.length} 个</b><span>条目</span><b>${entries} 条</b><span>要点</span><b>${bullets} 条</b>`;
+    const basic = draft.sections.find((s) => s.type === 'basic');
+    const draftName = (basic?.fields ?? []).find(([k]) => k === '姓名')?.[1] ?? draft.name ?? '';
+    const dest = document.getElementById('clean-dest');
+    if (dest) dest.textContent = '没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。' + (draftName.trim() ? '' : ' 姓名为空：导入后请补填，导出前会拦截。');
   }
 
   function renderIssues(){
@@ -661,9 +665,12 @@
       ? `篇幅提示：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议上限 ${LIMITS[s.type]}）`).join('；')}——会正常分页，简历可能偏长，不会隐藏或截断。`
       : '';
     const pending = inboxPending().length;
-    document.getElementById('issues-dest').innerHTML = pending
+    const basic = draft.sections.find((s) => s.type === 'basic');
+    const draftName = (basic?.fields ?? []).find(([k]) => k === '姓名')?.[1] ?? draft.name ?? '';
+    const nameNote = draftName.trim() ? '' : '<br><b>姓名为空</b>：导入后请补填，导出前会拦截。';
+    document.getElementById('issues-dest').innerHTML = (pending
       ? `<b>${pending} 块</b>将放入「待整理内容」，<b>会随简历一起导出</b>${over.length ? `；篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}` : ''}。`
-      : (over.length ? `篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}。` : '没有待整理内容。');
+      : (over.length ? `篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}。` : '没有待整理内容。')) + nameNote;
   }
 
   function buildReview(){
@@ -830,7 +837,8 @@
     const fieldOf = (label) => (fields.find(([k]) => k === label)?.[1] ?? '');
     // 区分「没有姓名字段」与「用户主动清空」：后者不能回落到解析时的旧姓名
     const nameField = fields.find(([k]) => k === '姓名');
-    const finalName = nameField ? nameField[1] : (draft.name || title);
+    // 姓名只来自「姓名字段」或解析出的姓名；不得用文档标题伪装姓名
+    const finalName = nameField ? nameField[1] : (draft.name || '');
     const sections = draft.sections.map((s) => ({
       id: s.id, title: s.title, type: s.type,
       fields: (s.fields || []).map(([label, value]) => [label, value]),
@@ -863,7 +871,7 @@
       sourcePages: draft.pages,
       extractedPages: draft.extractedPages,
       noTextPages: draft.raw.filter((r) => r.noText).map((r) => r.page),
-      nameMissing: !finalName,
+      nameMissing: !finalName.trim(),
     };
     try { localStorage.setItem('fl:preview-import', JSON.stringify(payload)); } catch {}
     // 与决策对齐：创建成功后直接进入成品视图，不设独立完成页；携带同一份草稿
