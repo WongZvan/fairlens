@@ -695,7 +695,11 @@
 
   function renderKeepingAnchor(){
     // 跳过自动生成的续页标题：用当前页第一个真实内容单元（要点/条目头/字段）的稳定 uid
-    const first = (pages[page] || []).find(({ unit }) => unit.type !== 'cont-head')?.unit ?? (pages[page] || [])[0]?.unit;
+    const pageUnits = pages[page] || [];
+    // 阅读锚点优先取当前页第一条要点（完整要点 srcStart=0），否则取第一个真实内容单元
+    const first = pageUnits.find(({ unit }) => unit.type === 'bullet')?.unit
+      ?? pageUnits.find(({ unit }) => unit.type !== 'cont-head')?.unit
+      ?? pageUnits[0]?.unit;
     const anchor = first ? { base:first.uid.split('#')[0], offset:(typeof first.srcStart === 'number' ? first.srcStart : null), uid:first.uid } : null;
     const fallback = page;
     render();
