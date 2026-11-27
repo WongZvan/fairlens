@@ -105,15 +105,19 @@ test('切换保护：取消留在编辑器；不保存丢弃改动，另一份�
   await page.getByRole('button', { name: '添加字段' }).click();
   const field = page.locator('[data-type="fl-basic-field"]');
   await expect(field).toHaveCount(1);
-  await field.click();
+  const value = field.locator('.fl-field-value');
+  await value.click();
+  await expect(page.locator('.ProseMirror')).toBeFocused();
   await page.keyboard.press('End');
   await page.keyboard.type('FIRST-KEEP');
+  await expect(field).toContainText('FIRST-KEEP');
   await page.waitForTimeout(900); // 等自动保存
 
   // 切手动模式，再写一段“将被丢弃”的内容
   await page.getByRole('switch', { name: '自动保存' }).click();
   await expect(page.getByRole('switch', { name: '手动保存' })).toBeVisible();
-  await field.click();
+  await value.click();
+  await expect(page.locator('.ProseMirror')).toBeFocused();
   await page.keyboard.press('End');
   await page.keyboard.type('SECOND-DISCARD');
 
