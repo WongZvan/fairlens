@@ -111,6 +111,7 @@
   #fl-imp .result .meta b{ color:var(--fg); font-weight:500; }
   #fl-imp .result .dest{ margin-top:12px; border-top:1px dashed var(--line); padding-top:10px; font-size:11.5px; color:var(--muted); line-height:1.7; }
   #fl-imp .result .dest b{ color:var(--warn-ink); font-weight:500; }
+  #fl-imp .result .name-warn{ margin:9px 0 0; font-size:11.5px; color:var(--pen-red); }
   #fl-imp .issues-list{ display:flex; flex-direction:column; gap:8px; margin:0 0 14px; }
   #fl-imp .issue{ display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-left:3px solid var(--warn); border-radius:6px; background:var(--warn-tint); padding:9px 11px; font-size:12px; }
   #fl-imp .issue .t{ flex:1; line-height:1.6; }
@@ -136,6 +137,7 @@
   #fl-imp .review .main{ padding:14px 18px 26px; overflow:auto; min-height:0; scroll-behavior:smooth; }
   #fl-imp .review-head{ display:flex; align-items:center; gap:9px; margin-bottom:11px; }
   #fl-imp .review-head .sum{ font-size:11.5px; color:var(--muted); }
+  #fl-imp .name-warn-inline{ font-size:11px; color:var(--pen-red); border:1px solid var(--pen-red); border-radius:3px; padding:1px 5px; }
   #fl-imp .review-head .spacer{ flex:1; }
   #fl-imp .banner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.6; border:1px solid var(--line); border-left:3px solid var(--warn); background:var(--warn-tint); border-radius:6px; padding:8px 10px; margin-bottom:12px; }
   #fl-imp .banner b{ font-weight:500; color:var(--warn-ink); }
@@ -297,6 +299,7 @@
                 <span>要点</span><b>12 条</b>
               </div>
               <div class="dest" id="clean-dest">没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。</div>
+              <p class="name-warn" id="clean-name-warn" hidden>姓名为空：导入后请补填，导出前会拦截。</p>
             </div>
             <div class="actions">
               <button class="btn primary" id="clean-import">导入并打开</button>
@@ -315,6 +318,7 @@
               <label for="issues-title">简历标题</label>
               <input id="issues-title" value="林知远">
               <div class="dest" id="issues-dest"></div>
+              <p class="name-warn" id="issues-name-warn" hidden>姓名为空：导入后请补填，导出前会拦截。</p>
             </div>
           </div>
         </section>
@@ -325,7 +329,7 @@
             <aside class="side" id="side"></aside>
             <div class="main" id="review-main">
               <div class="review-head">
-                <span class="sum" id="review-sum"></span><span class="spacer"></span>
+                <span class="sum" id="review-sum"></span><span class="name-warn-inline" id="review-name-warn" hidden>姓名为空 · 导出前会拦截</span><span class="spacer"></span>
                 <button class="btn small" id="raw-btn">查看提取原文</button>
               </div>
               <div class="banner" id="review-banner"></div>
@@ -499,6 +503,20 @@
   const overSections = () => draft.sections.filter((s) => s.entries.length > (LIMITS[s.type] || 999));
   const noTextPages = () => draft.raw.filter((r) => r.noText);
 
+  function currentName(){
+    const basic = draft.sections.find((s) => s.type === 'basic');
+    const f = (basic?.fields ?? []).find(([k]) => k === '姓名');
+    return f ? f[1] : (draft.name ?? '');
+  }
+
+  function refreshNameWarn(){
+    const missing = !currentName().trim();
+    ['clean-name-warn','issues-name-warn','review-name-warn'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = !missing;
+    });
+  }
+
   function issueCount(){
     let n = 0;
     if (inboxPending().length) n++;
@@ -642,7 +660,8 @@
     const basic = draft.sections.find((s) => s.type === 'basic');
     const draftName = (basic?.fields ?? []).find(([k]) => k === '姓名')?.[1] ?? draft.name ?? '';
     const dest = document.getElementById('clean-dest');
-    if (dest) dest.textContent = '没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。' + (draftName.trim() ? '' : ' 姓名为空：导入后请补填，导出前会拦截。');
+    if (dest) dest.textContent = '没有待整理内容，也没有超出建议上限的分区。导入后直接打开草稿，建议快速检查一遍。';
+    refreshNameWarn();
   }
 
   function renderIssues(){
@@ -665,12 +684,10 @@
       ? `篇幅提示：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议上限 ${LIMITS[s.type]}）`).join('；')}——会正常分页，简历可能偏长，不会隐藏或截断。`
       : '';
     const pending = inboxPending().length;
-    const basic = draft.sections.find((s) => s.type === 'basic');
-    const draftName = (basic?.fields ?? []).find(([k]) => k === '姓名')?.[1] ?? draft.name ?? '';
-    const nameNote = draftName.trim() ? '' : '<br><b>姓名为空</b>：导入后请补填，导出前会拦截。';
-    document.getElementById('issues-dest').innerHTML = (pending
+    document.getElementById('issues-dest').innerHTML = pending
       ? `<b>${pending} 块</b>将放入「待整理内容」，<b>会随简历一起导出</b>${over.length ? `；篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}` : ''}。`
-      : (over.length ? `篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}。` : '没有待整理内容。')) + nameNote;
+      : (over.length ? `篇幅：${over.map((s)=>`${s.title} ${s.entries.length} 条（建议 ${LIMITS[s.type]}）`).join('；')}。` : '没有待整理内容。');
+    refreshNameWarn();
   }
 
   function buildReview(){
@@ -744,6 +761,7 @@
       };
     });
     updateImportSummary();
+    refreshNameWarn();
   }
 
   document.getElementById('sections').addEventListener('input', (e) => {
@@ -757,6 +775,7 @@
     if (kind === 'field'){
       const f = (s.fields||[]).find(([k]) => k === el.dataset.k);
       if (f) f[1] = el.textContent;
+      refreshNameWarn();
       return;
     }
     const ei = Number(el.dataset.ei);
@@ -913,6 +932,17 @@
   }
 
   function showGuard(){
+    if (!currentName().trim()){
+      openModal(`<h3>导出被拦截</h3>
+        <p>姓名为空：桌面版导出守卫会在产出 PDF/归档前拦截，不会生成文件。</p>
+        <p>请先在基本信息补填姓名，再导出。</p>
+        <div class="acts"><button class="btn" data-x="close">关闭</button><button class="btn primary" data-x="fix">去填写姓名</button></div>`,
+        (wrap, close) => {
+          wrap.querySelector('[data-x="close"]').onclick = close;
+          wrap.querySelector('[data-x="fix"]').onclick = () => { close(); openReviewAt('sec-basic'); };
+        });
+      return;
+    }
     const pending = inboxPending().length;
     const over = overSections();
     if (!pending && !over.length){
