@@ -24,6 +24,7 @@ test('条目头 ⋯：键盘可打开/关闭，不误开编辑框', async ({ pag
   await expect(menu.getByRole('menuitem', { name: '复制条目' })).toBeVisible();
   await expect(page.locator('.meta-overlay')).toHaveCount(0);
 
+  await menu.getByRole('menuitem', { name: '复制条目' }).focus();
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
   await expect(more).toBeFocused();
@@ -42,17 +43,24 @@ test('达到建议上限：取消不新增，确认后新增', async ({ page }) 
   await page.getByRole('button', { name: '激活' }).click();
   await page.getByRole('button', { name: '打开 示例简历' }).click();
 
-  const section = page.locator('.fl-section').filter({ has: page.locator('.fl-entry-head') }).first();
+  const section = page.locator('.fl-section').filter({ has: page.locator('h3', { hasText: '教育经历' }) }).first();
   const count = () => section.locator('.fl-entry-head').count();
   const more = () => section.locator('.fl-entry-head').first().locator('button[aria-label="条目操作"]');
   const guard = page.locator('.guard-box');
-
-  // 连续复制直到触发上限确认（上限 8 由 manifest 决定；最多试 8 次）
-  for (let i = 0; i < 8 && !(await guard.isVisible()); i += 1) {
+  const copyOnce = async () => {
     await more().click();
     await page.locator('.ctx-menu').getByRole('menuitem', { name: '复制条目' }).click();
-    await expect(guard).toBeVisible({ timeout: 3000 }).catch(() => {});
+  };
+
+  await expect(section.locator('h3')).toContainText('教育经历');
+  await expect.poll(count).toBe(1);
+  // 教育建议上限=4：1→2→3→4 不提示；第 5 次才首次提示
+  for (const expected of [2, 3, 4]) {
+    await copyOnce();
+    await expect(guard).toHaveCount(0);
+    await expect.poll(count).toBe(expected);
   }
+  await copyOnce();
   await expect(guard).toBeVisible();
   await expect(guard).toContainText('已到建议上限');
 

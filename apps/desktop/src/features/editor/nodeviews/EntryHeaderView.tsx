@@ -1,7 +1,7 @@
 /** 条目头 NodeView（#117）：org/role/date 三段；点击编辑元信息（日期纯文本解析）；#127 加 ⋯ 复制/删除 */
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
 import { MoreHorizontal, Pencil } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../../../app/dropdown.js';
 import { toast } from '../../../app/Toast.js';
@@ -21,6 +21,13 @@ export function EntryHeaderView({ node, editor, updateAttributes }: NodeViewProp
     node.attrs.end as string | null,
     node.attrs.ongoing as boolean | null,
   );
+
+  // 菜单关闭后焦点归还到 ⋯（Esc 从 portal 菜单项退出时尤其需要）
+  const wasMenuOpen = useRef(false);
+  useEffect(() => {
+    if (wasMenuOpen.current && !menuOpen) moreRef.current?.focus();
+    wasMenuOpen.current = menuOpen;
+  }, [menuOpen]);
 
   return (
     <NodeViewWrapper className="fl-entry-head" data-type="fl-entry-header" contentEditable={false}>
