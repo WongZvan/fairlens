@@ -511,9 +511,13 @@
   }
 
   function focusNameField(){
-    openReviewAt('sec-basic');
+    // 不写死分区 ID：取草稿实际 basic 分区；若被折叠先展开，再聚焦姓名
+    const basic = draft.sections.find((s) => s.type === 'basic');
+    if (!basic) return;
+    basic.collapsed = false;
+    openReviewAt('sec-' + basic.id);
     setTimeout(() => {
-      const el = document.querySelector('#sec-basic [data-edit="field"][data-k="姓名"]');
+      const el = document.querySelector(`#sec-${CSS.escape(basic.id)} [data-edit="field"][data-k="姓名"]`);
       if (!el) return;
       el.focus();
       const range = document.createRange();
