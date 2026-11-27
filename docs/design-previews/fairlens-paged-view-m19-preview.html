@@ -34,7 +34,7 @@
   #fl-page .pbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   #fl-page .pbtn[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); background:var(--accent-tint); }
 
-  #fl-page .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; height:clamp(560px, calc(100vh - 100px), 860px); }
+  #fl-page .win{ background:var(--bench); border:1px solid #17181B; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; height:clamp(420px, calc(100vh - 120px), 860px); }
   #fl-page.light .win{ border-color:#D9D6CF; }
   #fl-page .titlebar{ height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 6px 0 14px; background:var(--chrome); border-bottom:1px solid var(--line); }
   #fl-page .titlebar .app{ font-family:'IBM Plex Mono',monospace; font-weight:500; letter-spacing:.08em; font-size:12.5px; }
@@ -457,7 +457,9 @@
         : CONTENT_H - contH);
       const maxNext = Math.max(120, CONTENT_H - contH);
       const fullH = heightOf(u);
-      if (fullH <= maxFirst){ out.push(u); continue; }
+      // 先判断完整内容能否放进「新的一页」（含所需上下文）；能放就不拆，交给正常分页
+      const freshCapacity = isFirst ? CONTENT_H - headH - headingH : CONTENT_H - contH;
+      if (fullH <= freshCapacity){ out.push(u); continue; }
       let rest = u.text;
       let seg = 0;
       while (rest.length){
@@ -687,6 +689,16 @@
   $('fit-page').onclick = () => { userZoomed = false; fitZoom(); };
   $('fit-width').onclick = () => { userZoomed = false; fitWidth(); };
 
+  function renderKeepingAnchor(){
+    const anchor = pages[page]?.[0]?.unit?.uid?.split('#')[0] ?? null;
+    const fallback = page;
+    render();
+    if (!anchor) return;
+    const found = pages.findIndex((pu) => pu.some(({ unit }) => unit.uid.split('#')[0] === anchor));
+    page = found >= 0 ? found : Math.min(fallback, pages.length - 1);
+    render();
+  }
+
   function setDensity(next){
     dense = next;
     $('sheet').classList.toggle('compact', dense);
@@ -694,7 +706,7 @@
     $('tpl-compact').setAttribute('aria-pressed', String(dense));
     $('pv-dense').setAttribute('aria-pressed', String(dense));
     const before = pages.length;
-    render();
+    renderKeepingAnchor();
     if (before && pages.length !== before) toast(`密度已切换，重新分页：${before} → ${pages.length} 页`);
   }
   $('tpl-classic').onclick = () => setDensity(false);
