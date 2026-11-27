@@ -160,7 +160,8 @@
   #fl-imp .field{ display:flex; gap:8px; align-items:baseline; padding:3px 0; font-size:12.5px; }
   #fl-imp .field .k{ width:66px; flex:none; color:var(--muted); font-size:11px; }
   #fl-imp .field .v{ border-bottom:1px dashed transparent; }
-  #fl-imp .field .v[contenteditable="true"]{ outline:none; }
+  #fl-imp .field .v[contenteditable="true"]{ outline:none; display:inline-block; min-width:2.5em; min-height:1.2em; }
+  #fl-imp .field .v[contenteditable="true"]:empty::before{ content:'点击填写'; color:var(--muted); font-size:11px; }
   #fl-imp .field .v[contenteditable="true"]:hover{ border-bottom-color:var(--line); }
 
   #fl-imp .entry{ border-top:1px dashed var(--line); padding:9px 0 7px; }
@@ -509,6 +510,21 @@
     return f ? f[1] : (draft.name ?? '');
   }
 
+  function focusNameField(){
+    openReviewAt('sec-basic');
+    setTimeout(() => {
+      const el = document.querySelector('#sec-basic [data-edit="field"][data-k="姓名"]');
+      if (!el) return;
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }, 30);
+  }
+
   function refreshNameWarn(){
     const missing = !currentName().trim();
     ['clean-name-warn','issues-name-warn','review-name-warn'].forEach((id) => {
@@ -642,6 +658,13 @@
       d.raw = lines.map((l, i) => ({ id:'r'+i, page:1, text:l, dest:'待整理内容' }));
       d.name = ''; d.title = '导入的简历';
     }
+    // 姓名是必填元信息：确保检查页始终有可填写的「姓名」字段（原文没有姓名时也不丢补填入口）
+    let basic = d.sections.find((s) => s.type === 'basic');
+    if (!basic){
+      basic = { id:'basic', title:'基本信息', type:'basic', fields:[], entries:[] };
+      d.sections.unshift(basic);
+    }
+    if (!basic.fields.some(([k]) => k === '姓名')) basic.fields.unshift(['姓名','']);
     return d;
   }
 
@@ -939,7 +962,7 @@
         <div class="acts"><button class="btn" data-x="close">关闭</button><button class="btn primary" data-x="fix">去填写姓名</button></div>`,
         (wrap, close) => {
           wrap.querySelector('[data-x="close"]').onclick = close;
-          wrap.querySelector('[data-x="fix"]').onclick = () => { close(); openReviewAt('sec-basic'); };
+          wrap.querySelector('[data-x="fix"]').onclick = () => { close(); focusNameField(); };
         });
       return;
     }
