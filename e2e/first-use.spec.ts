@@ -37,10 +37,17 @@ test('首用：清空 → 添加基本信息字段 → 姓名未填时导出被�
 
   await addField.click();
   await expect(fields).toHaveCount(1);
-
-  await fields.first().click();
+  // 新增字段后直接打字：光标应落在新字段值末尾
+  await expect(page.locator('.ProseMirror')).toBeFocused();
   await page.keyboard.type('武汉 · 可即时到岗');
-  await expect(basicSection).toContainText('武汉 · 可即时到岗');
+  await expect(fields.first()).toContainText('武汉 · 可即时到岗');
+
+  // 点击字段行（值编辑区外沿）再打字：光标也应落到值末尾
+  await fields.first().click({ position: { x: 2, y: 6 } });
+  await expect(page.locator('.ProseMirror')).toBeFocused();
+  await page.keyboard.press('End');
+  await page.keyboard.type('（补充）');
+  await expect(fields.first()).toHaveText(/武汉 · 可即时到岗\s*（补充）/);
   // 姓名仍为空 → 导出必须被拦截（而不是产出「你的姓名」的 PDF/归档）
   await page.getByRole('button', { name: '文件' }).click();
   await page.getByRole('menuitem', { name: '另存为归档…' }).click();

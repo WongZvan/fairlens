@@ -23,11 +23,19 @@ export function BasicFieldView({ node, updateAttributes, editor, getPos, deleteN
     const fieldType = editor.schema.nodes.flBasicField;
     if (!fieldType) return;
     const at = pos + node.nodeSize;
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(at, fieldType.create({ id: nanoid(), label: t('editor.fieldLabelDefault'), href: null }, editor.schema.text(' ')))
-      .run();
+    const next = fieldType.create({ id: nanoid(), label: t('editor.fieldLabelDefault'), href: null }, editor.schema.text(' '));
+    // 新字段插入后把光标放到其值末尾：用户点「添加字段」即可直接打字
+    editor.chain().focus().insertContentAt(at, next).setTextSelection(at + next.nodeSize - 1).run();
+  };
+
+  /** 点击字段行（标签/空白）时把光标落到值末尾；点值编辑区/操作按钮不拦截 */
+  const focusValueEnd = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.fl-field-value') || target.closest('.fl-field-actions')) return;
+    const pos = typeof getPos === 'function' ? getPos() : null;
+    if (typeof pos !== 'number') return;
+    e.preventDefault();
+    editor.chain().focus().setTextSelection(pos + node.nodeSize - 1).run();
   };
 
   return (
@@ -35,6 +43,7 @@ export function BasicFieldView({ node, updateAttributes, editor, getPos, deleteN
       className="fl-basic-field"
       data-type="fl-basic-field"
       data-block-id={typeof node.attrs.id === 'string' ? node.attrs.id : undefined}
+      onMouseDown={focusValueEnd}
     >
       {label && <span className="fl-field-label">{label}</span>}
       {href ? <a href={href} onClick={(e) => e.preventDefault()}>{value}</a> : value}
