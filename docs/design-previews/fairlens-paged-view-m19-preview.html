@@ -89,6 +89,7 @@
   #fl-page .bullet-text{ min-width:0; }
   #fl-page .u.bullet[data-depth="1"]{ padding-left:14px; }
   #fl-page .u.bullet[data-depth="2"]{ padding-left:28px; }
+  #fl-page .u.bullet.is-split-cont .bullet-mark{ color:#7A776F; }
   #fl-page .u.cont-head{ padding:8px 0 2px; border-top:1px dashed #C9C6BF; font-size:10.5px; color:#7A776F; }
   #fl-page .u.inbox{ display:flex; gap:7px; padding:3px 0; font-size:11.5px; line-height:1.65; }
   #fl-page .inbox-mark{ color:#A37F18; flex:none; }
@@ -128,6 +129,7 @@
     <button class="pbtn" id="pv-theme">浅色</button>
     <button class="pbtn" id="pv-dense" aria-pressed="false">紧凑密度</button>
     <button class="pbtn" id="pv-add">加内容（两段）</button>
+    <button class="pbtn" id="pv-long">超长要点回归</button>
     <button class="pbtn" id="pv-reset">重置</button>
   </div>
 
@@ -146,6 +148,10 @@
         <button class="tbtn" id="zoom-out" aria-label="缩小">−</button>
         <b id="zoom-val">100%</b>
         <button class="tbtn" id="zoom-in" aria-label="放大">+</button>
+      </div>
+      <div class="tgroup">
+        <button class="tbtn" id="fit-page" aria-pressed="true">整页</button>
+        <button class="tbtn" id="fit-width" aria-pressed="false">适应宽度</button>
       </div>
       <div class="tgroup">
         <button class="tbtn" id="tpl-classic" aria-pressed="true">经典</button>
@@ -278,6 +284,7 @@
   let page = 0;
   let zoom = 100;
   let userZoomed = false;
+  let zoomMode = 'page';
   let dense = false;
   let pages = [];
   let unitHeights = new Map();
@@ -321,7 +328,8 @@
       </div>`;
     }
     if (u.type === 'bullet'){
-      return `<div class="u bullet" data-uid="${u.uid}" data-depth="${u.depth || 0}"><span class="bullet-mark">▪</span><span class="bullet-text">${esc(u.text)}</span></div>`;
+      const mark = u.splitContinuation ? '↳' : '▪';
+      return `<div class="u bullet${u.splitContinuation ? ' is-split-cont' : ''}" data-uid="${u.uid}" data-depth="${u.depth || 0}"><span class="bullet-mark">${mark}</span><span class="bullet-text">${esc(u.text)}</span></div>`;
     }
     if (u.type === 'inbox'){
       return `<div class="u inbox" data-uid="${u.uid}"><span class="inbox-mark">▪</span><span>${esc(u.text)}</span></div>`;
@@ -394,9 +402,79 @@
   const heightOf = (u) => unitHeights.get(u.uid) ?? 0;
   const contHeight = (meta) => unitHeights.get('__cont-' + meta) ?? 0;
 
+  /** 临时测量一段要点文字的高度（用于超页要点的按行拆分） */
+  function measureBulletText(text, depth = 0){
+    const m = makeMeasure();
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderUnit({ type:'bullet', uid:'__measure', text, depth });
+    const el = wrap.firstElementChild;
+    m.appendChild(el);
+    const h = el.offsetHeight;
+    m.remove();
+    return h;
+  }
+
+  /** 取最长可装入 maxH 的前缀；优先在句读/空格处断开 */
+  function longestFittingPrefix(text, maxH, depth = 0){
+    let low = 1, high = text.length, best = 1;
+    while (low <= high){
+      const mid = Math.floor((low + high) / 2);
+      const h = measureBulletText(text.slice(0, mid), depth);
+      if (h <= maxH){ best = mid; low = mid + 1; } else { high = mid - 1; }
+    }
+    const windowStart = Math.max(1, Math.floor(best * 0.6));
+    const punctuation = /[。；，、！？,;.!?\s]/;
+    for (let i = best; i >= windowStart; i -= 1){
+      if (punctuation.test(text.slice(i - 1, i))) return i;
+    }
+    return best;
+  }
+
+  /**
+   * 超页要点：只影响显示，不修改数据。
+   * 第一段与 entry-head 同页；后续段强制另起一页并带续页小标题。
+   */
+  function expandLongBullets(units){
+    const out = [];
+    for (let i = 0; i < units.length; i += 1){
+      const u = units[i];
+      if (u.type !== 'bullet' || !u.entryId){ out.push(u); continue; }
+      const prev = units[i - 1];
+      const isFirst = prev && prev.type === 'entry-head';
+      const headH = isFirst ? heightOf(prev) : 0;
+      const contH = contHeight(u.entryMeta);
+      // 首段：首条要点与 entry-head 同页；其余要点必须给续页小标题留高度
+      const maxFirst = Math.max(120, isFirst ? CONTENT_H - headH : CONTENT_H - contH);
+      const maxNext = Math.max(120, CONTENT_H - contH);
+      const fullH = heightOf(u);
+      if (fullH <= maxFirst){ out.push(u); continue; }
+      let rest = u.text;
+      let seg = 0;
+      while (rest.length){
+        const maxH = seg === 0 ? maxFirst : maxNext;
+        const cut = rest.length ? longestFittingPrefix(rest, maxH, u.depth) : 0;
+        const text = rest.slice(0, cut);
+        out.push({
+          ...u,
+          uid: `${u.uid}#s${seg}`,
+          text,
+          issue: seg === 0 ? u.issue : null,
+          splitContinuation: seg > 0,
+          forceBreakBefore: seg > 0,
+        });
+        rest = rest.slice(cut);
+        seg += 1;
+        if (cut === 0) break;
+      }
+    }
+    return out;
+  }
+
   /** 分页：按测量高度分配，不按固定高度切片；标题/条目头与首条内容保持同页 */
   function paginate(units){
     measureAll(units);
+    const expanded = expandLongBullets(units);
+    measureAll(expanded);
     const result = [];
     let cur = [];
     let y = 0;
@@ -404,18 +482,25 @@
 
     const flush = () => { result.push(cur); cur = []; y = 0; };
 
-    for (let i = 0; i < units.length; i += 1){
-      const u = units[i];
+    for (let i = 0; i < expanded.length; i += 1){
+      const u = expanded[i];
       const h = heightOf(u);
+      if (u.forceBreakBefore && cur.length){
+        flush();
+        if (u.entryMeta){
+          cur.push({ unit:{ type:'cont-head', uid:'cont-force-'+i, text:u.entryMeta } });
+          y += contHeight(u.entryMeta);
+        }
+      }
       if (u.type === 'heading' && cur.length){
         // 标题不与后续内容分离：标题 + 下一个内容单元（entry-head+首 bullet 或 field）必须同页
-        const next = units[i+1];
+        const next = expanded[i+1];
         const nextH = next ? heightOf(next) : 0;
-        const nextNext = next && next.type === 'entry-head' ? heightOf(units[i+2] || {}) : 0;
+        const nextNext = next && next.type === 'entry-head' ? heightOf(expanded[i+2] || {}) : 0;
         if (y + h + nextH + nextNext > CONTENT_H) flush();
       }
       if (u.type === 'entry-head' && cur.length){
-        const firstBullet = units[i+1] && units[i+1].type === 'bullet' ? heightOf(units[i+1]) : 0;
+        const firstBullet = expanded[i+1] && expanded[i+1].type === 'bullet' ? heightOf(expanded[i+1]) : 0;
         if (y + h + firstBullet > CONTENT_H) flush();
       }
       if (y + h > CONTENT_H && cur.length){
@@ -461,7 +546,7 @@
     $('prev').disabled = page <= 0;
     $('next').disabled = page >= pages.length - 1;
     const chip = $('issue-chip');
-    const count = issueMap.size;
+    const count = issueMap.size + sourceNoText.length;
     chip.hidden = count === 0;
     $('issue-count').textContent = count ? `${count} 处待确认` : '';
     chip.dataset.pages = Array.from(new Set(Array.from(issueMap.values()).map((v) => v.page + 1))).join(',');
@@ -511,6 +596,22 @@
     $('zoom-val').textContent = zoom + '%';
   }
 
+  /** 适应宽度：可读字号，页内纵向滚动 */
+  function fitWidth(){
+    const stage = $('stage');
+    const availW = Math.max(300, stage.clientWidth - 56);
+    const z = Math.min(150, Math.max(30, Math.floor((availW / 700 * 100) / 5) * 5));
+    zoom = z;
+    zoomMode = 'width';
+    applyZoom();
+    setFitPressed();
+  }
+
+  function setFitPressed(){
+    $('fit-page').setAttribute('aria-pressed', String(zoomMode === 'page'));
+    $('fit-width').setAttribute('aria-pressed', String(zoomMode === 'width'));
+  }
+
   /** 默认按窗口高度适配，一次完整显示一张 A4；缩放不参与分页计算 */
   function fitZoom(){
     const stage = $('stage');
@@ -518,7 +619,9 @@
     const availH = Math.max(300, stage.clientHeight - 30);
     const z = Math.min(availW / 700, availH / 990, 1) * 100;
     zoom = Math.max(30, Math.min(150, Math.floor(z / 5) * 5));
+    zoomMode = 'page';
     applyZoom();
+    setFitPressed();
   }
 
   function setPage(nextPage){
@@ -529,9 +632,15 @@
   let issueCursor = 0;
   function jumpToIssue(){
     const values = Array.from(pages.flatMap((pu, pi) => pu.filter((x) => x.unit.issue).map((x) => ({ unit:x.unit, page:pi }))));
-    if (!values.length) return;
-    const target = values[issueCursor % values.length];
+    const sourceValues = sourceNoText.map((p) => ({ sourcePage:p }));
+    const all = [...sourceValues, ...values];
+    if (!all.length) return;
+    const target = all[issueCursor % all.length];
     issueCursor += 1;
+    if (target.sourcePage){
+      toast(`原文件第 ${target.sourcePage} 页没有可提取文字，需回源检查（不会自动算作已解决）`);
+      return;
+    }
     setPage(target.page);
     requestAnimationFrame(() => {
       const el = $('content').querySelector(`[data-uid="${CSS.escape(target.unit.uid)}"]`);
@@ -556,8 +665,10 @@
   $('prev').onclick = () => setPage(page - 1);
   $('next').onclick = () => setPage(page + 1);
   $('issue-chip').onclick = jumpToIssue;
-  $('zoom-in').onclick = () => { userZoomed = true; zoom = Math.min(150, zoom + 10); applyZoom(); };
-  $('zoom-out').onclick = () => { userZoomed = true; zoom = Math.max(30, zoom - 10); applyZoom(); };
+  $('zoom-in').onclick = () => { userZoomed = true; zoomMode = 'manual'; setFitPressed(); zoom = Math.min(150, zoom + 10); applyZoom(); };
+  $('zoom-out').onclick = () => { userZoomed = true; zoomMode = 'manual'; setFitPressed(); zoom = Math.max(30, zoom - 10); applyZoom(); };
+  $('fit-page').onclick = () => { userZoomed = false; fitZoom(); };
+  $('fit-width').onclick = () => { userZoomed = false; fitWidth(); };
 
   function setDensity(next){
     dense = next;
@@ -572,6 +683,20 @@
   $('tpl-classic').onclick = () => setDensity(false);
   $('tpl-compact').onclick = () => setDensity(true);
   $('pv-dense').onclick = () => setDensity(!dense);
+
+  $('pv-long').onclick = () => {
+    const exp = doc.sections.find((s) => s.id === 'exp');
+    if (!exp || !exp.entries.length) return;
+    const target = exp.entries[exp.entries.length - 1];
+    target.bullets.push({
+      id: 'b-long-' + Date.now(),
+      text: '超长要点回归：为了验证单条要点无法装入一页时的分页规则。' + '这段文字会持续重复，直到超过一页的安全高度。'.repeat(220),
+    });
+    render();
+    page = 0;
+    render();
+    toast('已加入超长要点：按行拆分为续段，数据仍是一条要点');
+  };
 
   $('pv-add').onclick = () => {
     const exp = doc.sections.find((s) => s.id === 'exp');
@@ -623,6 +748,7 @@
     $('tpl-compact').setAttribute('aria-pressed','false');
     $('pv-dense').setAttribute('aria-pressed','false');
     userZoomed = false;
+    zoomMode = 'page';
     render();
     fitZoom();
     toast('已重置预览文档');
@@ -662,7 +788,7 @@
     document.fonts.ready.then(initialFit);
   }
   window.addEventListener('load', initialFit, { once: true });
-  window.addEventListener('resize', () => { if (!userZoomed) fitZoom(); });
+  window.addEventListener('resize', () => { if (userZoomed) return; if (zoomMode === 'width') fitWidth(); else fitZoom(); });
 })();
 </script>
 </body>
