@@ -61,7 +61,7 @@
   #fl-page .stage{ flex:1; min-height:0; overflow:auto; padding:22px 28px 12px; display:flex; justify-content:center; }
   #fl-page .page-shell{ position:relative; flex:none; }
   #fl-page .sheet{ width:700px; height:990px; box-sizing:border-box; background:#fff; color:#1C1D1B;
-    border-radius:2px; box-shadow:0 10px 30px rgba(0,0,0,.28); padding:38px 46px 46px; transform-origin:top center; }
+    border-radius:2px; box-shadow:0 10px 30px rgba(0,0,0,.28); padding:38px 46px 46px; transform-origin:top left; }
   #fl-page.light .sheet{ box-shadow:0 8px 22px rgba(0,0,0,.12); }
   #fl-page .sheet-content{ position:relative; }
   #fl-page .sheet-gutter{ position:absolute; top:38px; right:-26px; width:18px; bottom:46px; }
@@ -130,6 +130,7 @@
     <button class="pbtn" id="pv-dense" aria-pressed="false">紧凑密度</button>
     <button class="pbtn" id="pv-add">加内容（两段）</button>
     <button class="pbtn" id="pv-long">超长要点回归</button>
+    <button class="pbtn" id="pv-long-first">首条超长回归</button>
     <button class="pbtn" id="pv-reset">重置</button>
   </div>
 
@@ -291,6 +292,7 @@
   let sourcePages = 2;
   let sourceExtracted = 2;
   let sourceNoText = [];
+  let sourceNameMissing = false;
 
   let doc = baseDoc();
   const q = new URLSearchParams(location.search);
@@ -303,6 +305,7 @@
     sourcePages = Number(importedPayload.sourcePages) || 2;
     sourceExtracted = Number(importedPayload.extractedPages) || sourcePages;
     sourceNoText = Array.isArray(importedPayload.noTextPages) ? importedPayload.noTextPages : [];
+    sourceNameMissing = !!importedPayload.nameMissing;
   }
 
   const $ = (id) => document.getElementById(id);
@@ -442,9 +445,16 @@
       const prev = units[i - 1];
       const isFirst = prev && prev.type === 'entry-head';
       const headH = isFirst ? heightOf(prev) : 0;
+      const headingH = (isFirst && units[i - 2] && units[i - 2].type === 'heading') ? heightOf(units[i - 2]) : 0;
+      // 第一分区的第一条要点：页头(profile)也在同一页，首段必须同时给页头/标题/条目头留空间
+      const preH = (isFirst && units[i - 2] && units[i - 2].type === 'heading' && i - 2 <= 1)
+        ? heightOf(units[0]) + headingH + headH
+        : 0;
       const contH = contHeight(u.entryMeta);
-      // 首段：首条要点与 entry-head 同页；其余要点必须给续页小标题留高度
-      const maxFirst = Math.max(120, isFirst ? CONTENT_H - headH : CONTENT_H - contH);
+      // 首段：首条要点与「页头 + 分区标题 + entry-head」同页；其余要点必须给续页小标题留高度
+      const maxFirst = Math.max(120, isFirst
+        ? CONTENT_H - (preH || (headH + headingH))
+        : CONTENT_H - contH);
       const maxNext = Math.max(120, CONTENT_H - contH);
       const fullH = heightOf(u);
       if (fullH <= maxFirst){ out.push(u); continue; }
@@ -528,6 +538,8 @@
   function render(){
     const units = buildUnits();
     pages = paginate(units);
+    if (page > pages.length - 1) page = pages.length - 1;
+    if (page < 0) page = 0;
     const issueMap = new Map();
     pages.forEach((pageUnits, pi) => {
       pageUnits.forEach(({ unit }) => { if (unit.issue) issueMap.set(unit.uid, { label:unit.issue, page:pi }); });
@@ -539,16 +551,21 @@
     if (importedPayload && q.get('imported') === '1'){
       const inboxCount = doc.sections.reduce((n, s) => n + (s.blocks ? s.blocks.length : 0), 0);
       const noText = sourceNoText.length ? `；原文件第 ${sourceNoText.join('、')} 页无文字` : '';
+      const nameNote = sourceNameMissing ? '；姓名为空（导出前会拦截）' : '';
       $('imported-banner').classList.add('show');
-      $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图。原文件 ${sourcePages} 页（提取 ${sourceExtracted} 页）→ 排版后 ${pages.length} 页；待整理内容 ${inboxCount} 块${noText}。`;
+      $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图。原文件 ${sourcePages} 页（提取 ${sourceExtracted} 页）→ 排版后 ${pages.length} 页；待整理内容 ${inboxCount} 块${noText}${nameNote}。`;
     }
     $('page-cur').textContent = String(Math.min(page + 1, pages.length));
     $('prev').disabled = page <= 0;
     $('next').disabled = page >= pages.length - 1;
     const chip = $('issue-chip');
-    const count = issueMap.size + sourceNoText.length;
+    const inboxIssue = pages.flatMap((pu) => pu.filter((x) => x.unit.type === 'inbox' && x.unit.issue)).length;
+    const otherIssue = issueMap.size - inboxIssue;
+    const count = (inboxIssue ? 1 : 0) + otherIssue + sourceNoText.length;
     chip.hidden = count === 0;
     $('issue-count').textContent = count ? `${count} 处待确认` : '';
+    chip.title = [inboxIssue ? `待整理 ${inboxIssue} 块` : '', otherIssue ? `其他疑点 ${otherIssue} 处` : '', sourceNoText.length ? `未提取 ${sourceNoText.length} 页` : '']
+      .filter(Boolean).join(' · ');
     chip.dataset.pages = Array.from(new Set(Array.from(issueMap.values()).map((v) => v.page + 1))).join(',');
 
     const content = $('content');
@@ -684,6 +701,23 @@
   $('tpl-compact').onclick = () => setDensity(true);
   $('pv-dense').onclick = () => setDensity(!dense);
 
+  $('pv-long-first').onclick = () => {
+    doc = {
+      id:'long-first', title:'超长首条', profile:{ name:'测试', headline:'', contact:'' },
+      sections:[{ id:'exp', title:'实习经历', type:'experience', entries:[{
+        id:'e-long-first', org:'某公司', role:'工程师', date:'2024.01 – 2024.12',
+        bullets:[{ id:'b-long-first', text:'首条超长要点：' + '这一条非常长，需要跨页显示。'.repeat(220) }],
+      }]}],
+    };
+    page = 0; dense = false;
+    $('sheet').classList.remove('compact');
+    $('tpl-classic').setAttribute('aria-pressed','true');
+    $('tpl-compact').setAttribute('aria-pressed','false');
+    $('pv-dense').setAttribute('aria-pressed','false');
+    render(); page = 0; render();
+    toast('已切换为「单分区 + 首条超长要点」回归样例');
+  };
+
   $('pv-long').onclick = () => {
     const exp = doc.sections.find((s) => s.id === 'exp');
     if (!exp || !exp.entries.length) return;
@@ -765,8 +799,9 @@
   if (q.get('imported') === '1'){
     const inboxCount = doc.sections.reduce((n, s) => n + (s.blocks ? s.blocks.length : 0), 0);
     const noText = sourceNoText.length ? `；原文件第 ${sourceNoText.join('、')} 页无文字` : '';
+    const nameNote = sourceNameMissing ? '；姓名为空（导出前会拦截）' : '';
     $('imported-banner').classList.add('show');
-    $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图。原文件 ${sourcePages} 页（提取 ${sourceExtracted} 页）→ 排版后 ${pages.length} 页；待整理内容 ${inboxCount} 块${noText}。`;
+    $('imported-banner').textContent = `已导入「${doc.title}」并直接打开成品视图。原文件 ${sourcePages} 页（提取 ${sourceExtracted} 页）→ 排版后 ${pages.length} 页；待整理内容 ${inboxCount} 块${noText}${nameNote}。`;
     toast('已导入并打开：这里是成品视图，不是独立完成页');
   }
 
