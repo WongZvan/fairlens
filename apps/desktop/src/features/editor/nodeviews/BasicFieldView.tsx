@@ -25,17 +25,24 @@ export function BasicFieldView({ node, updateAttributes, editor, getPos, deleteN
     const at = pos + node.nodeSize;
     const next = fieldType.create({ id: nanoid(), label: t('editor.fieldLabelDefault'), href: null }, editor.schema.text(' '));
     // 新字段插入后把光标放到其值末尾：用户点「添加字段」即可直接打字
-    editor.chain().focus().insertContentAt(at, next).setTextSelection(at + next.nodeSize - 1).run();
+    editor.chain().focus().insertContentAt(at, next).setTextSelection(at + next.nodeSize - 2).run();
   };
 
-  /** 点击字段行（标签/空白）时把光标落到值末尾；点值编辑区/操作按钮不拦截 */
+  /**
+   * 点击字段行本身（标签/空白）时把光标落到值末尾。
+   * 只处理左键；值编辑区/操作按钮不拦截；**必须排除 MetaDialog**——
+   * Overlay 是 portal，React 事件仍会冒泡到 NodeView，若误拦会把输入写进正文。
+   */
   const focusValueEnd = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     const target = e.target as HTMLElement;
+    if (target.closest('.meta-overlay') || target.closest('.meta-win')) return;
     if (target.closest('.fl-field-value') || target.closest('.fl-field-actions')) return;
+    if (target !== e.currentTarget && !target.closest('.fl-field-label')) return;
     const pos = typeof getPos === 'function' ? getPos() : null;
     if (typeof pos !== 'number') return;
     e.preventDefault();
-    editor.chain().focus().setTextSelection(pos + node.nodeSize - 1).run();
+    editor.chain().focus().setTextSelection(pos + node.nodeSize - 2).run();
   };
 
   return (
