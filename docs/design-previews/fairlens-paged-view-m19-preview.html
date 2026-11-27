@@ -690,11 +690,27 @@
   $('fit-width').onclick = () => { userZoomed = false; fitWidth(); };
 
   function renderKeepingAnchor(){
-    const anchor = pages[page]?.[0]?.unit?.uid?.split('#')[0] ?? null;
+    // 跳过自动生成的续页标题：用当前页第一个真实内容单元（要点/条目头/字段）的稳定 uid
+    const first = (pages[page] || []).find(({ unit }) => unit.type !== 'cont-head')?.unit ?? (pages[page] || [])[0]?.unit;
+    const anchor = first?.uid ?? null;
     const fallback = page;
     render();
     if (!anchor) return;
-    const found = pages.findIndex((pu) => pu.some(({ unit }) => unit.uid.split('#')[0] === anchor));
+    const exact = pages.findIndex((pu) => pu.some(({ unit }) => unit.uid === anchor));
+    const base = anchor.split('#')[0];
+    const segMatch = anchor.match(/#s(\d+)/);
+    const wantSeg = segMatch ? Number(segMatch[1]) : 0;
+    let found = exact;
+    if (found < 0){
+      // 同一要点可能被重新拆段：优先找 >= 当前段的续段，否则找同基 id 的最后一页
+      const candidates = [];
+      pages.forEach((pu, pi) => pu.forEach(({ unit }) => {
+        const m = unit.uid.match(/#s(\d+)/);
+        if (unit.uid.split('#')[0] === base) candidates.push({ page:pi, seg:m ? Number(m[1]) : 0 });
+      }));
+      const after = candidates.find((c) => c.seg >= wantSeg);
+      found = after ? after.page : (candidates.length ? candidates[candidates.length - 1].page : -1);
+    }
     page = found >= 0 ? found : Math.min(fallback, pages.length - 1);
     render();
   }
